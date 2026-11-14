@@ -548,15 +548,15 @@ static bool VersionGreater(const std::wstring& a, const std::wstring& b) {
 static bool IsoToTime(const std::string& s, time_t& out) {
   int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0;
   if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &sec) != 6) return false;
-  struct tm t{};
-  t.tm_year = y - 1900;
-  t.tm_mon = mo - 1;
-  t.tm_mday = d;
-  t.tm_hour = h;
-  t.tm_min = mi;
-  t.tm_sec = sec;
-  time_t base = _mkgmtime(&t);
-  if (base == (time_t)-1) return false;
+
+  // Days-from-civil (Howard Hinnant), independent of the process timezone.
+  int yy = y - (mo <= 2 ? 1 : 0);
+  const int era = (yy >= 0 ? yy : yy - 399) / 400;
+  const unsigned yoe = (unsigned)(yy - era * 400);
+  const unsigned doy = (153u * (unsigned)(mo + (mo > 2 ? -3 : 9)) + 2u) / 5u + (unsigned)d - 1u;
+  const unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
+  long long days = (long long)era * 146097LL + (long long)doe - 719468LL;
+  long long base = days * 86400LL + h * 3600LL + mi * 60LL + sec;
 
   int offset = 0;
   size_t tpos = s.find('T');
@@ -569,7 +569,7 @@ static bool IsoToTime(const std::string& s, time_t& out) {
       if (s[z] == '-') offset = -offset;
     }
   }
-  out = base - offset;
+  out = (time_t)(base - offset);
   return true;
 }
 
@@ -734,10 +734,23 @@ static void LoadAnnouncements(const std::set<std::string>& seen) {
   for (const auto& entry : list->items) {
     if (entry.type != json::Value::OBJECT) continue;
     std::string id = entry.Str("id");
-    if (id.empty() || seen.count(id)) continue;
+    if (id.empty() || seen.count(id)) {
+      if (!id.empty()) LogLine(L"announcement already seen: " + Utf8ToWide(id));
+      continue;
+    }
 
     time_t published = 0;
-    if (!IsoToTime(entry.Str("published_at"), published) || published > now) continue;
+    if (!IsoToTime(entry.Str("published_at"), published)) {
+      LogLine(L"announcement time parse failed: " + Utf8ToWide(entry.Str("published_at")));
+      continue;
+    }
+    LogLine(L"announcement " + Utf8ToWide(id) + L" published=" +
+            std::to_wstring((long long)published) + L" now=" +
+            std::to_wstring((long long)now));
+    if (published > now) {
+      LogLine(L"announcement skipped: not published yet");
+      continue;
+    }
 
     std::string expiresText = entry.Str("expires_at");
     if (!expiresText.empty()) {

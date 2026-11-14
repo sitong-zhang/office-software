@@ -20,6 +20,7 @@ The product is rebuilt around its interface. The goal is not a new coat of paint
 | Dialogs | Shared spacing, type scale, button order, and validation states |
 | Settings | Reorganized by task instead of upstream module tree |
 | Update screen | Full-window blocking state, see [updater.md](updater.md) |
+| Announcement screen | Full-window notice shown once, dismissed with **继续** |
 | About | Product name, version, attribution line as required by [branding.md](branding.md) |
 
 ## Design tokens
@@ -55,5 +56,6 @@ The splash is the first brand impression and the first update checkpoint.
 - [ ] Start Center and main-window mockups
 - [ ] Splash animation source file plus exported frames
 - [ ] Update screen mockup covering checking, downloading, verifying, installing, failed
+- [ ] Announcement screen mockup for one and multiple notices
 - [ ] Icon set for the application, file types, and window chrome
 - [ ] Accessibility and high-contrast review

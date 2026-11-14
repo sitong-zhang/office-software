@@ -42,14 +42,15 @@ The file is attached to every release by the workflow in `.github/workflows/upda
 1. Splash starts immediately and renders the update-check state.
 2. The client requests the manifest with a 10 s timeout, up to 3 attempts, and `Cache-Control: no-cache`.
 3. If the remote `version` is greater than the running version, or the running version is below `min_supported_version`, the splash transitions to the **mandatory update screen**.
-4. Otherwise the application opens normally.
+4. Otherwise the application opens normally, after any unseen announcements have been shown (see [announcements.md](announcements.md)).
 
 ## Mandatory update screen
 
 - Full-window, modal, and blocking; no close button, no Esc, no skip link.
 - Shows current version, target version, release notes summary, download size, and progress.
-- Actions: **Download and install** (primary), **Exit** (secondary). There is no "Remind me later".
-- The window cannot be closed until the installer starts; closing the app during download is allowed only through **Exit**, which discards the partial download.
+- Action: **Download and install** — the only control on the screen.
+- There is no **Exit**, no "Remind me later", and no way to dismiss the screen and continue on the old build.
+- While an update is pending, the window close command and Esc are ignored. Leaving the process is only possible by terminating it from the operating system.
 - After installation, the app relaunches and re-runs the check.
 
 ## Download, verify, install

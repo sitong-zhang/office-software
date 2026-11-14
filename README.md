@@ -19,6 +19,7 @@ The suite targets everyday document work — writing, spreadsheets, presentation
 - **Interface rebuild** — one visual language across the Start Center, editor, dialogs, and settings; less chrome, clearer defaults. See [docs/ui.md](docs/ui.md).
 - **Custom splash animation** — a short branded startup animation that doubles as the update check screen.
 - **Mandatory updates** — on launch the app reads a release manifest from this repository. When a new version is published, the update screen blocks the app until the new build is installed; it cannot be skipped. See [docs/updater.md](docs/updater.md).
+- **In-app announcements** — notices published in [announcements.json](announcements.json) are delivered at launch, shown once, and dismissed with **继续**. They never replace a mandatory update. See [docs/announcements.md](docs/announcements.md).
 - **Windows 64-bit first** — Windows 10/11 x64 is the only supported target until version 1.0. macOS and Linux are deferred.
 
 ## Project links
@@ -28,6 +29,7 @@ The suite targets everyday document work — writing, spreadsheets, presentation
 | Project site | https://sitong-zhang.github.io/office-software/ |
 | Downloads | [Releases](https://github.com/sitong-zhang/office-software/releases) |
 | Update manifest | https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json |
+| Announcement feed | https://raw.githubusercontent.com/sitong-zhang/office-software/main/announcements.json |
 | Announcements | [Discussions → Announcements](https://github.com/sitong-zhang/office-software/discussions/categories/announcements) |
 | Bug reports | [Issues](https://github.com/sitong-zhang/office-software/issues) |
 | Questions and ideas | [Discussions](https://github.com/sitong-zhang/office-software/discussions) |
@@ -40,8 +42,9 @@ The staged plan — foundation, Windows client and identity, interface rebuild, 
 
 ```text
 .
-├── .github/            # Issue forms, pull request template, update manifest workflow
-├── docs/               # Project site, architecture, UI, updater, branding, roadmap, release process
+├── .github/            # Issue forms, pull request template, update and validation workflows
+├── docs/               # Project site, architecture, UI, updater, announcements, branding, roadmap
+├── announcements.json  # In-app announcement feed
 ├── CHANGELOG.md        # User-visible changes per release
 ├── CONTRIBUTING.md     # How to contribute
 ├── LICENSE             # Mozilla Public License 2.0

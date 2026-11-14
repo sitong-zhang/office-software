@@ -61,6 +61,7 @@ Planned jobs:
 
 - **Releases** — signed installers, checksums, and release notes.
 - **Update manifest** — `latest.json`, attached to each release; the only source the client trusts.
+- **Announcement feed** — `announcements.json` at the repository root, read at launch and shown once before the app opens.
 - **Discussions → Announcements** — product news and maintenance notices.
 - **Project site** — a stable, linkable summary of the latest release and the roadmap.
 

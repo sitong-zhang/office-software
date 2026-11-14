@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-15T12:00:00+08:00",
+  "announcements": [
+    {
+      "id": "2026-11-15-project-start",
+      "title": "Chenyi Office（胡辰逸定制版）项目启动",
+      "body": "项目已进入基础建设阶段：品牌、界面规范、更新协议和发布流程均已就位。\n\n首个 Windows 10 / 11 64 位安装包尚未发布。发布后，软件会在启动时检查版本；有新版本时必须完成更新才能继续使用。\n\n新公告会通过本文件直接送达软件内，点击“继续”即可进入应用。",
+      "severity": "info",
+      "published_at": "2026-11-15T12:00:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "查看路线图",
+      "action_url": "https://github.com/sitong-zhang/office-software/blob/main/docs/roadmap.md"
+    }
+  ]
+}

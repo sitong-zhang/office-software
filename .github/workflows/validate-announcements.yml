@@ -1,0 +1,51 @@
+name: Validate announcements
+
+on:
+  push:
+    paths:
+      - announcements.json
+      - .github/workflows/validate-announcements.yml
+  pull_request:
+    paths:
+      - announcements.json
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate structure
+        run: |
+          python - <<'PY'
+          import json, re, sys
+          from datetime import datetime
+
+          with open("announcements.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data.get("schema_version") == 1, "schema_version must be 1"
+          assert data.get("updated_at"), "updated_at is required"
+          datetime.fromisoformat(data["updated_at"])
+
+          ids = set()
+          for item in data.get("announcements", []):
+              for key in ("id", "title", "body", "severity", "published_at"):
+                  assert item.get(key), f"{item.get('id', '?')}: missing {key}"
+              assert re.fullmatch(r"\d{4}-\d{2}-\d{2}-[a-z0-9-]+", item["id"]), f"invalid id: {item['id']}"
+              assert item["id"] not in ids, f"duplicate id: {item['id']}"
+              ids.add(item["id"])
+              assert item["severity"] in ("info", "important"), f"invalid severity: {item['severity']}"
+              datetime.fromisoformat(item["published_at"])
+              for key in ("expires_at",):
+                  if item.get(key):
+                      datetime.fromisoformat(item[key])
+              if item.get("action_url"):
+                  assert item["action_url"].startswith("https://"), "action_url must use https"
+
+          print(f"OK: {len(ids)} announcement(s)")
+          PY

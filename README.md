@@ -41,7 +41,7 @@ The profile is applied once and then left alone, so user customization is preser
 - **Interface rebuild** — one visual language across the Start Center, editor, dialogs, and settings. See [docs/ui.md](docs/ui.md).
 - **Mandatory updates** — the only update path; no "remind me later". See [docs/updater.md](docs/updater.md).
 - **In-app announcements** — delivered at launch, independent of releases. See [docs/announcements.md](docs/announcements.md).
-- **Windows 64-bit only** until version 1.0; macOS and Linux are deferred.
+- **Windows 64-bit only**; macOS and Linux builds are not planned.
 
 ## Project links
 

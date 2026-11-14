@@ -206,11 +206,15 @@ def make_background(width=1800, height=1200):
 def main():
     logo = make_logo()
     logo.resize((512, 512), Image.LANCZOS).save(BRAND / "logo.png")
-    logo.save(BRAND / "logo-1024.png")
-    logo.save(
-        BRAND / "icon.ico",
-        sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)],
-    )
+    for target in (
+        ROOT / "app" / "launcher" / "icon.ico",
+        ROOT / "installer" / "icon.ico",
+        ROOT / "uninstaller" / "icon.ico",
+    ):
+        logo.save(
+            target,
+            sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)],
+        )
 
     background = make_background()
     background.resize((900, 600), Image.LANCZOS).save(INSTALLER / "welcome.png")

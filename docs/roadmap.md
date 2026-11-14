@@ -50,7 +50,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [ ] Maintenance policy and release cadence
 - [ ] Release notes archive and update history
 
-## Out of scope until 1.0
+## Not planned
 
 - macOS and Linux builds
 - Mobile and web editions

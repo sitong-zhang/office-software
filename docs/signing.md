@@ -65,5 +65,6 @@ No source changes are required. After switching, update this document and the fi
 - The private key must never be committed. `build/` is ignored by Git.
 - Keep an offline backup of the key; losing it prevents signing updates with a consistent publisher identity.
 - The build script never contains a default password and refuses to publish in CI without signing material (`REQUIRE_SIGN=1`).
+- CI reads `SIGN_PFX_BASE64` and `SIGN_PFX_PASS` from repository secrets, decodes the PFX, and derives the public certificate from it.
 - The launcher pins the signer certificate thumbprint (`FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4`). If the certificate is ever replaced, a new launcher must ship first with the new thumbprint; otherwise updates will be rejected.
 - The update manifest hash and the installer signature are independent checks; both are verified by the launcher.

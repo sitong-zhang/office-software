@@ -2,6 +2,24 @@
 
 The product is rebuilt around its interface. The goal is not a new coat of paint on the upstream shell, but a consistent, quieter workspace that a first-time user can operate without instruction.
 
+## Implemented in v0.1.3
+
+- **Tabbed notebookbar** is the default UI for Writer, Calc, Impress, and Draw, replacing the classic menu-plus-toolbars layout.
+- **Product identity** inside the engine is set to Chenyi Office (name and vendor).
+- **Clean first run**: tip of the day, What's New, Get Involved, and Donate infobars are disabled.
+- **Isolated profile**: the launcher starts the engine with `-env:UserInstallation=%LOCALAPPDATA%\ChenyiOffice\lo-profile`, so the branded configuration does not collide with other LibreOffice installations.
+- **Brand shell**: splash animation, password-gated installer, update screen, and announcement screen.
+
+## Next: source-level interface work
+
+The following require patching LibreOffice and rebuilding the engine:
+
+- Start Center layout and artwork.
+- Dialog and settings reorganization.
+- Consistent typography, spacing, and color tokens across VCL widgets.
+- Dark theme, high contrast, and per-monitor DPI review.
+- Engine-level icons, About dialog, and default templates.
+
 ## Principles
 
 1. **Document first.** Chrome recedes when the user types; commands appear in context rather than all at once.

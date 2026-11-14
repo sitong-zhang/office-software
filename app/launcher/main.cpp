@@ -34,8 +34,8 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.2";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.2";
+static const wchar_t* kVersion = L"0.1.3";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.3";
 
 static const char* kManifestUrl =
     "https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json";
@@ -1091,6 +1091,66 @@ static void DrawError(HDC dc) {
   DrawButton(dc, L"重试", false);
 }
 
+static std::wstring ProfileDirectory() {
+  wchar_t* base = nullptr;
+  std::wstring dir;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &base))) {
+    dir = base;
+    CoTaskMemFree(base);
+  } else {
+    wchar_t tmp[MAX_PATH];
+    GetTempPathW(MAX_PATH, tmp);
+    dir = tmp;
+  }
+  dir += L"\\ChenyiOffice\\lo-profile";
+  SHCreateDirectoryExW(nullptr, (dir + L"\\user").c_str(), nullptr);
+  return dir;
+}
+
+static std::wstring FileUrlFromPath(const std::wstring& path) {
+  std::string utf8 = WideToUtf8(path);
+  std::string url = "file:///";
+  char encoded[8];
+  for (unsigned char c : utf8) {
+    if (c == '\\') {
+      url.push_back('/');
+    } else if (c == ' ' || c == '%' || c == '#' || c == '?' || c >= 0x80) {
+      std::snprintf(encoded, sizeof(encoded), "%%%02X", c);
+      url += encoded;
+    } else {
+      url.push_back((char)c);
+    }
+  }
+  return Utf8ToWide(url);
+}
+
+static void EnsureProfile() {
+  std::wstring dir = ProfileDirectory();
+  std::wstring path = dir + L"\\user\\registrymodifications.xcu";
+  if (FileExists(path)) return;
+
+  HRSRC res = FindResourceW(g_instance, MAKEINTRESOURCEW(106), RT_RCDATA);
+  if (!res) {
+    LogLine(L"brand profile resource missing");
+    return;
+  }
+  HGLOBAL data = LoadResource(g_instance, res);
+  DWORD size = SizeofResource(g_instance, res);
+  void* bytes = LockResource(data);
+  if (!bytes) return;
+
+  HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file == INVALID_HANDLE_VALUE) {
+    LogLine(L"cannot write brand profile");
+    return;
+  }
+  DWORD written = 0;
+  WriteFile(file, bytes, size, &written, nullptr);
+  CloseHandle(file);
+  LogLine(L"brand profile created: " + dir);
+}
+
 static void LaunchEngine() {
   std::wstring engine = FindEngine();
   LogLine(engine.empty() ? L"engine not found" : L"launch engine: " + engine);
@@ -1111,6 +1171,10 @@ static void LaunchEngine() {
   info.lpVerb = L"open";
   info.lpFile = engine.c_str();
   info.lpDirectory = dir.c_str();
+  EnsureProfile();
+  std::wstring profileArg =
+      L"-env:UserInstallation=\"" + FileUrlFromPath(ProfileDirectory()) + L"\"";
+  info.lpParameters = profileArg.c_str();
   info.nShow = SW_SHOWNORMAL;
   if (!ShellExecuteExW(&info)) {
     MessageBoxW(g_window, L"无法启动办公套件。", kProductName, MB_ICONERROR | MB_OK);

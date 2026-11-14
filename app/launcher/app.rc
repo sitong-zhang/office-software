@@ -3,11 +3,13 @@
 1 ICON "app/launcher/icon.ico"
 2 ICON "app/launcher/icon.ico"
 
+106 RCDATA "app/profile/registrymodifications.xcu"
+
 1 24 "app/launcher/app.manifest"
 
 1 VERSIONINFO
-FILEVERSION 0,1,2,0
-PRODUCTVERSION 0,1,2,0
+FILEVERSION 0,1,3,0
+PRODUCTVERSION 0,1,3,0
 FILEOS 0x40004
 FILETYPE 0x1
 BEGIN
@@ -17,12 +19,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Chenyi Office contributors"
       VALUE "FileDescription", "Chenyi Office launcher"
-      VALUE "FileVersion", "0.1.2.0"
+      VALUE "FileVersion", "0.1.3.0"
       VALUE "InternalName", "ChenyiOffice"
       VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
       VALUE "OriginalFilename", "ChenyiOffice.exe"
       VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
-      VALUE "ProductVersion", "0.1.2"
+      VALUE "ProductVersion", "0.1.3"
     END
   END
   BLOCK "VarFileInfo"

@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.1.2** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, splash, mandatory update gate, and announcement channel. The LibreOffice interface itself is still upstream.
+Current release: **v0.1.3** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -26,10 +26,12 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 
 ## Phase 2 — Interface rebuild (in progress)
 
+- [x] Branded LibreOffice profile (Tabbed notebookbar, product name, clean first run)
+- [x] Dedicated user profile launched with `-env:UserInstallation`
+- [x] Remove upstream tips, What's New, Get Involved, and Donate infobars
 - [ ] Upstream source integration and patch series
 - [ ] Design tokens, typography, and component inventory
 - [ ] Start Center redesign
-- [ ] Menu, toolbar, and sidebar density pass
 - [ ] Dialog and settings reorganization
 - [ ] Dark theme, high contrast, and DPI review
 - [ ] Interface preview build

@@ -2,6 +2,24 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-11-15
+
+### Added
+
+- Branded LibreOffice interface profile with the Tabbed notebookbar for Writer, Calc, Impress, and Draw.
+- Product name and vendor set to Chenyi Office inside the office engine.
+- Dedicated profile in `%LOCALAPPDATA%\ChenyiOffice\lo-profile`, launched with `-env:UserInstallation`.
+- Upstream tips, What's New, Get Involved, and Donate infobars disabled.
+
+### Changed
+
+- Launcher prepares the brand profile before starting the engine.
+- Profile settings are applied only on first run, preserving later user customization.
+
+### Known limitations
+
+- Dialogs, widgets, and the Start Center still use upstream VCL layouts; source-level redesign is the next step.
+
 ## [0.1.2] — 2026-11-15
 
 ### Added
@@ -53,6 +71,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.0

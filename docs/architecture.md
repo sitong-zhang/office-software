@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the shipped v0.1.2 implementation and the planned path to source-level interface work.
+This document describes the shipped v0.1.3 implementation and the planned path to source-level interface work.
 
 ## Current implementation
 
@@ -37,9 +37,13 @@ The install gate is a distribution control, not encryption. Anyone with the inst
 - Announcements: `announcements.json` with raw GitHub as primary and jsDelivr as fallback; seen ids stored in `%LOCALAPPDATA%\ChenyiOffice\state.ini`.
 - Engine discovery through `HKLM\Software\ChenyiOffice\EnginePath`, then standard LibreOffice paths.
 
+### Interface layer
+
+The launcher embeds a `registrymodifications.xcu` template and writes it to `%LOCALAPPDATA%\ChenyiOffice\lo-profile\user` on first start. The engine is then launched with `-env:UserInstallation=file:///...`, which isolates the product profile from any other LibreOffice installation. The template selects the Tabbed notebookbar for all four applications, sets the product name to Chenyi Office, and disables upstream tips and promotional infobars.
+
 ### Engine
 
-The engine is the official LibreOffice 26.8.3 Windows x64 MSI, unmodified. Product identity is currently applied at the shell level only: installer, shortcuts, splash, announcements, update flow. Deep interface changes require building from source, which is Phase 2.
+The engine is the official LibreOffice 26.8.3 Windows x64 MSI, unmodified. Product identity and the interface layout are applied through the dedicated profile. Deep visual changes to dialogs and widgets require building from source, which is the next Phase 2 step.
 
 ## Source strategy (Phase 2)
 
@@ -55,7 +59,7 @@ The Windows engine build itself requires MSVC or a supported MinGW cross-build e
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.1.2-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.1.3-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 

@@ -31,7 +31,7 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.2";
+static const wchar_t* kVersion = L"0.1.3";
 // SHA-256 of the install password; the plain password is not stored in source.
 static const wchar_t* kPasswordHash =
     L"d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5";

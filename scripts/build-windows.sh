@@ -10,7 +10,7 @@ DIST="$ROOT/dist"
 LO_VERSION="${LO_VERSION:-26.8.3}"
 LO_MSI="LibreOffice_${LO_VERSION}_Win_x86-64.msi"
 LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${LO_VERSION}/win/x86_64/${LO_MSI}}"
-VERSION="0.1.2"
+VERSION="0.1.3"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"

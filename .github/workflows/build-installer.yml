@@ -29,6 +29,6 @@ jobs:
         with:
           name: ChenyiOffice-windows-x64
           path: |
-            dist/ChenyiOffice-0.1.0-x64.exe
-            dist/ChenyiOffice-0.1.0-x64.exe.sha256
+            dist/ChenyiOffice-*-x64.exe
+            dist/ChenyiOffice-*-x64.exe.sha256
           if-no-files-found: error

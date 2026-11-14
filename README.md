@@ -4,15 +4,15 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.1.0-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.1.1-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.1.0 — first Windows preview.** The repository now builds a working Windows installer that bundles the LibreOffice 26.8.3 engine, a custom splash and update gate, an in-app announcement channel, and a branded welcome page protected by an install password. The LibreOffice interface itself is still upstream; the interface rebuild is the next track.
+**v0.1.1 — Windows preview.** First available build: a working Windows installer that bundles the LibreOffice 26.8.3 engine, a custom splash and update gate, an in-app announcement channel, and a branded welcome page protected by an install password. The LibreOffice interface itself is still upstream; the interface rebuild is the next track.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.1.0-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.1.1-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
 - **Notes:** the installer requires the install password, distributed separately from this repository. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
 
@@ -68,7 +68,7 @@ Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`.
 ./scripts/build-windows.sh
 ```
 
-The script generates brand assets, compiles the launcher and uninstaller, downloads the pinned LibreOffice MSI, compiles the installer, and appends the engine payload. Output: `dist/ChenyiOffice-0.1.0-x64.exe` plus its SHA-256.
+The script generates brand assets, compiles the launcher and uninstaller, downloads the pinned LibreOffice MSI, compiles the installer, and appends the engine payload. Output: `dist/ChenyiOffice-0.1.1-x64.exe` plus its SHA-256.
 
 See [docs/build.md](docs/build.md) for the pipeline and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 

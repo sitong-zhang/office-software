@@ -34,7 +34,7 @@ The product is rebuilt around its interface. The goal is not a new coat of paint
 
 ## Splash animation
 
-The splash is the first brand impression and the first update checkpoint. Implemented in `app/launcher/main.cpp` for v0.1.0.
+The splash is the first brand impression and the first update checkpoint. Implemented in `app/launcher/main.cpp` for v0.1.x.
 
 - **Duration**: 1.2–1.8 s when the app is ready; it persists while the update check runs, up to 10 s.
 - **Content**: product wordmark, edition suffix, loading indicator, version in small type.

@@ -2,6 +2,14 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-11-15
+
+### Fixed
+
+- Announcement publication times with a non-UTC offset were parsed incorrectly, which could hide new notices.
+- The Linux CI build failed with a broken pipe while reading the MSI product code.
+- Added launcher logging under `%LOCALAPPDATA%\ChenyiOffice\launcher.log` for update and announcement failures.
+
 ## [0.1.0] — 2026-11-15
 
 First Windows preview.
@@ -30,4 +38,5 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.0

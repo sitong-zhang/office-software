@@ -23,7 +23,7 @@ Tags use a `v` prefix (`v0.1.0`). Pre-releases use suffixes (`0.2.0-beta.1`). On
    - the splash appears, the app starts, and announcements display once;
    - a newer test release correctly triggers the blocking update screen;
    - the SHA-256 of the installer matches the checksum file.
-5. **Sign** — sign the installer with Authenticode when a certificate is configured. v0.1.0 is unsigned; note this in the release.
+5. **Sign** — sign the installer with Authenticode when a certificate is configured. v0.1.x is unsigned; note this in the release.
 6. **Tag** — create an annotated tag and push it:
 
    ```bash

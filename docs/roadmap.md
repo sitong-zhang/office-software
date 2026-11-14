@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.1.0** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, splash, mandatory update gate, and announcement channel. The LibreOffice interface itself is still upstream.
+Current release: **v0.1.1** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, splash, mandatory update gate, and announcement channel. The LibreOffice interface itself is still upstream.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 

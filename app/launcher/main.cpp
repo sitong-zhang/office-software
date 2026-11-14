@@ -34,8 +34,8 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.0";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1";
+static const wchar_t* kVersion = L"0.1.1";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.1";
 
 static const char* kManifestUrl =
     "https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json";
@@ -559,8 +559,10 @@ static bool IsoToTime(const std::string& s, time_t& out) {
   if (base == (time_t)-1) return false;
 
   int offset = 0;
-  size_t z = s.find_last_of("Zz+-");
-  if (z != std::string::npos && z > 18 && s[z] != 'Z' && s[z] != 'z') {
+  size_t tpos = s.find('T');
+  size_t z = std::string::npos;
+  if (tpos != std::string::npos) z = s.find_first_of("+-Zz", tpos + 1);
+  if (z != std::string::npos && s[z] != 'Z' && s[z] != 'z') {
     int oh = 0, om = 0;
     if (sscanf(s.c_str() + z + 1, "%d:%d", &oh, &om) == 2) {
       offset = oh * 3600 + om * 60;
@@ -589,6 +591,20 @@ static std::wstring StateDirectory() {
   dir += L"\\ChenyiOffice";
   SHCreateDirectoryExW(nullptr, dir.c_str(), nullptr);
   return dir;
+}
+
+static void LogLine(const std::wstring& text) {
+  std::wstring path = StateDirectory() + L"\\launcher.log";
+  FILE* f = _wfopen(path.c_str(), L"ab");
+  if (!f) return;
+  SYSTEMTIME st{};
+  GetLocalTime(&st);
+  char stamp[64];
+  std::snprintf(stamp, sizeof(stamp), "%04d-%02d-%02d %02d:%02d:%02d ", st.wYear, st.wMonth,
+                st.wDay, st.wHour, st.wMinute, st.wSecond);
+  std::string line = std::string(stamp) + WideToUtf8(text) + "\r\n";
+  fwrite(line.data(), 1, line.size(), f);
+  fclose(f);
 }
 
 static std::set<std::string> LoadSeen() {
@@ -697,7 +713,11 @@ static void LoadAnnouncements(const std::set<std::string>& seen) {
   for (const char* source : sources) {
     std::wstring err;
     body.clear();
-    if (HttpGet(Utf8ToWide(source) + stamp, body, err) && !body.empty()) break;
+    if (HttpGet(Utf8ToWide(source) + stamp, body, err) && !body.empty()) {
+      LogLine(std::wstring(L"announcements fetched from ") + Utf8ToWide(source));
+      break;
+    }
+    LogLine(std::wstring(L"announcement fetch failed: ") + err);
   }
   if (body.empty()) return;
 
@@ -740,21 +760,25 @@ static void LoadAnnouncements(const std::set<std::string>& seen) {
 
   std::sort(g_announcements.begin(), g_announcements.end(),
             [](const Announcement& a, const Announcement& b) { return a.id < b.id; });
+  LogLine(L"unseen announcements: " + std::to_wstring(g_announcements.size()));
 }
 
 static DWORD WINAPI CheckThreadProc(LPVOID) {
+  LogLine(std::wstring(L"launcher start, version ") + kVersion);
   std::string body;
   std::wstring err;
   bool manifestOk = HttpGet(Utf8ToWide(kManifestUrl), body, err);
+  if (!manifestOk) LogLine(L"manifest fetch failed: " + err);
 
   if (manifestOk) {
     json::Value root;
     std::string parseError;
     if (json::Parser(body).Parse(root, parseError)) {
       std::string remote = root.Str("version");
+      LogLine(L"manifest version: " + Utf8ToWide(remote));
       if (!remote.empty() && VersionGreater(Utf8ToWide(remote), kVersion)) {
         g_update.version = Utf8ToWide(remote);
-        g_update.mandatory = root.Bool("mandatory", true) || true;
+        g_update.mandatory = true;
         const json::Value* installer = root.Get("installer");
         if (installer) {
           g_update.url = Utf8ToWide(installer->Str("url"));
@@ -1053,6 +1077,7 @@ static void DrawError(HDC dc) {
 
 static void LaunchEngine() {
   std::wstring engine = FindEngine();
+  LogLine(engine.empty() ? L"engine not found" : L"launch engine: " + engine);
   if (engine.empty()) {
     MessageBoxW(g_window,
                 L"没有找到办公套件内核。请重新运行安装包，或检查 LibreOffice 是否已正确安装。",

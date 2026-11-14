@@ -1080,9 +1080,12 @@ static void DrawError(HDC dc) {
   DrawTextLine(dc, g_downloadError, msg, 15, FW_NORMAL, RGB(226, 166, 158),
                L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
 
-  RECT link{pad, S(250), g_width - pad, S(320)};
-  DrawTextLine(dc, std::wstring(L"手动下载地址：") + g_update.url, link, 12, FW_NORMAL,
-               RGB(136, 196, 168), L"Consolas",
+  RECT linkLabel{pad, S(248), g_width - pad, S(272)};
+  DrawTextLine(dc, L"手动下载地址：", linkLabel, 12, FW_NORMAL, RGB(150, 170, 158),
+               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
+
+  RECT link{pad, S(274), g_width - pad, S(330)};
+  DrawTextLine(dc, g_update.url, link, 11, FW_NORMAL, RGB(136, 196, 168), L"Consolas",
                DT_LEFT | DT_WORDBREAK | DT_END_ELLIPSIS);
 
   DrawButton(dc, L"重试", false);

@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (leave empty for the latest release)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -16,41 +21,48 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
-          RELEASE_URL: ${{ github.event.release.html_url }}
-          PUBLISHED_AT: ${{ github.event.release.published_at }}
+          INPUT_TAG: ${{ github.event.release.tag_name || inputs.tag }}
           MIN_SUPPORTED_VERSION: ${{ vars.MIN_SUPPORTED_VERSION }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = $env:TAG -replace '^v', ''
           $repo = $env:GITHUB_REPOSITORY
 
-          $assets = gh release view $env:TAG --repo $repo --json assets | ConvertFrom-Json
-          $installer = $assets.assets |
+          $tag = $env:INPUT_TAG
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = gh release view --repo $repo --json tagName --jq '.tagName'
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "No release tag available."
+          }
+
+          $release = gh release view $tag --repo $repo --json tagName,url,publishedAt,assets | ConvertFrom-Json
+          $version = $release.tagName -replace '^v', ''
+
+          $installer = $release.assets |
             Where-Object { $_.name -match '(?i)x64.*\.(exe|msi)$' } |
             Select-Object -First 1
 
           if (-not $installer) {
-            Write-Host "No x64 installer attached to $env:TAG; skipping manifest."
+            Write-Host "No x64 installer attached to $tag; skipping manifest."
             exit 0
           }
 
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          gh release download $env:TAG --repo $repo --pattern $installer.name --dir dist
+          gh release download $tag --repo $repo --pattern $installer.name --dir dist
 
           $path = Join-Path 'dist' $installer.name
           $hash = (Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToLowerInvariant()
           $size = (Get-Item $path).Length
-          $url = "https://github.com/$repo/releases/download/$env:TAG/$($installer.name)"
+          $url = "https://github.com/$repo/releases/download/$tag/$($installer.name)"
           $min = if ([string]::IsNullOrWhiteSpace($env:MIN_SUPPORTED_VERSION)) { '0.0.0' } else { $env:MIN_SUPPORTED_VERSION }
 
           $manifest = [ordered]@{
-            version              = $version
-            mandatory            = $true
+            version               = $version
+            mandatory             = $true
             min_supported_version = $min
-            published_at         = $env:PUBLISHED_AT
-            release_notes_url    = $env:RELEASE_URL
-            installer            = [ordered]@{
+            published_at          = $release.publishedAt
+            release_notes_url     = $release.url
+            installer             = [ordered]@{
               url    = $url
               sha256 = $hash
               size   = $size
@@ -58,4 +70,4 @@ jobs:
           }
 
           $manifest | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 -NoNewline latest.json
-          gh release upload $env:TAG latest.json --clobber --repo $repo
+          gh release upload $tag latest.json --clobber --repo $repo

@@ -10,14 +10,24 @@ DIST="$ROOT/dist"
 LO_VERSION="${LO_VERSION:-26.8.3}"
 LO_MSI="LibreOffice_${LO_VERSION}_Win_x86-64.msi"
 LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${LO_VERSION}/win/x86_64/${LO_MSI}}"
-VERSION="0.1.4"
+# Pinned SHA-256 of the engine MSI. Override together with LO_VERSION only when
+# you have independently verified a new upstream artifact.
+LO_MSI_SHA256="${LO_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
+VERSION="0.1.5"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"
 HOMEPAGE="https://sitong-zhang.github.io/office-software/"
 SIGN_PFX="${SIGN_PFX:-$BUILD/signing/chenyi.pfx}"
-SIGN_PASS="${SIGN_PFX_PASS:-chenyi-signing-key}"
 SIGN_CERT="${SIGN_CERT:-$BUILD/signing/chenyi.crt}"
+# The password is never stored in the repository. Prefer SIGN_PFX_PASS; a
+# git-ignored build/signing/password.txt is also accepted. REQUIRE_SIGN=1
+# turns a missing certificate/password into a hard failure (used by CI).
+REQUIRE_SIGN="${REQUIRE_SIGN:-0}"
+SIGN_PASS="${SIGN_PFX_PASS:-}"
+if [ -z "$SIGN_PASS" ] && [ -f "$BUILD/signing/password.txt" ]; then
+  SIGN_PASS="$(tr -d '\r\n' < "$BUILD/signing/password.txt")"
+fi
 
 CXX=x86_64-w64-mingw32-g++
 RC=x86_64-w64-mingw32-windres
@@ -30,7 +40,19 @@ mkdir -p "$BUILD" "$CACHE" "$DIST"
 sign_file() {
   local input="$1"
   if [ ! -f "$SIGN_PFX" ]; then
+    if [ "$REQUIRE_SIGN" = "1" ]; then
+      echo "  signing certificate missing at $SIGN_PFX (REQUIRE_SIGN=1)" >&2
+      return 1
+    fi
     echo "  no signing certificate at $SIGN_PFX; leaving unsigned"
+    return 0
+  fi
+  if [ -z "$SIGN_PASS" ]; then
+    if [ "$REQUIRE_SIGN" = "1" ]; then
+      echo "  signing password missing (set SIGN_PFX_PASS or build/signing/password.txt)" >&2
+      return 1
+    fi
+    echo "  no signing password; leaving unsigned"
     return 0
   fi
   if timeout 45 osslsigncode sign -pkcs12 "$SIGN_PFX" -pass "$SIGN_PASS" \
@@ -58,7 +80,7 @@ echo "[2/8] Building and signing launcher"
 "$RC" "$ROOT/app/launcher/app.rc" -O coff -o "$BUILD/app.res.o"
 "$CXX" "${CXXFLAGS[@]}" "$ROOT/app/launcher/main.cpp" "$BUILD/app.res.o" \
   -o "$BUILD/ChenyiOffice.exe" \
-  -lwinhttp -lbcrypt -lshell32 -lole32 -luuid -lshlwapi -lgdi32 -luser32 -ladvapi32
+  -lwinhttp -lbcrypt -lwintrust -lcrypt32 -lshell32 -lole32 -luuid -lshlwapi -lgdi32 -luser32 -ladvapi32
 sign_file "$BUILD/ChenyiOffice.exe"
 
 echo "[3/8] Building and signing uninstaller"
@@ -74,6 +96,13 @@ if [ ! -f "$CACHE/$LO_MSI" ]; then
     -o "$CACHE/$LO_MSI.part" "$LO_URL"
   mv "$CACHE/$LO_MSI.part" "$CACHE/$LO_MSI"
 fi
+if ! echo "$LO_MSI_SHA256  $CACHE/$LO_MSI" | sha256sum -c - >/dev/null 2>&1; then
+  echo "Engine MSI checksum mismatch: $CACHE/$LO_MSI" >&2
+  echo "Expected $LO_MSI_SHA256" >&2
+  echo "Delete the cached file and retry, or set LO_MSI_SHA256 to a verified value." >&2
+  exit 1
+fi
+echo "  engine MSI checksum verified"
 
 echo "[5/8] Reading engine product code"
 PRODUCT_CODE="$(msiinfo export "$CACHE/$LO_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
@@ -107,16 +136,32 @@ echo "[8/8] Signing installer and exporting certificate"
 sign_file "$OUT"
 if [ -f "$SIGN_CERT" ]; then
   openssl x509 -in "$SIGN_CERT" -outform DER -out "$DIST/ChenyiOffice-code-signing.cer"
+elif [ "$REQUIRE_SIGN" = "1" ]; then
+  echo "Public signing certificate missing at $SIGN_CERT (REQUIRE_SIGN=1)" >&2
+  exit 1
 fi
 
-sha256sum "$OUT" | tee "$OUT.sha256"
+( cd "$DIST" && sha256sum "$(basename "$OUT")" ) | tee "$OUT.sha256"
 if [ -f "$DIST/ChenyiOffice-code-signing.cer" ]; then
-  sha256sum "$DIST/ChenyiOffice-code-signing.cer" | tee "$DIST/ChenyiOffice-code-signing.cer.sha256"
+  ( cd "$DIST" && sha256sum "ChenyiOffice-code-signing.cer" ) \
+    | tee "$DIST/ChenyiOffice-code-signing.cer.sha256"
 fi
 
 if command -v osslsigncode >/dev/null 2>&1; then
   echo "Signature check:"
-  osslsigncode verify -in "$OUT" 2>&1 | grep -E 'Signature verification|Number of signatures|Subject' | head -4 || true
+  verify_args=(-in "$OUT")
+  if [ -f "$SIGN_CERT" ]; then
+    verify_args+=(-CAfile "$SIGN_CERT")
+  fi
+  if osslsigncode verify "${verify_args[@]}" >/tmp/chenyi-signature-check.txt 2>&1; then
+    grep -E 'Signature verification|Number of verified signatures' /tmp/chenyi-signature-check.txt | tail -2
+  else
+    echo "  signature verification failed" >&2
+    grep -E 'Signature verification|Error' /tmp/chenyi-signature-check.txt | tail -4 >&2 || true
+    if [ "$REQUIRE_SIGN" = "1" ]; then
+      exit 1
+    fi
+  fi
 fi
 
 echo "Done: $OUT"

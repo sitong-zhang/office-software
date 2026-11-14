@@ -2,6 +2,37 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] — 2026-11-15
+
+### Fixed
+
+- Updates no longer ask for the install password. The launcher runs the downloaded installer with `/S`; the installer also skips the password page when it detects an existing installation.
+- The installer recognizes a LibreOffice that was already on the machine, reuses it without overwriting its splash/About artwork, and records that fact so uninstall never removes the user's own engine.
+- The launcher now rejects an update whose downloaded file is not signed by the pinned Chenyi Office certificate, and requires a 64-character SHA-256 instead of silently skipping the check.
+- Update downloads are rejected when redirects leave the allowlisted GitHub/CDN hosts, and HTTPS-to-HTTP redirects are disabled.
+- `min_supported_version` is enforced; a manifest that points below it is rejected.
+- Uninstall now removes `%LOCALAPPDATA%\ChenyiOffice` (profile, seen announcements, logs), so a reinstall starts clean.
+- The dead `--uninstall` branch was removed from the installer; uninstalling is handled only by `Uninstall.exe`.
+- Version resources now match the product version instead of reporting `0.1.3`.
+- The installer and uninstaller scale with the system DPI; the uninstaller manifest declares Per-Monitor V2 awareness.
+- Announcement timezone parsing accepts both `+08:00` and `+0800`, and announcements are ordered by publication time.
+- Launcher state shared between worker threads and the UI is protected by a lock; the splash status text now reflects the actual check result.
+- Only one launcher instance can run at a time.
+- The launcher accepts a close request on the splash and announcement screens; the mandatory update screen still cannot be dismissed.
+
+### Changed
+
+- Build script no longer contains a default signing password. It reads `SIGN_PFX_PASS` or a git-ignored `build/signing/password.txt`, and `REQUIRE_SIGN=1` fails the build when signing material is missing.
+- The LibreOffice engine MSI is verified against a pinned SHA-256 before use.
+- CI installs `osslsigncode`, requires signing secrets, and uploads the public certificate alongside the installer.
+- The brand profile is re-applied when the brand version changes (with a `.bak` copy), instead of only on first run.
+
+### Known limitations
+
+- The install password is a distribution gate, not a security boundary; the appended MSI can still be extracted by anyone who obtains the installer.
+- A pre-existing LibreOffice shares its ProductCode with the bundled engine, so Chenyi Office reuses it rather than installing a fully isolated copy.
+- No Windows 10/11 hardware test was available; verification was done with cross-compilation and Wine where possible.
+
 ## [0.1.4] — 2026-11-15
 
 ### Added
@@ -88,6 +119,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.5]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.2

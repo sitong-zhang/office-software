@@ -12,6 +12,10 @@ out/
 dist/
 *.o
 *.obj
+installer/welcome.png
+
+# Uploaded review material
+.uploads/
 
 # OS and editor files
 .DS_Store

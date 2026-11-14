@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.1.4** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
+Current release: **v0.1.5** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, passwordless updates, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -22,7 +22,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [x] Installer with engine payload, shortcuts, registry, and uninstaller
 - [x] Brand identity: logo, icon, installer background
 - [x] Authenticode signing (self-signed certificate; CA certificate pending)
-- [ ] Signed update manifests
+- [x] Authenticated updates (mandatory SHA-256 + pinned Authenticode publisher; manifest treated as an untrusted hint)
 
 ## Phase 2 — Interface rebuild (in progress)
 

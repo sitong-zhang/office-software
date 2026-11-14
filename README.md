@@ -4,22 +4,22 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.1.4-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.1.5-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.1.4 — Windows preview with engine-level branding.** The installer bundles the LibreOffice 26.8.3 engine, a custom launcher, and branded engine artwork. Writer, Calc, Impress, and Draw start in the **Tabbed** notebookbar layout with the **Sifr** icon theme; the product name is **Chenyi Office**, the splash and About/Start Center marks are custom, and upstream tips and promotional infobars are disabled. The installer is Authenticode-signed with a self-signed certificate. Deep VCL-level dialog and widget redesign remains the next track.
+**v0.1.5 — Windows preview with passwordless updates.** The installer bundles the LibreOffice 26.8.3 engine, a custom launcher, and branded engine artwork. Writer, Calc, Impress, and Draw start in the **Tabbed** notebookbar layout with the **Sifr** icon theme; the product name is **Chenyi Office**, the splash and About/Start Center marks are custom, and upstream tips and promotional infobars are disabled. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature. Deep VCL-level dialog and widget redesign remains the next track.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.1.4-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.1.5-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
-- **Notes:** the installer requires the install password, distributed separately from this repository. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
+- **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
 
 ## What the launcher does
 
 1. Shows the branded splash animation.
-2. Reads `latest.json` from the latest GitHub Release. If a newer version exists, a blocking update screen downloads, verifies (SHA-256), installs, and restarts — with no exit or skip action.
+2. Reads `latest.json` from the latest GitHub Release. If a newer version exists, a blocking update screen downloads, verifies the SHA-256 and the pinned publisher signature, installs silently with `/S`, and restarts — with no exit or skip action.
 3. Reads `announcements.json` from the repository and shows unseen notices once, dismissed with **继续**.
 4. Prepares a dedicated LibreOffice profile with the Chenyi Office interface settings and starts the engine.
 
@@ -34,7 +34,9 @@ The installer writes a signed-in launcher and a brand profile. On first start, t
 - No first-run tip, What's New, Get Involved, or Donate infobars.
 - A clean first-run experience behind the Chenyi Office splash.
 
-The profile is applied once and then left alone, so user customization is preserved across updates. See [docs/ui.md](docs/ui.md).
+The profile is re-applied when the brand version changes, with the previous file kept as `registrymodifications.xcu.bak`, so new interface defaults reach existing users. See [docs/ui.md](docs/ui.md).
+
+If LibreOffice is already installed, the installer reuses it as the engine, leaves its splash and About artwork untouched, and records that fact so uninstalling Chenyi Office does not remove the user's own LibreOffice.
 
 ## Product direction
 
@@ -75,19 +77,19 @@ The profile is applied once and then left alone, so user customization is preser
 
 The Windows installer is cross-built on Linux with MinGW-w64; no Windows machine is required until the LibreOffice interface is patched at source level.
 
-Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`.
+Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`, `osslsigncode`, `openssl`.
 
 ```bash
-./scripts/build-windows.sh
+SIGN_PFX_PASS=... ./scripts/build-windows.sh
 ```
 
-The script generates brand assets, compiles and signs the launcher and uninstaller, downloads the pinned LibreOffice MSI, compiles the installer, appends the engine payload, and signs the final installer. Output: `dist/ChenyiOffice-0.1.4-x64.exe` plus its SHA-256 and the public signing certificate.
+The script generates brand assets, compiles and signs the launcher and uninstaller, verifies the pinned LibreOffice MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.1.5-x64.exe` plus its SHA-256 and the public signing certificate.
 
 See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 
 ## Security
 
-The install password is a distribution gate, not a cryptographic protection: the payload can be extracted by anyone who obtains the installer. Do not reuse it for anything sensitive. The installer and launcher carry a self-signed Authenticode signature; Windows shows "Unknown publisher" until the certificate is trusted. See [docs/signing.md](docs/signing.md). Report vulnerabilities according to [SECURITY.md](SECURITY.md).
+The install password is a distribution gate, not a cryptographic protection: the payload can be extracted by anyone who obtains the installer. Do not reuse it for anything sensitive. Updates are accepted only from an installer signed by the pinned Chenyi Office certificate, even though the certificate is self-signed; Windows shows "Unknown publisher" until the certificate is trusted. See [docs/signing.md](docs/signing.md) and [SECURITY.md](SECURITY.md).
 
 ## Contributing
 

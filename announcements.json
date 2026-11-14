@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T06:12:00+08:00",
+  "updated_at": "2026-11-15T07:30:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-15-v0-1-5",
+      "title": "v0.1.5 已发布：更新不再需要密码",
+      "body": "Chenyi Office（胡辰逸定制版）v0.1.5 已发布。\n\n从这一版开始，安装密码只在第一次下载安装时使用；以后所有更新都不再询问密码，下载完成后直接静默安装并重启。\n\n本次还补强了更新安全：安装包必须带有 Chenyi Office 的发布者签名，SHA-256 必须完整匹配，重定向不能离开 GitHub 域名；卸载会清理本地配置，重装后不会带回旧的已读公告。\n\n如果电脑上本来就装有 LibreOffice，安装器会复用它作为内核，不改动它的开屏和关于图，卸载时也不会删除它。\n\n安装包与公开证书见 GitHub Releases。",
+      "severity": "important",
+      "published_at": "2026-11-15T07:20:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-1-4",
       "title": "v0.1.4 已发布：引擎级品牌界面",

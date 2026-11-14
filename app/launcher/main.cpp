@@ -16,6 +16,9 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shlwapi.h>
+#include <wincrypt.h>
+#include <wintrust.h>
+#include <softpub.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -34,8 +37,12 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.4";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.4";
+static const wchar_t* kVersion = L"0.1.5";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.5";
+
+// SHA-1 thumbprint of the code-signing certificate. Updates are accepted only
+// from an installer signed by this certificate, even if the manifest is tampered with.
+static const wchar_t* kExpectedThumbprint = L"FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4";
 
 static const char* kManifestUrl =
     "https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json";
@@ -74,6 +81,41 @@ static std::wstring FormatBytes(uint64_t bytes) {
 static bool FileExists(const std::wstring& path) {
   DWORD a = GetFileAttributesW(path.c_str());
   return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+static bool ReadTextFile(const std::wstring& path, std::string& out) {
+  out.clear();
+  FILE* f = _wfopen(path.c_str(), L"rb");
+  if (!f) return false;
+  char buffer[512];
+  size_t n = fread(buffer, 1, sizeof(buffer), f);
+  fclose(f);
+  out.assign(buffer, n);
+  while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
+  return true;
+}
+
+static bool IsAllowedHost(const std::wstring& host) {
+  static const wchar_t* hosts[] = {
+      L"github.com",
+      L"objects.githubusercontent.com",
+      L"release-assets.githubusercontent.com",
+      L"raw.githubusercontent.com",
+      L"cdn.jsdelivr.net",
+  };
+  for (const wchar_t* allowed : hosts) {
+    if (_wcsicmp(host.c_str(), allowed) == 0) return true;
+  }
+  return false;
+}
+
+static bool IsAllowedUrl(const std::wstring& url) {
+  URL_COMPONENTS parts{};
+  parts.dwStructSize = sizeof(parts);
+  parts.dwHostNameLength = (DWORD)-1;
+  if (!WinHttpCrackUrl(url.c_str(), (DWORD)url.size(), 0, &parts)) return false;
+  if (parts.nScheme != INTERNET_SCHEME_HTTPS) return false;
+  return IsAllowedHost(std::wstring(parts.lpszHostName, parts.dwHostNameLength));
 }
 
 // ---------------------------------------------------------------------------
@@ -358,6 +400,10 @@ static bool HttpRequest(const std::wstring& url, std::string* body, const std::w
   if (parts.dwExtraInfoLength)
     path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
   bool secure = parts.nScheme == INTERNET_SCHEME_HTTPS;
+  if (!secure || !IsAllowedHost(host)) {
+    err = L"不安全的更新地址";
+    return false;
+  }
 
   HttpHandle session, connection, request;
   session.h = WinHttpOpen(kUserAgent, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
@@ -385,10 +431,25 @@ static bool HttpRequest(const std::wstring& url, std::string* body, const std::w
   WinHttpAddRequestHeaders(request.h, L"Cache-Control: no-cache\r\n", (DWORD)-1,
                            WINHTTP_ADDREQ_FLAG_ADD);
 
+  // Follow redirects, but never downgrade HTTPS to HTTP.
+  DWORD redirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
+  WinHttpSetOption(request.h, WINHTTP_OPTION_REDIRECT_POLICY, &redirectPolicy,
+                   sizeof(redirectPolicy));
+
   if (!WinHttpSendRequest(request.h, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0,
                           0, 0) ||
       !WinHttpReceiveResponse(request.h, nullptr)) {
     err = L"网络连接失败";
+    return false;
+  }
+
+  // WinHTTP follows redirects automatically; make sure the final URL is still
+  // on an allowed GitHub/CDN host before reading any content.
+  wchar_t finalUrl[2048] = {0};
+  DWORD finalUrlSize = sizeof(finalUrl);
+  if (!WinHttpQueryOption(request.h, WINHTTP_OPTION_URL, finalUrl, &finalUrlSize) ||
+      !IsAllowedUrl(finalUrl)) {
+    err = L"更新地址被重定向到不受信任的主机";
     return false;
   }
 
@@ -457,7 +518,9 @@ static bool HttpRequest(const std::wstring& url, std::string* body, const std::w
 
   if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
   if (body == nullptr && expectedSize > 0 && done != expectedSize) {
-    // Size mismatch is tolerated here; the SHA-256 check is authoritative.
+    err = L"下载文件大小不匹配";
+    DeleteFileW(filePath.c_str());
+    return false;
   }
   return true;
 }
@@ -517,6 +580,81 @@ cleanup:
 }
 
 // ---------------------------------------------------------------------------
+// Authenticode verification
+// ---------------------------------------------------------------------------
+
+static std::wstring SignerThumbprint(const std::wstring& path) {
+  HCERTSTORE store = nullptr;
+  HCRYPTMSG message = nullptr;
+  std::wstring result;
+
+  if (!CryptQueryObject(CERT_QUERY_OBJECT_FILE, path.c_str(),
+                        CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+                        CERT_QUERY_FORMAT_FLAG_BINARY, 0, nullptr, nullptr, nullptr, &store,
+                        &message, nullptr)) {
+    return result;
+  }
+
+  DWORD size = 0;
+  if (CryptMsgGetParam(message, CMSG_SIGNER_INFO_PARAM, 0, nullptr, &size) && size > 0) {
+    std::vector<BYTE> buffer(size);
+    if (CryptMsgGetParam(message, CMSG_SIGNER_INFO_PARAM, 0, buffer.data(), &size)) {
+      auto* signer = reinterpret_cast<CMSG_SIGNER_INFO*>(buffer.data());
+      CERT_INFO certInfo{};
+      certInfo.Issuer = signer->Issuer;
+      certInfo.SerialNumber = signer->SerialNumber;
+      PCCERT_CONTEXT cert = CertFindCertificateInStore(
+          store, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0, CERT_FIND_SUBJECT_CERT, &certInfo,
+          nullptr);
+      if (cert) {
+        BYTE hash[20] = {0};
+        DWORD hashSize = sizeof(hash);
+        if (CertGetCertificateContextProperty(cert, CERT_SHA1_HASH_PROP_ID, hash, &hashSize)) {
+          static const wchar_t* digits = L"0123456789ABCDEF";
+          for (DWORD i = 0; i < hashSize; ++i) {
+            result.push_back(digits[hash[i] >> 4]);
+            result.push_back(digits[hash[i] & 0xF]);
+          }
+        }
+        CertFreeCertificateContext(cert);
+      }
+    }
+  }
+
+  if (message) CryptMsgClose(message);
+  if (store) CertCloseStore(store, 0);
+  return result;
+}
+
+static bool VerifyInstallerSignature(const std::wstring& path) {
+  if (!FileExists(path)) return false;
+
+  std::wstring thumbprint = SignerThumbprint(path);
+  if (thumbprint.empty() || _wcsicmp(thumbprint.c_str(), kExpectedThumbprint) != 0) return false;
+
+  WINTRUST_FILE_INFO fileInfo{};
+  fileInfo.cbStruct = sizeof(fileInfo);
+  fileInfo.pcwszFilePath = path.c_str();
+
+  WINTRUST_DATA data{};
+  data.cbStruct = sizeof(data);
+  data.dwUIChoice = WTD_UI_NONE;
+  data.fdwRevocationChecks = WTD_REVOKE_NONE;
+  data.dwUnionChoice = WTD_CHOICE_FILE;
+  data.pFile = &fileInfo;
+  data.dwStateAction = WTD_STATEACTION_VERIFY;
+
+  GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+  LONG status = WinVerifyTrust(nullptr, &action, &data);
+  data.dwStateAction = WTD_STATEACTION_CLOSE;
+  WinVerifyTrust(nullptr, &action, &data);
+
+  // The publisher certificate is self-signed and therefore not in the Windows
+  // trust store. The pinned thumbprint above is the identity check.
+  return status == ERROR_SUCCESS || status == CERT_E_UNTRUSTEDROOT;
+}
+
+// ---------------------------------------------------------------------------
 // Version and time helpers
 // ---------------------------------------------------------------------------
 
@@ -564,10 +702,13 @@ static bool IsoToTime(const std::string& s, time_t& out) {
   if (tpos != std::string::npos) z = s.find_first_of("+-Zz", tpos + 1);
   if (z != std::string::npos && s[z] != 'Z' && s[z] != 'z') {
     int oh = 0, om = 0;
-    if (sscanf(s.c_str() + z + 1, "%d:%d", &oh, &om) == 2) {
-      offset = oh * 3600 + om * 60;
-      if (s[z] == '-') offset = -offset;
+    if (sscanf(s.c_str() + z + 1, "%2d:%2d", &oh, &om) != 2 &&
+        sscanf(s.c_str() + z + 1, "%2d%2d", &oh, &om) != 2) {
+      oh = 0;
+      om = 0;
     }
+    offset = oh * 3600 + om * 60;
+    if (s[z] == '-') offset = -offset;
   }
   out = (time_t)(base - offset);
   return true;
@@ -689,6 +830,7 @@ struct Announcement {
   std::string id;
   std::wstring title;
   std::wstring body;
+  time_t published = 0;
 };
 
 static UpdateInfo g_update;
@@ -699,6 +841,47 @@ static volatile LONG g_downloadState = 0;  // 0 none, 1 running, 2 verified, 3 f
 static volatile LONG g_downloadPercent = 0;
 static std::wstring g_downloadError;
 static std::wstring g_installerPath;
+static CRITICAL_SECTION g_dataLock;
+static std::wstring g_status = L"正在检查更新…";
+
+static void SetDownloadError(const std::wstring& text) {
+  EnterCriticalSection(&g_dataLock);
+  g_downloadError = text;
+  LeaveCriticalSection(&g_dataLock);
+}
+
+static std::wstring GetDownloadError() {
+  EnterCriticalSection(&g_dataLock);
+  std::wstring text = g_downloadError;
+  LeaveCriticalSection(&g_dataLock);
+  return text;
+}
+
+static void SetInstallerPath(const std::wstring& path) {
+  EnterCriticalSection(&g_dataLock);
+  g_installerPath = path;
+  LeaveCriticalSection(&g_dataLock);
+}
+
+static std::wstring GetInstallerPath() {
+  EnterCriticalSection(&g_dataLock);
+  std::wstring path = g_installerPath;
+  LeaveCriticalSection(&g_dataLock);
+  return path;
+}
+
+static void SetStatus(const std::wstring& text) {
+  EnterCriticalSection(&g_dataLock);
+  g_status = text;
+  LeaveCriticalSection(&g_dataLock);
+}
+
+static std::wstring GetStatus() {
+  EnterCriticalSection(&g_dataLock);
+  std::wstring text = g_status;
+  LeaveCriticalSection(&g_dataLock);
+  return text;
+}
 
 static void LoadAnnouncements(const std::set<std::string>& seen) {
   wchar_t stamp[32];
@@ -767,12 +950,16 @@ static void LoadAnnouncements(const std::set<std::string>& seen) {
     a.id = id;
     a.title = Utf8ToWide(entry.Str("title"));
     a.body = Utf8ToWide(entry.Str("body"));
+    a.published = published;
     if (a.title.empty()) continue;
     g_announcements.push_back(a);
   }
 
   std::sort(g_announcements.begin(), g_announcements.end(),
-            [](const Announcement& a, const Announcement& b) { return a.id < b.id; });
+            [](const Announcement& a, const Announcement& b) {
+              if (a.published != b.published) return a.published < b.published;
+              return a.id < b.id;
+            });
   LogLine(L"unseen announcements: " + std::to_wstring(g_announcements.size()));
 }
 
@@ -788,21 +975,39 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
     std::string parseError;
     if (json::Parser(body).Parse(root, parseError)) {
       std::string remote = root.Str("version");
+      std::string minSupported = root.Str("min_supported_version");
       LogLine(L"manifest version: " + Utf8ToWide(remote));
-      if (!remote.empty() && VersionGreater(Utf8ToWide(remote), kVersion)) {
-        g_update.version = Utf8ToWide(remote);
-        g_update.mandatory = true;
+
+      bool newer = !remote.empty() && VersionGreater(Utf8ToWide(remote), kVersion);
+      bool belowMinimum =
+          !minSupported.empty() && VersionGreater(Utf8ToWide(minSupported), kVersion);
+
+      if (newer || belowMinimum) {
         const json::Value* installer = root.Get("installer");
         if (installer) {
-          g_update.url = Utf8ToWide(installer->Str("url"));
-          g_update.sha256 = Utf8ToWide(installer->Str("sha256"));
-          g_update.size = (uint64_t)installer->Num("size", 0);
+          std::string url = installer->Str("url");
+          std::string sha = installer->Str("sha256");
+          uint64_t size = (uint64_t)installer->Num("size", 0);
+          bool manifestConsistent =
+              minSupported.empty() || !VersionGreater(Utf8ToWide(minSupported), Utf8ToWide(remote));
+          bool valid = !remote.empty() && !url.empty() && url.rfind("https://", 0) == 0 &&
+                       sha.size() == 64 && size > 0 && manifestConsistent;
+          if (valid) {
+            g_update.version = Utf8ToWide(remote);
+            g_update.mandatory = true;
+            g_update.url = Utf8ToWide(url);
+            g_update.sha256 = Utf8ToWide(sha);
+            g_update.size = size;
+            SetStatus(L"发现新版本");
+            InterlockedExchange(&g_checkState, 1);
+            return 0;
+          }
+          LogLine(L"manifest update rejected: missing url, sha256, or size");
+        } else {
+          LogLine(L"manifest update rejected: installer object missing");
         }
-        if (!g_update.url.empty()) {
-          InterlockedExchange(&g_checkState, 1);
-          return 0;
-        }
-        g_update = UpdateInfo();
+      } else {
+        SetStatus(L"已是最新版本");
       }
     }
   }
@@ -811,6 +1016,7 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
     LoadAnnouncements(LoadSeen());
   }
 
+  SetStatus(manifestOk ? L"已是最新版本" : L"无法检查更新");
   InterlockedExchange(&g_checkState, manifestOk ? 1 : 2);
   return 0;
 }
@@ -842,7 +1048,7 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
                         },
                         err);
   if (!ok) {
-    g_downloadError = err.empty() ? L"下载失败" : err;
+    SetDownloadError(err.empty() ? L"下载失败" : err);
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
@@ -850,19 +1056,27 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
   std::wstring digest;
   if (!Sha256File(path, digest)) {
     DeleteFileW(path.c_str());
-    g_downloadError = L"无法校验安装包";
+    SetDownloadError(L"无法校验安装包");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
 
-  if (!g_update.sha256.empty() && _wcsicmp(digest.c_str(), g_update.sha256.c_str()) != 0) {
+  if (g_update.sha256.size() != 64 ||
+      _wcsicmp(digest.c_str(), g_update.sha256.c_str()) != 0) {
     DeleteFileW(path.c_str());
-    g_downloadError = L"安装包校验失败，已删除下载文件";
+    SetDownloadError(L"安装包校验失败，已删除下载文件");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
 
-  g_installerPath = path;
+  if (!VerifyInstallerSignature(path)) {
+    DeleteFileW(path.c_str());
+    SetDownloadError(L"安装包发布者签名无效，已拒绝更新");
+    InterlockedExchange(&g_downloadState, 3);
+    return 0;
+  }
+
+  SetInstallerPath(path);
   InterlockedExchange(&g_downloadState, 2);
   return 0;
 }
@@ -881,7 +1095,6 @@ static int g_screen = 0;  // 0 splash, 1 announcement, 2 update, 3 downloading, 
 static size_t g_announcementIndex = 0;
 static int g_scroll = 0;
 static int g_scrollMax = 0;
-static std::wstring g_status = L"正在检查更新…";
 
 #define S(x) MulDiv((x), g_dpi, 96)
 
@@ -958,7 +1171,7 @@ static void DrawSplash(HDC dc) {
                RGB(150, 170, 158), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
 
   RECT status{pad, g_height - S(74), g_width - S(220), g_height - S(46)};
-  DrawTextLine(dc, g_status, status, 12, FW_NORMAL, RGB(150, 170, 158), L"Microsoft YaHei UI",
+  DrawTextLine(dc, GetStatus(), status, 12, FW_NORMAL, RGB(150, 170, 158), L"Microsoft YaHei UI",
                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
   RECT version{g_width - S(220), g_height - S(74), g_width - pad, g_height - S(46)};
@@ -1077,7 +1290,7 @@ static void DrawError(HDC dc) {
                L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
 
   RECT msg{pad, S(168), g_width - pad, S(230)};
-  DrawTextLine(dc, g_downloadError, msg, 15, FW_NORMAL, RGB(226, 166, 158),
+  DrawTextLine(dc, GetDownloadError(), msg, 15, FW_NORMAL, RGB(226, 166, 158),
                L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
 
   RECT linkLabel{pad, S(248), g_width - pad, S(272)};
@@ -1127,7 +1340,17 @@ static std::wstring FileUrlFromPath(const std::wstring& path) {
 static void EnsureProfile() {
   std::wstring dir = ProfileDirectory();
   std::wstring path = dir + L"\\user\\registrymodifications.xcu";
-  if (FileExists(path)) return;
+  std::wstring marker = dir + L"\\brand-version.txt";
+
+  std::string installedVersion;
+  if (FileExists(path) && ReadTextFile(marker, installedVersion) &&
+      installedVersion == WideToUtf8(kVersion)) {
+    return;
+  }
+
+  if (FileExists(path)) {
+    CopyFileW(path.c_str(), (path + L".bak").c_str(), FALSE);
+  }
 
   HRSRC res = FindResourceW(g_instance, MAKEINTRESOURCEW(106), RT_RCDATA);
   if (!res) {
@@ -1148,7 +1371,14 @@ static void EnsureProfile() {
   DWORD written = 0;
   WriteFile(file, bytes, size, &written, nullptr);
   CloseHandle(file);
-  LogLine(L"brand profile created: " + dir);
+
+  FILE* versionFile = _wfopen(marker.c_str(), L"wb");
+  if (versionFile) {
+    std::string version = WideToUtf8(kVersion);
+    fwrite(version.data(), 1, version.size(), versionFile);
+    fclose(versionFile);
+  }
+  LogLine(L"brand profile applied for " + std::wstring(kVersion));
 }
 
 static void LaunchEngine() {
@@ -1192,8 +1422,8 @@ static void FinishAnnouncements() {
 }
 
 static void StartDownload() {
-  g_downloadError.clear();
-  g_installerPath.clear();
+  SetDownloadError(L"");
+  SetInstallerPath(L"");
   InterlockedExchange(&g_downloadPercent, 0);
   InterlockedExchange(&g_downloadState, 1);
   g_screen = 3;
@@ -1202,24 +1432,39 @@ static void StartDownload() {
 }
 
 static void RunInstallerAndRestart() {
+  std::wstring installer = GetInstallerPath();
+  if (installer.empty()) {
+    SetDownloadError(L"没有可用的安装包，请重新下载。");
+    g_screen = 4;
+    InvalidateRect(g_window, nullptr, FALSE);
+    return;
+  }
   std::wstring params = L"/S";
   SHELLEXECUTEINFOW info{};
   info.cbSize = sizeof(info);
   info.fMask = SEE_MASK_NOCLOSEPROCESS;
   info.lpVerb = L"runas";
-  info.lpFile = g_installerPath.c_str();
+  info.lpFile = installer.c_str();
   info.lpParameters = params.c_str();
   info.nShow = SW_SHOWNORMAL;
 
   if (!ShellExecuteExW(&info)) {
-    g_downloadError = L"无法启动安装程序，请允许管理员权限后重试。";
+    SetDownloadError(L"无法启动安装程序，请允许管理员权限后重试。");
     g_screen = 4;
     InvalidateRect(g_window, nullptr, FALSE);
     return;
   }
   if (info.hProcess) {
+    DWORD code = 1;
     WaitForSingleObject(info.hProcess, INFINITE);
+    GetExitCodeProcess(info.hProcess, &code);
     CloseHandle(info.hProcess);
+    if (code != 0) {
+      SetDownloadError(L"更新安装失败，请重新运行安装包或联系发布者。");
+      g_screen = 4;
+      InvalidateRect(g_window, nullptr, FALSE);
+      return;
+    }
   }
 
   wchar_t self[MAX_PATH] = {0};
@@ -1335,7 +1580,16 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
 
     case WM_CLOSE:
-      // No close path while an update is pending or being downloaded.
+      // The splash can be closed; the announcement gate behaves like the
+      // "continue" button. Mandatory updates and downloads cannot be closed.
+      if (g_screen == 0) {
+        PostQuitMessage(0);
+        return 0;
+      }
+      if (g_screen == 1) {
+        FinishAnnouncements();
+        return 0;
+      }
       return 0;
 
     case WM_DESTROY:
@@ -1348,6 +1602,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   g_instance = instance;
   SetProcessDPIAware();
+  InitializeCriticalSection(&g_dataLock);
+
+  HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\ChenyiOfficeLauncher");
+  if (singleInstance && GetLastError() == ERROR_ALREADY_EXISTS) {
+    CloseHandle(singleInstance);
+    return 0;
+  }
 
   HDC screen = GetDC(nullptr);
   g_dpi = screen ? GetDeviceCaps(screen, LOGPIXELSX) : 96;
@@ -1385,5 +1646,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
+  DeleteCriticalSection(&g_dataLock);
+  if (singleInstance) CloseHandle(singleInstance);
   return 0;
 }

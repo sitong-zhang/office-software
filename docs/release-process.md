@@ -10,7 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/):
 - `MINOR` — new features and user-visible improvements
 - `PATCH` — bug fixes and security updates
 
-Tags use a `v` prefix (`v0.1.4`). Pre-releases use suffixes (`0.2.0-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
+Tags use a `v` prefix (`v0.1.5`). Pre-releases use suffixes (`0.2.0-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
 
 ## Checklist
 
@@ -27,14 +27,14 @@ Tags use a `v` prefix (`v0.1.4`). Pre-releases use suffixes (`0.2.0-beta.1`). On
 6. **Tag** — create an annotated tag and push it:
 
    ```bash
-   git tag -a v0.1.4 -m "Chenyi Office（胡辰逸定制版） 0.1.4"
-   git push origin v0.1.4
+   git tag -a v0.1.5 -m "Chenyi Office（胡辰逸定制版） 0.1.5"
+   git push origin v0.1.5
    ```
 
 7. **Publish** — create a GitHub Release from the tag:
-   - title: `Chenyi Office（胡辰逸定制版） 0.1.4`
+   - title: `Chenyi Office（胡辰逸定制版） 0.1.5`
    - notes: highlights, changes, known issues
-   - assets: `ChenyiOffice-0.1.4-x64.exe` and its `.sha256`
+   - assets: `ChenyiOffice-0.1.5-x64.exe`, its `.sha256`, and `ChenyiOffice-code-signing.cer`
    - do not mark it as a pre-release.
 8. **Manifest** — confirm `.github/workflows/update-manifest.yml` attached `latest.json` with the right version, hash, size, and installer URL. From this point the previous version is blocked on its next launch.
 9. **Announce** — update `announcements.json` with a new unique id so installed clients show the release notice, and post in [Discussions → Announcements](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
@@ -58,7 +58,7 @@ Tags use a `v` prefix (`v0.1.4`). Pre-releases use suffixes (`0.2.0-beta.1`). On
 
 ## Install
 
-Download `ChenyiOffice-<version>-x64.exe`, verify the SHA-256, and enter the install password when prompted. The install password is provided separately.
+Download `ChenyiOffice-<version>-x64.exe`, verify the SHA-256, and enter the install password when prompted for the first installation. The install password is provided separately and is never required for updates.
 ```
 
 ## Update channels

@@ -2,7 +2,7 @@
 
 The product is rebuilt around its interface. The goal is not a new coat of paint on the upstream shell, but a consistent, quieter workspace that a first-time user can operate without instruction.
 
-## Implemented in v0.1.4
+## Implemented in v0.1.5
 
 - **Tabbed notebookbar** is the default UI for Writer, Calc, Impress, and Draw, replacing the classic menu-plus-toolbars layout.
 - **Sifr icon theme** replaces the default colorful icon set.
@@ -62,7 +62,7 @@ The splash is the first brand impression and the first update checkpoint. Implem
 - **Behavior**: not interactive; if the update check returns "up to date", the main window opens immediately after the animation completes.
 - **First launch**: one additional line of setup copy; total time capped at 2.5 s.
 - **Reduced motion**: cross-fade only, 300 ms.
-- **Failure**: if the update check cannot complete, the splash exits to the app with a non-blocking notice and rechecks later.
+- **Failure**: if the update check cannot complete, the splash exits to the app with a non-blocking notice; the next launch retries.
 
 ## Accessibility
 
@@ -70,6 +70,8 @@ The splash is the first brand impression and the first update checkpoint. Implem
 - Contrast meets WCAG 2.1 AA for text and controls.
 - High-contrast and dark themes are part of the token set, not an afterthought.
 - Animation respects the Windows "Show animations" and reduced-motion settings.
+
+Current limitations: the launcher, installer, and uninstaller use custom-drawn GDI surfaces with fixed layouts. Enter activates the primary action and the installer password field takes focus, but there is no full Tab focus chain, no UI Automation semantics, and no high-contrast theme yet. A full accessibility review is part of Phase 2.
 
 ## Deliverables before the first preview
 

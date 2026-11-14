@@ -40,7 +40,7 @@ The file is attached to every release by the workflow in `.github/workflows/upda
 ## Launch sequence
 
 1. Splash starts immediately and renders the update-check state.
-2. The client requests the manifest with a 10 s timeout, up to 3 attempts, and `Cache-Control: no-cache`.
+2. The client makes one request to the manifest with 8 s connect/send/receive timeouts and a 12 s total timeout, plus `Cache-Control: no-cache`. There is no automatic retry loop; the next launch retries.
 3. If the remote `version` is greater than the running version, or the running version is below `min_supported_version`, the splash transitions to the **mandatory update screen**.
 4. Otherwise the application opens normally, after any unseen announcements have been shown (see [announcements.md](announcements.md)).
 
@@ -55,25 +55,26 @@ The file is attached to every release by the workflow in `.github/workflows/upda
 
 ## Download, verify, install
 
-1. Download to a temporary directory if it has enough free space (size × 3).
-2. Verify size, then SHA-256 against the manifest. A mismatch deletes the file and offers a retry.
-3. Verify the Authenticode signature of the installer and that the publisher matches the expected certificate.
-4. Run the installer silently (`/quiet` for MSI, `/S` for the EXE wrapper), then relaunch the app.
-5. If any step fails, show the manual download link and a retry; the app remains blocked.
+1. Download to a temporary directory.
+2. Verify size, then SHA-256 against the manifest. A missing or mismatched hash is a failure, never a skip.
+3. Verify the Authenticode signature of the installer and require it to be signed by the pinned Chenyi Office certificate. A self-signed certificate is expected; the pinned thumbprint, not the Windows trust store, is the identity check.
+4. Run the installer silently (`/S` for the EXE wrapper). Silent mode is reserved for updates: the installer refuses it when Chenyi Office is not already installed, and it never asks for the install password. After installation the launcher relaunches.
+5. If any step fails, show the retry screen; the app remains blocked.
 
 ## Offline and failure behavior
 
-- If the manifest cannot be fetched (offline, DNS failure, timeout), the app may open with a persistent "update check unavailable" notice and rechecks every 30 minutes.
+- If the manifest cannot be fetched (offline, DNS failure, timeout), the splash shows "无法检查更新" and the app opens without blocking. The next launch retries.
 - Once a newer version has been confirmed, the block applies. It is not possible to continue on the old build.
 - An update cannot be deferred by changing the system clock; the running version is compared to the manifest, not to time.
 
 ## Security requirements
 
-- HTTPS only, with the repository host pinned; redirects must stay on GitHub domains.
-- Manifest signature verification (Ed25519 or minisign) is required before the first public release; the public key ships with the application.
-- Installs are rejected if the signature, hash, or publisher does not match.
-- Downgrades are never installed; an emergency rollback is published as a higher version number.
-- The updater runs with the same integrity level as the application and never requests elevation beyond what the installer requires.
+- HTTPS only. The initial URL and the final URL after redirects must both use an allowlisted host (`github.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com`, `raw.githubusercontent.com`, `cdn.jsdelivr.net`); HTTPS-to-HTTP redirects are disabled.
+- `installer.sha256` is mandatory and must be 64 hex characters. An empty or malformed value rejects the manifest.
+- The downloaded installer must carry an Authenticode signature whose signer certificate thumbprint matches the value compiled into the launcher. This is the trust anchor: a tampered manifest cannot make the client run an unsigned binary.
+- The manifest itself is not separately signed. It is treated as an untrusted hint; integrity is enforced on the downloaded envelope instead.
+- Downgrades are never installed: the remote version must be greater than the running version (or the running version must be below `min_supported_version`), and a manifest whose `min_supported_version` is greater than its `version` is rejected. A rollback is published as a higher version number.
+- The updater runs with the same integrity level as the application and requests elevation only when launching the installer.
 
 ## Release-side automation
 
@@ -88,9 +89,10 @@ If a release has no matching installer, the workflow exits without publishing a 
 
 ## Acceptance criteria
 
-- [ ] Fresh install checks on every launch.
-- [ ] Published newer release blocks the app within one launch.
-- [ ] Update screen has no dismissal path.
-- [ ] Tampered download is rejected and surfaces a retry.
-- [ ] Installer elevation and silent-install flags verified on Windows 10 and 11.
-- [ ] Relaunch after install reports the new version.
+- [x] Fresh install checks on every launch.
+- [x] Published newer release blocks the app within one launch.
+- [x] Update screen has no dismissal path.
+- [x] Tampered download and unsigned installer are rejected and surface a retry.
+- [x] Updates never ask for the install password.
+- [ ] Installer elevation and silent-install flags verified on Windows 10 and 11 hardware.
+- [ ] Relaunch after install reports the new version on Windows hardware.

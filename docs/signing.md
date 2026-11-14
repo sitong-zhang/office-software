@@ -11,7 +11,7 @@ All Windows executables are signed with Authenticode (SHA-256). The current cert
 | Validity | 10 years from generation |
 | Public certificate | `dist/ChenyiOffice-code-signing.cer` (attached to each release) |
 | Private key | `build/signing/chenyi.pfx`, never committed |
-| PFX password | Local build only; override with `SIGN_PFX_PASS` |
+| PFX password | Local build only; set `SIGN_PFX_PASS` or a git-ignored `build/signing/password.txt` |
 
 The build script signs three binaries:
 
@@ -24,13 +24,16 @@ The build script signs three binaries:
 On Linux:
 
 ```bash
-osslsigncode verify -in dist/ChenyiOffice-0.1.4-x64.exe
+osslsigncode verify -in dist/ChenyiOffice-0.1.5-x64.exe \
+  -CAfile build/signing/chenyi.crt
 ```
+
+Without `-CAfile`, `osslsigncode` reports a failure because the self-signed root is not in the system CA bundle; the signature itself is still intact.
 
 On Windows PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\ChenyiOffice-0.1.4-x64.exe | Format-List
+Get-AuthenticodeSignature .\ChenyiOffice-0.1.5-x64.exe | Format-List
 ```
 
 A self-signed signature reports `Status: UnknownError` or "Unknown publisher" on a machine that has not trusted the certificate, even though the signature is cryptographically intact.
@@ -61,4 +64,6 @@ No source changes are required. After switching, update this document and the fi
 
 - The private key must never be committed. `build/` is ignored by Git.
 - Keep an offline backup of the key; losing it prevents signing updates with a consistent publisher identity.
+- The build script never contains a default password and refuses to publish in CI without signing material (`REQUIRE_SIGN=1`).
+- The launcher pins the signer certificate thumbprint (`FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4`). If the certificate is ever replaced, a new launcher must ship first with the new thumbprint; otherwise updates will be rejected.
 - The update manifest hash and the installer signature are independent checks; both are verified by the launcher.

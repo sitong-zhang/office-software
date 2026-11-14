@@ -1,13 +1,13 @@
 # Architecture
 
-This document describes the shipped v0.1.4 implementation and the planned path to source-level interface work.
+This document describes the shipped v0.1.5 implementation and the planned path to source-level interface work.
 
 ## Current implementation
 
 The product is layered so the Window shell can evolve independently of the office engine:
 
 ```text
-Installer (password gate)
+Installer (password gate for first install)
    └─ installs
       ├─ Chenyi Office launcher  (%ProgramFiles%\ChenyiOffice\ChenyiOffice.exe)
       └─ LibreOffice 26.8.3 engine (%ProgramFiles%\LibreOffice)
@@ -21,11 +21,13 @@ Launcher
 ### Installer
 
 - Native Win32 application cross-compiled on Linux.
-- Welcome page with brand artwork, product introduction, password field, and **下一步确认**.
+- Welcome page with brand artwork, product introduction, password field, and **下一步确认**. The password is requested only for a fresh install; re-running the installer over an existing installation switches to an update screen without a password.
 - The password is stored as a SHA-256 hash and is distributed separately.
+- `/S` (or `--silent`) runs the update path with no UI and no password. It refuses to run when Chenyi Office is not already installed, so a fresh install cannot bypass the gate.
 - The LibreOffice MSI is appended to the installer with a 24-byte footer (`CHNYSET1`, offset, size) and extracted to `%TEMP%` during installation.
 - Installs the launcher and uninstaller, runs the MSI silently, writes registry values, creates Public Desktop and common Start Menu shortcuts, and registers an uninstall entry.
-- The uninstaller removes the engine through its MSI ProductCode, then the shell integration and files.
+- If a LibreOffice engine already exists before Chenyi Office, the MSI is skipped, engine artwork is left untouched, and `EnginePreExisting=1` is recorded. The uninstaller then removes only Chenyi Office and keeps the user's engine.
+- The uninstaller removes the engine through its MSI ProductCode when Chenyi Office installed it, then the shell integration, `%LOCALAPPDATA%\ChenyiOffice`, and program files.
 
 The install gate is a distribution control, not encryption. Anyone with the installer can extract the appended MSI.
 
@@ -33,13 +35,13 @@ The install gate is a distribution control, not encryption. Anyone with the inst
 
 - Native Win32, static runtime, no external dependencies.
 - Splash window; manifest fetch with timeout; blocking update screen with a single **Download and install** action and no exit path.
-- Download verification: size, SHA-256 from the manifest, then installer signature once signing is configured.
+- Download verification: size, mandatory SHA-256 from the manifest, then Authenticode verification against the pinned publisher certificate. Redirects must stay on allowlisted GitHub/CDN hosts; HTTPS-to-HTTP redirects are disabled.
 - Announcements: `announcements.json` with raw GitHub as primary and jsDelivr as fallback; seen ids stored in `%LOCALAPPDATA%\ChenyiOffice\state.ini`.
 - Engine discovery through `HKLM\Software\ChenyiOffice\EnginePath`, then standard LibreOffice paths.
 
 ### Interface layer
 
-The launcher embeds a `registrymodifications.xcu` template and writes it to `%LOCALAPPDATA%\ChenyiOffice\lo-profile\user` on first start. The engine is then launched with `-env:UserInstallation=file:///...`, which isolates the product profile from any other LibreOffice installation. The template selects the Tabbed notebookbar for all four applications, sets the Sifr icon theme, sets the product name to Chenyi Office, and disables upstream tips and promotional infobars.
+The launcher embeds a `registrymodifications.xcu` template and writes it to `%LOCALAPPDATA%\ChenyiOffice\lo-profile\user` on first start, then re-applies it when the brand version changes (keeping the previous file as `.bak`). The engine is then launched with `-env:UserInstallation=file:///...`, which isolates the product profile from any other LibreOffice installation. The template selects the Tabbed notebookbar for all four applications, sets the Sifr icon theme, sets the product name to Chenyi Office, and disables upstream tips and promotional infobars.
 
 The installer also writes engine brand artwork after the MSI completes: custom splash images and Start Center / About marks. This changes the visible engine chrome without modifying the MSI database.
 
@@ -61,7 +63,7 @@ The Windows engine build itself requires MSVC or a supported MinGW cross-build e
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.1.4-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.1.5-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 
@@ -78,16 +80,16 @@ Protocol details: [updater.md](updater.md).
 
 ## Continuous integration
 
-- `.github/workflows/build-installer.yml` rebuilds the installer on demand and on tags.
+- `.github/workflows/build-installer.yml` rebuilds the installer on demand and on tags; signing secrets are mandatory, so an unsigned artifact is never produced.
 - `.github/workflows/update-manifest.yml` publishes the update manifest on release.
 - `.github/workflows/validate-announcements.yml` validates the announcement feed on change.
 
-Planned additions: document round-trip tests, installer smoke tests on Windows 10 and 11, license and branding checks, and signed builds.
+Planned additions: document round-trip tests, installer smoke tests on Windows 10 and 11 hardware, and license/branding checks.
 
 ## Update and announcement channels
 
 - **Releases** — installer, checksum, release notes.
-- **Update manifest** — `latest.json`, the only version source the client trusts.
+- **Update manifest** — `latest.json`, treated as an untrusted version hint; the downloaded installer is authenticated by its signature.
 - **Announcement feed** — `announcements.json`, shown once at startup.
 - **Discussions → Announcements** — human-readable release news.
 - **Project site** — download and status summary.

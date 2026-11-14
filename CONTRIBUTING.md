@@ -1,6 +1,8 @@
-# Contributing to Office Software
+# Contributing to Chenyi Office（胡辰逸定制版）
 
 Thanks for your interest. The project is in its foundation stage, so the development workflow is still being defined. This document describes how to participate now and what the workflow will look like once source integration lands.
+
+The first supported platform is Windows 10/11 x64; changes targeting other platforms are out of scope until version 1.0.
 
 ## Ways to contribute
 

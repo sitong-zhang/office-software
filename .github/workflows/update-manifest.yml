@@ -1,0 +1,60 @@
+name: Publish update manifest
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  manifest:
+    runs-on: windows-latest
+    steps:
+      - name: Build and attach latest.json
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          PUBLISHED_AT: ${{ github.event.release.published_at }}
+          MIN_SUPPORTED_VERSION: ${{ vars.MIN_SUPPORTED_VERSION }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:TAG -replace '^v', ''
+          $repo = $env:GITHUB_REPOSITORY
+
+          $assets = gh release view $env:TAG --repo $repo --json assets | ConvertFrom-Json
+          $installer = $assets.assets |
+            Where-Object { $_.name -match '(?i)x64.*\.(exe|msi)$' } |
+            Select-Object -First 1
+
+          if (-not $installer) {
+            Write-Host "No x64 installer attached to $env:TAG; skipping manifest."
+            exit 0
+          }
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          gh release download $env:TAG --repo $repo --pattern $installer.name --dir dist
+
+          $path = Join-Path 'dist' $installer.name
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToLowerInvariant()
+          $size = (Get-Item $path).Length
+          $url = "https://github.com/$repo/releases/download/$env:TAG/$($installer.name)"
+          $min = if ([string]::IsNullOrWhiteSpace($env:MIN_SUPPORTED_VERSION)) { '0.0.0' } else { $env:MIN_SUPPORTED_VERSION }
+
+          $manifest = [ordered]@{
+            version              = $version
+            mandatory            = $true
+            min_supported_version = $min
+            published_at         = $env:PUBLISHED_AT
+            release_notes_url    = $env:RELEASE_URL
+            installer            = [ordered]@{
+              url    = $url
+              sha256 = $hash
+              size   = $size
+            }
+          }
+
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 -NoNewline latest.json
+          gh release upload $env:TAG latest.json --clobber --repo $repo

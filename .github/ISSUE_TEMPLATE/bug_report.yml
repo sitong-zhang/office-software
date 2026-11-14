@@ -24,10 +24,9 @@ body:
     attributes:
       label: Operating system
       options:
-        - Windows
-        - macOS
-        - Linux
-        - Other
+        - Windows 11 (x64)
+        - Windows 10 (x64)
+        - Other (unsupported)
     validations:
       required: true
 

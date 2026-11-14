@@ -28,6 +28,13 @@ SIGN_PASS="${SIGN_PFX_PASS:-}"
 if [ -z "$SIGN_PASS" ] && [ -f "$BUILD/signing/password.txt" ]; then
   SIGN_PASS="$(tr -d '\r\n' < "$BUILD/signing/password.txt")"
 fi
+# CI only provides the PFX; derive the public certificate from it when needed.
+if [ ! -f "$SIGN_CERT" ] && [ -f "$SIGN_PFX" ] && [ -n "$SIGN_PASS" ]; then
+  if openssl pkcs12 -in "$SIGN_PFX" -passin "pass:$SIGN_PASS" -nokeys -clcerts \
+      -out "$SIGN_CERT" >/dev/null 2>&1; then
+    echo "  exported public certificate from the signing key"
+  fi
+fi
 
 CXX=x86_64-w64-mingw32-g++
 RC=x86_64-w64-mingw32-windres

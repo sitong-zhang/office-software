@@ -34,9 +34,9 @@ Environment overrides:
 2. **Launcher** — Win32 app with splash, update check, mandatory update screen, announcement screen, and engine launch.
 3. **Uninstaller** — removes the engine through its ProductCode, then shell integration and files.
 4. **Engine** — downloads `LibreOffice_<version>_Win_x86-64.msi` into `build/cache/`.
-5. **Installer shell** — Win32 app with the password-gated welcome page, installation progress, and finish screen. The launcher, uninstaller, license, and notice are embedded as resources.
+5. **Installer shell** — Win32 app with the password-gated welcome page, installation progress, and finish screen. The launcher, uninstaller, license, notice, splash images, and logo/About marks are embedded as resources. After the MSI completes, the installer writes the brand artwork into the engine.
 6. **Payload** — the MSI is appended to the installer with a 24-byte footer (`CHNYSET1`, offset, size). The installer extracts it to `%TEMP%` at install time.
-7. **Output** — `dist/ChenyiOffice-0.1.3-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
+7. **Output** — `dist/ChenyiOffice-0.1.4-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
 
 ## Runtime layout
 
@@ -53,8 +53,8 @@ The welcome page requires the install password. The password is stored only as a
 
 After building:
 
-1. Create a draft GitHub Release tagged `v0.1.3`.
-2. Upload `dist/ChenyiOffice-0.1.3-x64.exe`, its checksum, and the public certificate.
+1. Create a draft GitHub Release tagged `v0.1.4`.
+2. Upload `dist/ChenyiOffice-0.1.4-x64.exe`, its checksum, and the public certificate.
 3. Publish the release. `.github/workflows/update-manifest.yml` generates and attaches `latest.json`.
 
 The installer filename must contain `x64` so the manifest workflow can identify it.

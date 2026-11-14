@@ -2,6 +2,23 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-11-15
+
+### Added
+
+- Engine-level brand artwork applied during installation: custom splash screens (`intro.png`, `intro-highres.png`) and new Start Center / About marks (`logo.svg`, `logo-sc.svg`, `about.svg`).
+- **Sifr** icon theme as the default interface icon set.
+- Installer step that writes brand artwork into the installed engine.
+
+### Changed
+
+- Interface now combines the Tabbed notebookbar, Sifr icons, and Chenyi Office splash and marks.
+
+### Known limitations
+
+- Notification icons, Windows file-type icons, and VCL dialog layouts still come from upstream LibreOffice.
+- Source-level UI rebuild remains the next track.
+
 ## [0.1.3] — 2026-11-15
 
 ### Added
@@ -71,6 +88,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.4]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.1

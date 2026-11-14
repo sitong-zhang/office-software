@@ -8,6 +8,11 @@
 103 RCDATA "build/Uninstall.exe"
 104 RCDATA "LICENSE"
 105 RCDATA "NOTICE"
+150 RCDATA "app/branding/engine/intro.png"
+151 RCDATA "app/branding/engine/intro-highres.png"
+152 RCDATA "app/branding/engine/logo.svg"
+153 RCDATA "app/branding/engine/logo-sc.svg"
+154 RCDATA "app/branding/engine/about.svg"
 
 1 24 "installer/app.manifest"
 
@@ -23,12 +28,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Chenyi Office contributors"
       VALUE "FileDescription", "Chenyi Office installer"
-      VALUE "FileVersion", "0.1.3.0"
+      VALUE "FileVersion", "0.1.4.0"
       VALUE "InternalName", "ChenyiOfficeSetup"
       VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
-      VALUE "OriginalFilename", "ChenyiOffice-0.1.3-x64.exe"
+      VALUE "OriginalFilename", "ChenyiOffice-0.1.4-x64.exe"
       VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
-      VALUE "ProductVersion", "0.1.3"
+      VALUE "ProductVersion", "0.1.4"
     END
   END
   BLOCK "VarFileInfo"

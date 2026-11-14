@@ -34,8 +34,8 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.3";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.3";
+static const wchar_t* kVersion = L"0.1.4";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.4";
 
 static const char* kManifestUrl =
     "https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json";

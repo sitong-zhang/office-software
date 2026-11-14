@@ -10,7 +10,7 @@ DIST="$ROOT/dist"
 LO_VERSION="${LO_VERSION:-26.8.3}"
 LO_MSI="LibreOffice_${LO_VERSION}_Win_x86-64.msi"
 LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${LO_VERSION}/win/x86_64/${LO_MSI}}"
-VERSION="0.1.3"
+VERSION="0.1.4"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"
@@ -52,6 +52,7 @@ sign_file() {
 
 echo "[1/8] Generating brand assets"
 python3 "$ROOT/scripts/make-brand-assets.py"
+python3 "$ROOT/scripts/make-engine-assets.py"
 
 echo "[2/8] Building and signing launcher"
 "$RC" "$ROOT/app/launcher/app.rc" -O coff -o "$BUILD/app.res.o"

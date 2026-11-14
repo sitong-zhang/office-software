@@ -2,9 +2,11 @@
 
 The product is rebuilt around its interface. The goal is not a new coat of paint on the upstream shell, but a consistent, quieter workspace that a first-time user can operate without instruction.
 
-## Implemented in v0.1.3
+## Implemented in v0.1.4
 
 - **Tabbed notebookbar** is the default UI for Writer, Calc, Impress, and Draw, replacing the classic menu-plus-toolbars layout.
+- **Sifr icon theme** replaces the default colorful icon set.
+- **Engine artwork**: custom splash screens (`intro.png`, `intro-highres.png`) and Start Center / About marks (`logo.svg`, `logo-sc.svg`, `about.svg`) are written into the installed engine.
 - **Product identity** inside the engine is set to Chenyi Office (name and vendor).
 - **Clean first run**: tip of the day, What's New, Get Involved, and Donate infobars are disabled.
 - **Isolated profile**: the launcher starts the engine with `-env:UserInstallation=%LOCALAPPDATA%\ChenyiOffice\lo-profile`, so the branded configuration does not collide with other LibreOffice installations.

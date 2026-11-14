@@ -4,15 +4,15 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.1.3-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.1.4-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.1.3 — Windows preview with interface layer.** The Windows installer bundles the LibreOffice 26.8.3 engine, a custom launcher, and a branded interface profile. Writer, Calc, Impress, and Draw now start in the **Tabbed** notebookbar layout, the product name is **Chenyi Office**, and upstream tips and promotional infobars are disabled. The installer is Authenticode-signed with a self-signed certificate. Deep VCL-level dialog and widget redesign remains the next track.
+**v0.1.4 — Windows preview with engine-level branding.** The installer bundles the LibreOffice 26.8.3 engine, a custom launcher, and branded engine artwork. Writer, Calc, Impress, and Draw start in the **Tabbed** notebookbar layout with the **Sifr** icon theme; the product name is **Chenyi Office**, the splash and About/Start Center marks are custom, and upstream tips and promotional infobars are disabled. The installer is Authenticode-signed with a self-signed certificate. Deep VCL-level dialog and widget redesign remains the next track.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.1.3-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.1.4-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
 - **Notes:** the installer requires the install password, distributed separately from this repository. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
 
@@ -28,7 +28,9 @@
 The installer writes a signed-in launcher and a brand profile. On first start, the launcher creates `%LOCALAPPDATA%\ChenyiOffice\lo-profile` and launches the engine with `-env:UserInstallation`, so the office UI uses:
 
 - **Tabbed notebookbar** in Writer, Calc, Impress, and Draw.
+- **Sifr** icon theme for a quieter, modern look.
 - **Chenyi Office** as the product name and vendor.
+- Custom splash screens and Start Center / About marks written into the engine at install time.
 - No first-run tip, What's New, Get Involved, or Donate infobars.
 - A clean first-run experience behind the Chenyi Office splash.
 
@@ -79,7 +81,7 @@ Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`.
 ./scripts/build-windows.sh
 ```
 
-The script generates brand assets, compiles and signs the launcher and uninstaller, downloads the pinned LibreOffice MSI, compiles the installer, appends the engine payload, and signs the final installer. Output: `dist/ChenyiOffice-0.1.3-x64.exe` plus its SHA-256 and the public signing certificate.
+The script generates brand assets, compiles and signs the launcher and uninstaller, downloads the pinned LibreOffice MSI, compiles the installer, appends the engine payload, and signs the final installer. Output: `dist/ChenyiOffice-0.1.4-x64.exe` plus its SHA-256 and the public signing certificate.
 
 See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 

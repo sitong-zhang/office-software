@@ -31,7 +31,7 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.3";
+static const wchar_t* kVersion = L"0.1.4";
 // SHA-256 of the install password; the plain password is not stored in source.
 static const wchar_t* kPasswordHash =
     L"d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5";
@@ -424,6 +424,18 @@ struct PayloadFooter {
 };
 #pragma pack(pop)
 
+static void ApplyEngineBranding(const std::wstring& programFiles) {
+  std::wstring program = programFiles + L"\\LibreOffice\\program";
+  std::wstring shell = program + L"\\shell";
+  if (GetFileAttributesW(program.c_str()) == INVALID_FILE_ATTRIBUTES) return;
+
+  WriteResourceFile(150, program + L"\\intro.png");
+  WriteResourceFile(151, program + L"\\intro-highres.png");
+  WriteResourceFile(152, shell + L"\\logo.svg");
+  WriteResourceFile(153, shell + L"\\logo-sc.svg");
+  WriteResourceFile(154, shell + L"\\about.svg");
+}
+
 static void Fail(const std::wstring& message) {
   g_error = message;
   InterlockedExchange(&g_state, 3);
@@ -555,6 +567,8 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
     Fail(L"无法写入程序文件，请以管理员身份重试。");
     return 0;
   }
+
+  ApplyEngineBranding(std::wstring(programFiles));
 
   // Shell integration.
   InterlockedExchange(&g_stage, 4);

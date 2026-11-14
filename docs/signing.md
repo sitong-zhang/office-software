@@ -24,13 +24,13 @@ The build script signs three binaries:
 On Linux:
 
 ```bash
-osslsigncode verify -in dist/ChenyiOffice-0.1.2-x64.exe
+osslsigncode verify -in dist/ChenyiOffice-0.1.4-x64.exe
 ```
 
 On Windows PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\ChenyiOffice-0.1.2-x64.exe | Format-List
+Get-AuthenticodeSignature .\ChenyiOffice-0.1.4-x64.exe | Format-List
 ```
 
 A self-signed signature reports `Status: UnknownError` or "Unknown publisher" on a machine that has not trusted the certificate, even though the signature is cryptographically intact.

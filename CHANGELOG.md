@@ -2,6 +2,21 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-11-15
+
+### Added
+
+- Authenticode SHA-256 signing for the launcher, uninstaller, and installer using a self-signed certificate.
+- Public signing certificate attached to the release and documented in [docs/signing.md](docs/signing.md).
+
+### Changed
+
+- Install password updated (distributed separately; only its hash is stored).
+
+### Fixed
+
+- The installer locates its engine payload correctly when an Authenticode certificate table is appended after the payload footer.
+
 ## [0.1.1] — 2026-11-15
 
 ### Fixed
@@ -38,5 +53,6 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.0

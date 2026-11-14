@@ -31,10 +31,10 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.1";
+static const wchar_t* kVersion = L"0.1.2";
 // SHA-256 of the install password; the plain password is not stored in source.
 static const wchar_t* kPasswordHash =
-    L"9dcbe7e30f0bd60827341113108a55f86b604f921e0792418a9810075dbf3d22";
+    L"d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5";
 
 enum Screen { WELCOME = 0, INSTALLING = 1, FINISH = 2, FAILED = 3, UNINSTALLING = 4, UNINSTALLED = 5 };
 
@@ -445,19 +445,43 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
   }
   LARGE_INTEGER fileSize{};
   GetFileSizeEx(self, &fileSize);
-  PayloadFooter footer{};
-  if (fileSize.QuadPart < (LONGLONG)sizeof(footer)) {
+  uint64_t totalSize = (uint64_t)fileSize.QuadPart;
+  if (totalSize < sizeof(PayloadFooter) + 1) {
     CloseHandle(self);
     Fail(L"安装包不完整，请重新下载。");
     return 0;
   }
-  LARGE_INTEGER footerPos{};
-  footerPos.QuadPart = fileSize.QuadPart - (LONGLONG)sizeof(footer);
-  SetFilePointerEx(self, footerPos, nullptr, FILE_BEGIN);
-  DWORD read = 0;
-  if (!ReadFile(self, &footer, sizeof(footer), &read, nullptr) || read != sizeof(footer) ||
-      memcmp(footer.magic, "CHNYSET1", 8) != 0 || footer.size == 0 ||
-      footer.offset + footer.size > (uint64_t)fileSize.QuadPart) {
+
+  // The payload footer sits before any Authenticode certificate table.
+  // Scan the tail for the magic instead of assuming the last 24 bytes.
+  const uint64_t scanSize = std::min<uint64_t>(totalSize, 1024 * 1024);
+  std::vector<char> tail((size_t)scanSize);
+  LARGE_INTEGER tailPos{};
+  tailPos.QuadPart = (LONGLONG)(totalSize - scanSize);
+  SetFilePointerEx(self, tailPos, nullptr, FILE_BEGIN);
+  DWORD tailRead = 0;
+  if (!ReadFile(self, tail.data(), (DWORD)scanSize, &tailRead, nullptr) ||
+      tailRead != scanSize) {
+    CloseHandle(self);
+    Fail(L"安装包读取失败，请重新下载。");
+    return 0;
+  }
+
+  PayloadFooter footer{};
+  bool found = false;
+  for (size_t i = 0; i + sizeof(PayloadFooter) <= tail.size(); ++i) {
+    if (memcmp(tail.data() + i, "CHNYSET1", 8) != 0) continue;
+    PayloadFooter candidate{};
+    memcpy(&candidate, tail.data() + i, sizeof(candidate));
+    uint64_t footerPos = totalSize - scanSize + i;
+    if (candidate.size > 0 && candidate.offset > 0 &&
+        candidate.offset + candidate.size == footerPos) {
+      footer = candidate;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
     CloseHandle(self);
     Fail(L"安装包数据损坏，请重新下载。");
     return 0;

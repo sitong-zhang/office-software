@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.1.1** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, splash, mandatory update gate, and announcement channel. The LibreOffice interface itself is still upstream.
+Current release: **v0.1.2** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, splash, mandatory update gate, and announcement channel. The LibreOffice interface itself is still upstream.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -21,8 +21,8 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [x] Custom splash animation
 - [x] Installer with engine payload, shortcuts, registry, and uninstaller
 - [x] Brand identity: logo, icon, installer background
-- [ ] Authenticode signing and signed update manifests
-- [ ] Full trademark sweep of the installed engine's user-facing strings
+- [x] Authenticode signing (self-signed certificate; CA certificate pending)
+- [ ] Signed update manifests
 
 ## Phase 2 — Interface rebuild (in progress)
 

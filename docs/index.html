@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chenyi Office（胡辰逸定制版）— 面向界面的 Windows 办公套件</title>
 <meta name="description" content="Chenyi Office（胡辰逸定制版）基于 LibreOffice 技术，面向 Windows 10/11 64 位重新设计界面，提供专属启动动画与强制更新机制。">
+<link rel="icon" href="assets/logo.png">
 <style>
   :root {
     --paper: #f7f5ef;
@@ -47,7 +48,8 @@
     gap: 24px;
     padding: 14px 0;
   }
-  .brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .brand-logo { width: 28px; height: 28px; border-radius: 7px; display: block; }
   .wordmark {
     font-family: var(--mono);
     font-size: 13px;
@@ -255,6 +257,7 @@
 <header>
   <div class="wrap nav">
     <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="Chenyi Office logo">
       <div class="wordmark">Chenyi<span>·</span>Office</div>
       <span class="edition">胡辰逸定制版</span>
     </div>
@@ -271,17 +274,17 @@
 
 <main>
   <div class="wrap hero">
-    <div class="status"><span class="dot"></span>基础建设阶段 · 暂无安装包</div>
+    <div class="status"><span class="dot"></span>v0.1.0 · Windows 10 / 11 64 位</div>
     <h1>把办公界面，<em>重新做一遍。</em></h1>
     <p class="lede">
       Chenyi Office（胡辰逸定制版）基于 LibreOffice 技术，为 Windows 10 / 11 64 位重新设计：
       统一的界面语言、专属启动动画，以及发布即生效的强制更新机制。
     </p>
     <div class="actions">
-      <a class="btn primary" href="https://github.com/sitong-zhang/office-software/discussions/categories/announcements">关注开发公告</a>
+      <a class="btn primary" href="https://github.com/sitong-zhang/office-software/releases/latest">下载 Windows 安装包</a>
       <a class="btn ghost" href="https://github.com/sitong-zhang/office-software/blob/main/docs/roadmap.md">查看路线图</a>
     </div>
-    <div class="platform">当前平台：<strong>Windows 10 / 11 · 64 位</strong> · 源码采用 MPL 2.0</div>
+    <div class="platform">安装需要密码 · 内置 LibreOffice 26.8.3 内核 · 源码采用 MPL 2.0</div>
   </div>
 
   <section id="direction">
@@ -328,22 +331,22 @@
       <div class="steps">
         <div class="step">
           <span class="phase">Phase 0</span>
-          <div><h3>基础建设</h3><p>许可、文档、站点、公告与发布流程、更新清单工作流。</p></div>
-          <span class="tag now">进行中</span>
+          <div><h3>基础建设</h3><p>许可、文档、站点、发布流程、更新清单与公告校验。</p></div>
+          <span class="tag now">已完成</span>
         </div>
         <div class="step">
           <span class="phase">Phase 1</span>
-          <div><h3>Windows 客户端与品牌</h3><p>锁定上游版本、Windows x64 构建、图标与启动动画、安装包与签名。</p></div>
-          <span class="tag next">计划中</span>
+          <div><h3>Windows 客户端与品牌</h3><p>Windows x64 安装包、启动器、密码欢迎页、品牌资产、强制更新与公告通道。</p></div>
+          <span class="tag now">已完成</span>
         </div>
         <div class="step">
           <span class="phase">Phase 2</span>
-          <div><h3>界面重构与预览版</h3><p>设计令牌、启动中心、主界面、对话框与设置改版，发布首个预览版。</p></div>
-          <span class="tag next">计划中</span>
+          <div><h3>界面重构</h3><p>LibreOffice 启动中心、菜单、工具栏、对话框与设置的视觉重构。</p></div>
+          <span class="tag now">进行中</span>
         </div>
         <div class="step">
           <span class="phase">Phase 3–4</span>
-          <div><h3>强制更新、公测与 1.0</h3><p>内置更新器与安装校验、公开测试、版本 1.0。</p></div>
+          <div><h3>公测与 1.0</h3><p>公开测试、本地化、稳定性打磨与正式版本。</p></div>
           <span class="tag next">计划中</span>
         </div>
       </div>
@@ -363,7 +366,7 @@
         <a class="link-card" href="https://github.com/sitong-zhang/office-software/releases">
           <span class="k">Releases</span>
           <h3>下载</h3>
-          <p>Windows 10 / 11 64 位安装包与发行说明。首个版本发布后开放。</p>
+          <p>Windows 10 / 11 64 位安装包与发行说明。v0.1.0 已发布，安装需要密码。</p>
         </a>
         <a class="link-card" href="https://github.com/sitong-zhang/office-software/discussions/categories/announcements">
           <span class="k">Announcements</span>
@@ -381,6 +384,7 @@
         <code>latest.json</code>。一旦发布新版本，旧版本会在下次启动时被强制更新页面拦截，
         没有“稍后提醒”或跳过入口，更新页也不提供退出按钮。请保持网络连接以完成更新。
         启动时还会读取仓库中的 <code>announcements.json</code>：有新公告会先展示，点击“继续”后进入应用。
+        安装程序受密码保护，密码由发布者单独提供，不在此页面公开。
       </div>
     </div>
   </section>

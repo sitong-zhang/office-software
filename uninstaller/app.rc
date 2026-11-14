@@ -1,0 +1,31 @@
+#include <windows.h>
+
+1 ICON "uninstaller/icon.ico"
+
+1 24 "uninstaller/app.manifest"
+
+1 VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEOS 0x40004
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080404B0"
+    BEGIN
+      VALUE "CompanyName", "Chenyi Office contributors"
+      VALUE "FileDescription", "Chenyi Office uninstaller"
+      VALUE "FileVersion", "0.1.0.0"
+      VALUE "InternalName", "Uninstall"
+      VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
+      VALUE "OriginalFilename", "Uninstall.exe"
+      VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
+      VALUE "ProductVersion", "0.1.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x804, 1200
+  END
+END

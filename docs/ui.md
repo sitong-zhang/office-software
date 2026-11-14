@@ -14,6 +14,7 @@ The product is rebuilt around its interface. The goal is not a new coat of paint
 
 | Surface | Change |
 | --- | --- |
+| Installer welcome | Branded background, logo, introduction, password gate, **下一步确认** |
 | Splash | Branded startup animation, doubles as the update check state |
 | Start Center | Simplified layout: recent documents, templates, create-new |
 | Menus and toolbars | Reduced default density, consistent icon grid, grouped commands |
@@ -33,7 +34,7 @@ The product is rebuilt around its interface. The goal is not a new coat of paint
 
 ## Splash animation
 
-The splash is the first brand impression and the first update checkpoint.
+The splash is the first brand impression and the first update checkpoint. Implemented in `app/launcher/main.cpp` for v0.1.0.
 
 - **Duration**: 1.2–1.8 s when the app is ready; it persists while the update check runs, up to 10 s.
 - **Content**: product wordmark, edition suffix, loading indicator, version in small type.

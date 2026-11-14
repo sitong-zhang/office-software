@@ -1,0 +1,38 @@
+#include <windows.h>
+
+1 ICON "installer/icon.ico"
+
+101 BITMAP "installer/welcome.bmp"
+
+102 RCDATA "build/ChenyiOffice.exe"
+103 RCDATA "build/Uninstall.exe"
+104 RCDATA "LICENSE"
+105 RCDATA "NOTICE"
+
+1 24 "installer/app.manifest"
+
+1 VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEOS 0x40004
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080404B0"
+    BEGIN
+      VALUE "CompanyName", "Chenyi Office contributors"
+      VALUE "FileDescription", "Chenyi Office installer"
+      VALUE "FileVersion", "0.1.0.0"
+      VALUE "InternalName", "ChenyiOfficeSetup"
+      VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
+      VALUE "OriginalFilename", "ChenyiOffice-0.1.0-x64.exe"
+      VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
+      VALUE "ProductVersion", "0.1.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x804, 1200
+  END
+END

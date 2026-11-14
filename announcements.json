@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T12:00:00+08:00",
+  "updated_at": "2026-11-15T13:10:00+08:00",
   "announcements": [
     {
-      "id": "2026-11-15-project-start",
-      "title": "Chenyi Office（胡辰逸定制版）项目启动",
-      "body": "项目已进入基础建设阶段：品牌、界面规范、更新协议和发布流程均已就位。\n\n首个 Windows 10 / 11 64 位安装包尚未发布。发布后，软件会在启动时检查版本；有新版本时必须完成更新才能继续使用。\n\n新公告会通过本文件直接送达软件内，点击“继续”即可进入应用。",
-      "severity": "info",
-      "published_at": "2026-11-15T12:00:00+08:00",
+      "id": "2026-11-15-v0-1-0-preview",
+      "title": "首个 Windows 预览版 v0.1.0 已发布",
+      "body": "Chenyi Office（胡辰逸定制版）v0.1.0 已发布，支持 Windows 10 / 11 64 位。\n\n本版本包含：专属开屏动画、应用内公告、不可跳过的强制更新机制，以及带安装密码的欢迎页。办公内核基于 LibreOffice 26.8.3。\n\n安装包与校验值见 GitHub Releases。安装密码由发布者单独提供。\n\n当前版本尚未重构 LibreOffice 主界面，界面改造会在后续版本中逐步推送。",
+      "severity": "important",
+      "published_at": "2026-11-15T13:10:00+08:00",
       "expires_at": null,
       "min_version": null,
       "max_version": null,
-      "action_label": "查看路线图",
-      "action_url": "https://github.com/sitong-zhang/office-software/blob/main/docs/roadmap.md"
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
     }
   ]
 }

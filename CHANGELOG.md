@@ -1,28 +1,33 @@
 # Changelog
 
-All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once versioned builds are published.
+All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] — 2026-11-15
+
+First Windows preview.
 
 ### Added
 
-- Interface-first product direction with a custom splash animation — see [docs/ui.md](docs/ui.md).
-- Mandatory update protocol and release manifest, plus a workflow that publishes `latest.json` with every release — see [docs/updater.md](docs/updater.md).
-- In-app announcement feed (`announcements.json`), validation workflow, and a "continue" gate that delivers notices at launch — see [docs/announcements.md](docs/announcements.md).
-- Windows 10/11 x64 declared as the first and only supported target.
+- Windows 10/11 x64 installer built on Linux with MinGW-w64, bundling LibreOffice 26.8.3.
+- Branded welcome page with a background image, logo, product introduction, install-password gate, and a **下一步确认** action.
+- Launcher with a custom splash animation, update check, blocking update screen (no exit or skip), in-app announcements, and engine start.
+- Brand identity: logo, application icon, installer artwork.
+- In-app announcement feed (`announcements.json`) with validation workflow.
+- Uninstaller and shell integration (shortcuts, registry entries).
 
 ### Changed
 
-- Product renamed to **Chenyi Office（胡辰逸定制版）**; branding rules updated accordingly.
-- Update channel now uses the signed manifest at `releases/latest/download/latest.json`.
-- The update screen has no exit action; **Download and install** is its only control.
+- Product named **Chenyi Office（胡辰逸定制版）**.
+- Update screen has a single action, **Download and install**.
 
-### Fixed
+### Known limitations
 
-- Nothing yet.
+- The LibreOffice interface itself is not redesigned yet; this release ships the upstream interface with Chenyi Office branding around it.
+- The installer is unsigned. Windows SmartScreen will warn until a code-signing certificate is configured.
+- Updates require access to GitHub.
 
 ## [0.0.0] — 2026-11-15
 
-Initial project setup. No installable build is available yet.
+Initial project setup.
 
-[Unreleased]: https://github.com/sitong-zhang/office-software/compare/v0.0.0...HEAD
+[0.1.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.0

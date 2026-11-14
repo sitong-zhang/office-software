@@ -1,68 +1,87 @@
 # Architecture
 
-This document records how the project is organized and how the upstream LibreOffice codebase and update pipeline will be integrated. It describes the intended design; the source tree is not part of this repository yet.
+This document describes the shipped v0.1.0 implementation and the planned path to source-level interface work.
 
-## Scope
+## Current implementation
 
-Chenyi Office（胡辰逸定制版） targets **Windows 10 and Windows 11, 64-bit only** until version 1.0. macOS, Linux, mobile, and portable builds are out of scope.
+The product is layered so the Window shell can evolve independently of the office engine:
 
-## Repository layout
+```text
+Installer (password gate)
+   └─ installs
+      ├─ Chenyi Office launcher  (%ProgramFiles%\ChenyiOffice\ChenyiOffice.exe)
+      └─ LibreOffice 26.8.3 engine (%ProgramFiles%\LibreOffice)
+Launcher
+   ├─ splash animation
+   ├─ update check (latest.json) → blocking update installer
+   ├─ announcement check (announcements.json) → continue screen
+   └─ starts soffice.exe
+```
 
-This repository is the product repository. It holds:
+### Installer
 
-- product documentation, branding assets, and release notes;
-- the project site served by GitHub Pages;
-- build and packaging configuration;
-- patches and downstream-only modules applied to upstream;
-- the update manifest workflow.
+- Native Win32 application cross-compiled on Linux.
+- Welcome page with brand artwork, product introduction, password field, and **下一步确认**.
+- The password is stored as a SHA-256 hash and is distributed separately.
+- The LibreOffice MSI is appended to the installer with a 24-byte footer (`CHNYSET1`, offset, size) and extracted to `%TEMP%` during installation.
+- Installs the launcher and uninstaller, runs the MSI silently, writes registry values, creates Public Desktop and common Start Menu shortcuts, and registers an uninstall entry.
+- The uninstaller removes the engine through its MSI ProductCode, then the shell integration and files.
 
-The upstream source tree is large (several gigabytes with history). Cloning or vendoring it into this repository would make the product repository impractical to use and would obscure downstream changes. Instead, the build works from a pinned upstream revision plus the patches tracked here.
+The install gate is a distribution control, not encryption. Anyone with the installer can extract the appended MSI.
 
-## Upstream integration strategy
+### Launcher
 
-Two options are under evaluation:
+- Native Win32, static runtime, no external dependencies.
+- Splash window; manifest fetch with timeout; blocking update screen with a single **Download and install** action and no exit path.
+- Download verification: size, SHA-256 from the manifest, then installer signature once signing is configured.
+- Announcements: `announcements.json` with raw GitHub as primary and jsDelivr as fallback; seen ids stored in `%LOCALAPPDATA%\ChenyiOffice\state.ini`.
+- Engine discovery through `HKLM\Software\ChenyiOffice\EnginePath`, then standard LibreOffice paths.
 
-1. **Patch series (preferred).** A script fetches the pinned upstream tag, applies the patches in `patches/` in order, and builds the result. Downstream changes stay reviewable, rebasing onto new upstream releases is explicit, and the repository stays small.
-2. **Vendored tree.** A subtree or full copy of upstream under `src/`. Simpler to build, but makes every upstream update a large merge and inflates the repository.
+### Engine
 
-The decision, including the pinned upstream version and the patch naming convention, will be recorded in this document before source integration begins.
+The engine is the official LibreOffice 26.8.3 Windows x64 MSI, unmodified. Product identity is currently applied at the shell level only: installer, shortcuts, splash, announcements, update flow. Deep interface changes require building from source, which is Phase 2.
+
+## Source strategy (Phase 2)
+
+The upstream tree is several gigabytes. The product repository stays small and builds from a pinned upstream tag plus a patch series:
+
+1. Fetch the pinned upstream revision.
+2. Apply patches from `patches/` in order.
+3. Build with the platform toolchain.
+
+The Windows engine build itself requires MSVC or a supported MinGW cross-build environment and substantially more compute than the current shell pipeline. This will be documented here before the first patched build.
 
 ## Build and packaging
 
-| Target | Artifact | Notes |
+| Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | MSI installer | Per-user and per-machine variants |
-| Windows 10/11 x64 | EXE bootstrapper | Wraps the MSI and simplifies elevation |
+| Windows 10/11 x64 | `ChenyiOffice-0.1.0-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
+| Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 
-Builds are produced from a pinned toolchain, with checksums and Authenticode signatures published alongside each release. The updater expects installer assets to include `x64` in the filename so the manifest workflow can identify them.
+See [build.md](build.md) for the pipeline and commands.
 
 ## Update pipeline
 
-The update path is a first-class part of the architecture:
+1. A release is published with the x64 installer attached.
+2. `.github/workflows/update-manifest.yml` computes SHA-256 and size, writes `latest.json`, and attaches it to the release.
+3. The launcher fetches `releases/latest/download/latest.json` at startup.
+4. A newer version triggers the blocking update screen.
 
-1. A release is published with an x64 installer attached.
-2. `.github/workflows/update-manifest.yml` computes the SHA-256 and size, writes `latest.json`, and attaches it to the same release.
-3. The application fetches `releases/latest/download/latest.json` at startup.
-4. If the published version is newer, a blocking update screen requires installation before use.
-
-The full protocol, manifest schema, failure handling, and security requirements are defined in [updater.md](updater.md).
+Protocol details: [updater.md](updater.md).
 
 ## Continuous integration
 
-Planned jobs:
+- `.github/workflows/build-installer.yml` rebuilds the installer on demand and on tags.
+- `.github/workflows/update-manifest.yml` publishes the update manifest on release.
+- `.github/workflows/validate-announcements.yml` validates the announcement feed on change.
 
-- Windows x64 build verification for every pull request that touches build configuration or source patches;
-- document round-trip smoke tests for a fixed corpus of files;
-- license and branding checks that fail if upstream notices are removed or upstream trademarks appear in product surfaces;
-- installer smoke tests on Windows 10 and 11 images;
-- release automation that drafts a GitHub Release from `CHANGELOG.md` and publishes the update manifest.
+Planned additions: document round-trip tests, installer smoke tests on Windows 10 and 11, license and branding checks, and signed builds.
 
 ## Update and announcement channels
 
-- **Releases** — signed installers, checksums, and release notes.
-- **Update manifest** — `latest.json`, attached to each release; the only source the client trusts.
-- **Announcement feed** — `announcements.json` at the repository root, read at launch and shown once before the app opens.
-- **Discussions → Announcements** — product news and maintenance notices.
-- **Project site** — a stable, linkable summary of the latest release and the roadmap.
-
-Clients do not query the GitHub API directly. They read the manifest asset, which is generated at release time and can be signed independently.
+- **Releases** — installer, checksum, release notes.
+- **Update manifest** — `latest.json`, the only version source the client trusts.
+- **Announcement feed** — `announcements.json`, shown once at startup.
+- **Discussions → Announcements** — human-readable release news.
+- **Project site** — download and status summary.

@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an improvement or a new capability
+title: "[Feature] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first, then the solution you have in mind. Ideas that are still taking shape are better suited to [Discussions → Ideas](https://github.com/sitong-zhang/office-software/discussions).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What task or workflow is difficult today?
+      placeholder: "When I try to..., I have to..., which costs..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should this work? Include alternatives you considered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Who does this affect?
+      description: Typical users, document types, platforms, or languages.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions and found no duplicate.
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and open-ended ideas
+    url: https://github.com/sitong-zhang/office-software/discussions
+    about: Ask questions, share workflows, or discuss ideas before filing an issue.
+  - name: Security reports
+    url: https://github.com/sitong-zhang/office-software/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, never in a public issue.

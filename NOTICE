@@ -1,0 +1,26 @@
+Office Software
+Copyright (C) 2026 Office Software contributors
+
+This product is based on LibreOffice, an open source office suite
+developed by The Document Foundation and contributors, and distributed
+under the Mozilla Public License, version 2.0.
+
+Upstream project: https://www.libreoffice.org/
+Upstream source:  https://git.libreoffice.org/core
+Source license:   https://www.mozilla.org/MPL/2.0/
+
+Modifications and additions made in this repository are also released
+under the Mozilla Public License 2.0. Files originating from upstream
+retain their original copyright notices and license headers; those
+notices must not be removed or altered.
+
+Trademarks
+----------
+
+LibreOffice and the LibreOffice logo are trademarks of The Document
+Foundation. The Document Foundation does not sponsor, endorse, or
+approve this product, and this project does not use the LibreOffice
+name or logo as its own product identity.
+
+"Office Software" is a working name and may change before the first
+public release.

@@ -18,8 +18,33 @@ MUTED = (156, 170, 160)
 
 FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-FONT_CJK = "/usr/share/fonts/opentype/noto-cjk-otf/NotoSansCJKsc-Regular.otf"
-FONT_CJK_BOLD = "/usr/share/fonts/opentype/noto-cjk-otf/NotoSansCJKsc-Bold.otf"
+
+
+def first_existing(candidates, fallback):
+    for path in candidates:
+        if Path(path).exists():
+            return path
+    return fallback
+
+
+FONT_CJK = first_existing(
+    [
+        "/usr/share/fonts/opentype/noto-cjk-otf/NotoSansCJKsc-Regular.otf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ],
+    FONT_REG,
+)
+FONT_CJK_BOLD = first_existing(
+    [
+        "/usr/share/fonts/opentype/noto-cjk-otf/NotoSansCJKsc-Bold.otf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Bold.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+    ],
+    FONT_BOLD,
+)
 
 
 def gradient(size, top, bottom):

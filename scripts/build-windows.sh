@@ -44,7 +44,7 @@ if [ ! -f "$CACHE/$LO_MSI" ]; then
 fi
 
 echo "[5/7] Reading engine product code"
-PRODUCT_CODE="$(msiinfo export "$CACHE/$LO_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2; exit}')"
+PRODUCT_CODE="$(msiinfo export "$CACHE/$LO_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
 if [ -z "$PRODUCT_CODE" ]; then
   echo "Could not read ProductCode from $LO_MSI" >&2
   exit 1

@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <shellapi.h>
+#include <tlhelp32.h>
 
 #include <string>
 #include <vector>
@@ -20,14 +21,34 @@ static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
 static HINSTANCE g_instance = nullptr;
 static HWND g_window = nullptr;
 static volatile LONG g_done = 0;
+static volatile LONG g_incomplete = 0;
 static int g_dpi = 96;
 static std::wstring g_installDir;
 static std::wstring g_status = L"正在移除办公内核与程序文件…";
 
 #define S(x) MulDiv((x), g_dpi, 96)
 
+static bool IsProcessRunning(const wchar_t* name) {
+  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (snapshot == INVALID_HANDLE_VALUE) return false;
+  PROCESSENTRY32W entry{};
+  entry.dwSize = sizeof(entry);
+  bool found = false;
+  if (Process32FirstW(snapshot, &entry)) {
+    do {
+      if (_wcsicmp(entry.szExeFile, name) == 0) {
+        found = true;
+        break;
+      }
+    } while (Process32NextW(snapshot, &entry));
+  }
+  CloseHandle(snapshot);
+  return found;
+}
+
 static bool DeleteTree(const std::wstring& path) {
   if (path.empty()) return true;
+  if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return true;
   std::wstring from = path;
   from.push_back(L'\0');
   from.push_back(L'\0');
@@ -122,9 +143,10 @@ static DWORD WINAPI UninstallThread(LPVOID) {
 
   // Remove the local profile: LibreOffice profile, seen announcements and logs
   // must not come back after a reinstall.
+  bool profileDeleted = true;
   wchar_t* localAppData = nullptr;
   if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppData))) {
-    DeleteTree(std::wstring(localAppData) + L"\\ChenyiOffice");
+    profileDeleted = DeleteTree(std::wstring(localAppData) + L"\\ChenyiOffice");
     CoTaskMemFree(localAppData);
   }
 
@@ -143,7 +165,8 @@ static DWORD WINAPI UninstallThread(LPVOID) {
                    ? true
                    : false;
 
-  DeleteTree(g_installDir);
+  bool installDeleted = DeleteTree(g_installDir);
+  if (!profileDeleted || !installDeleted) InterlockedExchange(&g_incomplete, 1);
 
   if (moved) {
     MoveFileExW(self.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
@@ -185,8 +208,16 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_TIMER:
       if (InterlockedCompareExchange(&g_done, 0, 0) == 1) {
         KillTimer(hwnd, 1);
-        MessageBoxW(hwnd, L"Chenyi Office（胡辰逸定制版）已卸载完成。", kProduct,
-                    MB_ICONINFORMATION | MB_OK);
+        if (InterlockedCompareExchange(&g_incomplete, 0, 0) == 1) {
+          MessageBoxW(hwnd,
+                      L"Chenyi Office 已卸载，但部分文件正被占用，未能删除。\n\n"
+                      L"请重启电脑后手动删除残留的 ChenyiOffice 目录，"
+                      L"或关闭所有办公程序后重新运行卸载器。",
+                      kProduct, MB_ICONWARNING | MB_OK);
+        } else {
+          MessageBoxW(hwnd, L"Chenyi Office（胡辰逸定制版）已卸载完成。", kProduct,
+                      MB_ICONINFORMATION | MB_OK);
+        }
         DestroyWindow(hwnd);
       }
       return 0;
@@ -232,6 +263,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   int answer = MessageBoxW(nullptr, question, kProduct,
                            MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2);
   if (answer != IDYES) return 0;
+
+  if (IsProcessRunning(L"soffice.bin") || IsProcessRunning(L"soffice.exe") ||
+      IsProcessRunning(L"ChenyiOffice.exe")) {
+    MessageBoxW(nullptr,
+                L"Chenyi Office 或 LibreOffice 仍在运行。\n\n"
+                L"请先保存并关闭所有文档和程序，然后重新运行卸载器。",
+                kProduct, MB_ICONWARNING | MB_OK);
+    return 0;
+  }
 
   WNDCLASSW wc{};
   wc.lpfnWndProc = WndProc;

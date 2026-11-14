@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the shipped v0.1.5 implementation and the planned path to source-level interface work.
+This document describes the shipped v0.1.6 implementation and the planned path to source-level interface work.
 
 ## Current implementation
 
@@ -35,19 +35,19 @@ The install gate is a distribution control, not encryption. Anyone with the inst
 
 - Native Win32, static runtime, no external dependencies.
 - Splash window; manifest fetch with timeout; blocking update screen with a single **Download and install** action and no exit path.
-- Download verification: size, mandatory SHA-256 from the manifest, then Authenticode verification against the pinned publisher certificate. Redirects must stay on allowlisted GitHub/CDN hosts; HTTPS-to-HTTP redirects are disabled.
+- Download verification: size, mandatory SHA-256 from the manifest, then Authenticode verification against a pinned publisher certificate (multiple thumbprints are accepted for rotation; expired pinned certificates are tolerated). Redirects are followed manually, one hop at a time, and every hop must be HTTPS on port 443 at `github.com`, `*.githubusercontent.com`, or `cdn.jsdelivr.net`.
 - Announcements: `announcements.json` with raw GitHub as primary and jsDelivr as fallback; seen ids stored in `%LOCALAPPDATA%\ChenyiOffice\state.ini`.
 - Engine discovery through `HKLM\Software\ChenyiOffice\EnginePath`, then standard LibreOffice paths.
 
 ### Interface layer
 
-The launcher embeds a `registrymodifications.xcu` template and writes it to `%LOCALAPPDATA%\ChenyiOffice\lo-profile\user` on first start, then re-applies it when the brand version changes (keeping the previous file as `.bak`). The engine is then launched with `-env:UserInstallation=file:///...`, which isolates the product profile from any other LibreOffice installation. The template selects the Tabbed notebookbar for all four applications, sets the Sifr icon theme, sets the product name to Chenyi Office, and disables upstream tips and promotional infobars.
+The launcher embeds a `registrymodifications.xcu` template and writes it to `%LOCALAPPDATA%\ChenyiOffice\lo-profile\user` on first start. When the brand version changes, it merges only missing product keys into the existing file (keeping the previous file as `.bak`); existing user values are never overwritten. The engine is then launched with `-env:UserInstallation=file:///...`, which isolates the product profile from any other LibreOffice installation. The template selects the Tabbed notebookbar for all four applications, sets the Sifr icon theme, sets the product name to Chenyi Office, and disables upstream tips and promotional infobars.
 
 The installer also writes engine brand artwork after the MSI completes: custom splash images and Start Center / About marks. This changes the visible engine chrome without modifying the MSI database.
 
 ### Engine
 
-The engine is the official LibreOffice 26.8.3 Windows x64 MSI, unmodified. Product identity and the interface layout are applied through the dedicated profile. Deep visual changes to dialogs and widgets require building from source, which is the next Phase 2 step.
+When no engine is present, the engine is the official LibreOffice 26.8.3 Windows x64 MSI, unmodified. If a LibreOffice installation already exists, it is reused instead and its version may differ. Product identity and the interface layout are applied through the dedicated profile. Deep visual changes to dialogs and widgets require building from source, which is the next Phase 2 step.
 
 ## Source strategy (Phase 2)
 
@@ -63,7 +63,7 @@ The Windows engine build itself requires MSVC or a supported MinGW cross-build e
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.1.5-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.1.6-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 
@@ -83,8 +83,9 @@ Protocol details: [updater.md](updater.md).
 - `.github/workflows/build-installer.yml` rebuilds the installer on demand and on tags; signing secrets are mandatory, so an unsigned artifact is never produced.
 - `.github/workflows/update-manifest.yml` publishes the update manifest on release.
 - `.github/workflows/validate-announcements.yml` validates the announcement feed on change.
+- `.github/workflows/windows-smoke.yml` verifies a published installer on Windows: manifest hash and size, Authenticode signer, and the silent fresh-install guard.
 
-Planned additions: document round-trip tests, installer smoke tests on Windows 10 and 11 hardware, and license/branding checks.
+Planned additions: a full install → forced update → restart loop on Windows 10/11 hardware, and license/branding checks.
 
 ## Update and announcement channels
 

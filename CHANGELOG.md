@@ -2,6 +2,30 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] — 2026-11-15
+
+### Fixed
+
+- Brand profile upgrades now **merge** missing product defaults into the existing `registrymodifications.xcu` instead of overwriting it, so user toolbar, icon, and option changes survive version upgrades.
+- The launcher accepts multiple pinned certificate thumbprints and tolerates `CERT_E_EXPIRED` for the pinned self-signed identity, so certificate expiry or rotation can no longer deadlock the mandatory update screen. The rotation procedure is documented.
+- Silent mode is parsed from exact command-line arguments (`/S`, `-s`, `--silent`) instead of substring matching, so paths containing `/S` cannot trigger it.
+- A failed silent update writes a diagnostic file, and the launcher error screen now shows its path.
+- Update redirects are followed one hop at a time with HTTPS, port 443, and host checks before each request; automatic WinHTTP redirects are disabled.
+- The host allowlist accepts any `*.githubusercontent.com` subdomain, so GitHub asset-host rotations do not require an emergency release.
+- If the configured engine disappears, the launcher offers a one-click link to the download page instead of only reporting a missing engine.
+- The uninstaller refuses to start while `soffice`, `soffice.bin`, or `ChenyiOffice.exe` is running, and reports an incomplete cleanup instead of claiming success when files remain locked.
+- Version consistency checks now also cover the project site, roadmap, architecture, build, signing, and release documents.
+
+### Changed
+
+- The README and architecture docs no longer claim every installation uses LibreOffice 26.8.3; a pre-existing engine is reused and its version may differ.
+- The v0.1.4 → v0.1.5/v0.1.6 first hop is documented as relying on HTTPS and SHA-256 because the old launcher predates signature verification.
+
+### Known limitations
+
+- No full Windows install → forced update → restart loop is automated yet; a Windows smoke workflow verifies the published installer's hash, signature, and silent-mode guard.
+- The install password remains a distribution gate, not a security boundary.
+
 ## [0.1.5] — 2026-11-15
 
 ### Fixed
@@ -119,6 +143,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.6]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.6
 [0.1.5]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.4
 [0.1.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.3

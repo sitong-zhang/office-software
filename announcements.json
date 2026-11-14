@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T07:30:00+08:00",
+  "updated_at": "2026-11-15T08:40:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-15-v0-1-6",
+      "title": "v0.1.6 已发布：升级不再清空你的界面设置",
+      "body": "Chenyi Office（胡辰逸定制版）v0.1.6 已发布。\n\n这次先修第二轮评审里最伤用户的一条：以前每个版本升级都会整体覆盖界面配置，你自己调的工具栏、图标和选项会被清掉。现在改成按配置项合并，只补充新版本新增的默认值，已有的用户设置原样保留。\n\n同时处理了证书过期/轮换可能把强制更新卡死的问题，更新重定向改成逐跳校验，静默失败会在错误页显示诊断日志路径；卸载前会先检查 LibreOffice 或 Chenyi Office 是否还在运行。\n\n安装包与公开证书见 GitHub Releases；首次安装仍需密码，更新不需要。",
+      "severity": "important",
+      "published_at": "2026-11-15T08:30:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-1-5",
       "title": "v0.1.5 已发布：更新不再需要密码",

@@ -24,7 +24,7 @@ The build script signs three binaries:
 On Linux:
 
 ```bash
-osslsigncode verify -in dist/ChenyiOffice-0.1.5-x64.exe \
+osslsigncode verify -in dist/ChenyiOffice-0.1.6-x64.exe \
   -CAfile build/signing/chenyi.crt
 ```
 
@@ -33,7 +33,7 @@ Without `-CAfile`, `osslsigncode` reports a failure because the self-signed root
 On Windows PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\ChenyiOffice-0.1.5-x64.exe | Format-List
+Get-AuthenticodeSignature .\ChenyiOffice-0.1.6-x64.exe | Format-List
 ```
 
 A self-signed signature reports `Status: UnknownError` or "Unknown publisher" on a machine that has not trusted the certificate, even though the signature is cryptographically intact.
@@ -49,16 +49,23 @@ Import-Certificate -FilePath .\ChenyiOffice-code-signing.cer `
 
 Only do this on machines you control. A self-signed certificate does not protect users from a compromised release channel, and it does not remove SmartScreen warnings for the general public.
 
-## Replacing it with a CA certificate
+## Rotation and replacing the certificate
 
-When a trusted certificate (OV/EV or a signing service such as SignPath or Azure Trusted Signing) is available:
+A trusted certificate (OV/EV or a signing service such as SignPath or Azure Trusted Signing) can be used with:
 
 ```bash
 SIGN_PFX=/path/to/ca.pfx SIGN_PFX_PASS=... SIGN_CERT=/path/to/ca.crt \
-  ./scripts/build-windows.sh
+  REQUIRE_SIGN=1 ./scripts/build-windows.sh
 ```
 
-No source changes are required. After switching, update this document and the fingerprint in the release notes.
+The launcher pins the signer thumbprint, so switching certificates is a two-step release:
+
+1. Add the new SHA-1 thumbprint to `kExpectedThumbprints` in `app/launcher/main.cpp` while keeping the old one.
+2. Build and release that launcher signed with the **old** certificate. Wait until it is installed.
+3. Switch the build to the new certificate. Keep the old thumbprint for one more release, then remove it.
+4. Update this document, `docs/updater.md`, and the release notes with the new fingerprint.
+
+Pinned certificates are accepted even after expiry (`CERT_E_EXPIRED`), so an expired certificate does not deadlock updates. Revoked certificates are still rejected.
 
 ## Security notes
 

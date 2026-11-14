@@ -4,15 +4,15 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.1.5-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.1.6-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.1.5 — Windows preview with passwordless updates.** The installer bundles the LibreOffice 26.8.3 engine, a custom launcher, and branded engine artwork. Writer, Calc, Impress, and Draw start in the **Tabbed** notebookbar layout with the **Sifr** icon theme; the product name is **Chenyi Office**, the splash and About/Start Center marks are custom, and upstream tips and promotional infobars are disabled. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature. Deep VCL-level dialog and widget redesign remains the next track.
+**v0.1.6 — Windows preview with passwordless updates.** The installer bundles LibreOffice 26.8.3 when no engine is present; if LibreOffice is already installed, it reuses that engine (its version may differ). It also ships a custom launcher and branded engine artwork. Writer, Calc, Impress, and Draw start in the **Tabbed** notebookbar layout with the **Sifr** icon theme; the product name is **Chenyi Office**, the splash and About/Start Center marks are custom, and upstream tips and promotional infobars are disabled. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature. Deep VCL-level dialog and widget redesign remains the next track.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.1.5-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.1.6-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
 - **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
 
@@ -34,9 +34,9 @@ The installer writes a signed-in launcher and a brand profile. On first start, t
 - No first-run tip, What's New, Get Involved, or Donate infobars.
 - A clean first-run experience behind the Chenyi Office splash.
 
-The profile is re-applied when the brand version changes, with the previous file kept as `registrymodifications.xcu.bak`, so new interface defaults reach existing users. See [docs/ui.md](docs/ui.md).
+When the brand version changes, the launcher merges only missing product defaults into the existing profile and keeps the previous file as `registrymodifications.xcu.bak`. User toolbar, icon, and option changes are preserved across upgrades. See [docs/ui.md](docs/ui.md).
 
-If LibreOffice is already installed, the installer reuses it as the engine, leaves its splash and About artwork untouched, and records that fact so uninstalling Chenyi Office does not remove the user's own LibreOffice.
+If LibreOffice is already installed, the installer reuses it as the engine, leaves its splash and About artwork untouched, and records that fact so uninstalling Chenyi Office does not remove the user's own LibreOffice. If that engine is later removed or replaced, the launcher offers a download-page shortcut to reinstall the kernel.
 
 ## Product direction
 
@@ -83,7 +83,7 @@ Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`, `osslsignc
 SIGN_PFX_PASS=... ./scripts/build-windows.sh
 ```
 
-The script generates brand assets, compiles and signs the launcher and uninstaller, verifies the pinned LibreOffice MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.1.5-x64.exe` plus its SHA-256 and the public signing certificate.
+The script generates brand assets, compiles and signs the launcher and uninstaller, verifies the pinned LibreOffice MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.1.6-x64.exe` plus its SHA-256 and the public signing certificate.
 
 See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 

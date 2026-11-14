@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.1.5** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, passwordless updates, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
+Current release: **v0.1.6** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, passwordless updates, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 

@@ -13,7 +13,7 @@ LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/s
 # Pinned SHA-256 of the engine MSI. Override together with LO_VERSION only when
 # you have independently verified a new upstream artifact.
 LO_MSI_SHA256="${LO_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
-VERSION="0.1.5"
+VERSION="0.1.6"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"

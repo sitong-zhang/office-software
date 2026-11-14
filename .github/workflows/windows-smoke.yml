@@ -1,0 +1,64 @@
+name: Windows smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify
+        required: true
+        default: v0.1.6
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - name: Download release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path smoke | Out-Null
+          gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" `
+            --pattern "latest.json" `
+            --pattern "ChenyiOffice-*-x64.exe" `
+            --dir smoke
+
+      - name: Verify hash, signature, and silent-mode guard
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content smoke/latest.json -Raw | ConvertFrom-Json
+          $installer = Get-ChildItem smoke -Filter 'ChenyiOffice-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer asset is missing.' }
+
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $manifest.installer.sha256) { throw "SHA-256 mismatch: $hash" }
+          if ($installer.Length -ne [int64]$manifest.installer.size) {
+            throw "Size mismatch: $($installer.Length)"
+          }
+
+          $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
+          if (-not $signature.SignerCertificate) { throw 'Installer is not Authenticode-signed.' }
+          $thumbprint = ($signature.SignerCertificate.Thumbprint -replace '\s', '').ToUpperInvariant()
+          if ($thumbprint -ne 'FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4') {
+            throw "Unexpected signer thumbprint: $thumbprint"
+          }
+          if ($signature.Status -notin @('Valid', 'UnknownError', 'UntrustedRoot')) {
+            throw "Unexpected signature status: $($signature.Status)"
+          }
+
+          if (Test-Path "$env:ProgramFiles\ChenyiOffice\ChenyiOffice.exe") {
+            Write-Host 'Chenyi Office is already installed; skipping the silent fresh-install guard.'
+            exit 0
+          }
+
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' `
+            -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 2) {
+            throw "Silent fresh-install guard returned $($process.ExitCode), expected 2."
+          }
+          Write-Host 'Silent fresh-install guard returned 2 as expected.'

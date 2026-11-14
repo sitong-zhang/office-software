@@ -57,9 +57,9 @@ The file is attached to every release by the workflow in `.github/workflows/upda
 
 1. Download to a temporary directory.
 2. Verify size, then SHA-256 against the manifest. A missing or mismatched hash is a failure, never a skip.
-3. Verify the Authenticode signature of the installer and require it to be signed by the pinned Chenyi Office certificate. A self-signed certificate is expected; the pinned thumbprint, not the Windows trust store, is the identity check.
+3. Verify the Authenticode signature of the installer and require it to be signed by a pinned Chenyi Office certificate. A self-signed certificate is expected; the pinned thumbprint, not the Windows trust store, is the identity check. Multiple thumbprints may be compiled in for rotation, and `CERT_E_EXPIRED` is accepted for a pinned identity.
 4. Run the installer silently (`/S` for the EXE wrapper). Silent mode is reserved for updates: the installer refuses it when Chenyi Office is not already installed, and it never asks for the install password. After installation the launcher relaunches.
-5. If any step fails, show the retry screen; the app remains blocked.
+5. If any step fails, show the retry screen with the path of `%TEMP%\ChenyiOffice-update-error.txt`; the app remains blocked.
 
 ## Offline and failure behavior
 
@@ -69,12 +69,23 @@ The file is attached to every release by the workflow in `.github/workflows/upda
 
 ## Security requirements
 
-- HTTPS only. The initial URL and the final URL after redirects must both use an allowlisted host (`github.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com`, `raw.githubusercontent.com`, `cdn.jsdelivr.net`); HTTPS-to-HTTP redirects are disabled.
+- HTTPS only. Automatic redirects are disabled; the client follows `Location` one hop at a time (at most five hops) and validates scheme, port 443, and host before every request. Allowed hosts are `github.com`, `*.githubusercontent.com`, and `cdn.jsdelivr.net`.
 - `installer.sha256` is mandatory and must be 64 hex characters. An empty or malformed value rejects the manifest.
 - The downloaded installer must carry an Authenticode signature whose signer certificate thumbprint matches the value compiled into the launcher. This is the trust anchor: a tampered manifest cannot make the client run an unsigned binary.
 - The manifest itself is not separately signed. It is treated as an untrusted hint; integrity is enforced on the downloaded envelope instead.
 - Downgrades are never installed: the remote version must be greater than the running version (or the running version must be below `min_supported_version`), and a manifest whose `min_supported_version` is greater than its `version` is rejected. A rollback is published as a higher version number.
 - The updater runs with the same integrity level as the application and requests elevation only when launching the installer.
+
+## First hop from v0.1.4
+
+v0.1.4 shipped before signature verification existed in the launcher. Its first update to a later version is therefore protected only by HTTPS and the SHA-256 from `latest.json`. From the v0.1.5 launcher onward, every update also requires the pinned Authenticode publisher. Users who want certificate-level assurance for that first hop can download the installer manually and compare both the SHA-256 and the certificate thumbprint (`FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4`).
+
+## Certificate lifecycle
+
+- The launcher accepts one or more pinned SHA-1 thumbprints.
+- For rotation: ship a launcher containing both the old and the new thumbprint while the old certificate still signs releases. After that launcher is widely installed, switch the signing certificate and keep the old thumbprint for one release.
+- Expired certificates are accepted only when the signer thumbprint matches a pin, so expiry cannot deadlock the mandatory update screen.
+- A revoked certificate is not accepted.
 
 ## Release-side automation
 
@@ -94,5 +105,6 @@ If a release has no matching installer, the workflow exits without publishing a 
 - [x] Update screen has no dismissal path.
 - [x] Tampered download and unsigned installer are rejected and surface a retry.
 - [x] Updates never ask for the install password.
-- [ ] Installer elevation and silent-install flags verified on Windows 10 and 11 hardware.
+- [x] Published installer hash, signature, and silent-mode guard verified on a Windows runner (`windows-smoke.yml`).
+- [ ] Full install → forced update → restart loop verified on Windows 10 and 11 hardware.
 - [ ] Relaunch after install reports the new version on Windows hardware.

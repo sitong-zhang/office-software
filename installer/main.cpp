@@ -14,6 +14,7 @@
 #include <bcrypt.h>
 #include <shlobj.h>
 #include <shlwapi.h>
+#include <shellapi.h>
 #include <objidl.h>
 
 #include <algorithm>
@@ -31,7 +32,7 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.5";
+static const wchar_t* kVersion = L"0.1.6";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -518,27 +519,38 @@ static bool DetectForeignEngine() {
 
 static DWORD WINAPI InstallThreadProc(LPVOID);
 
+static void WriteUpdateErrorLog(const std::wstring& message) {
+  wchar_t temp[MAX_PATH] = {0};
+  GetTempPathW(MAX_PATH, temp);
+  std::wstring log = std::wstring(temp) + L"ChenyiOffice-update-error.txt";
+  FILE* file = _wfopen(log.c_str(), L"wb");
+  if (!file) return;
+  std::string text = WideToUtf8(message);
+  fwrite(text.data(), 1, text.size(), file);
+  fclose(file);
+}
+
 static int RunSilentUpdate() {
   // Silent mode is reserved for updates. A fresh install still requires the
   // distribution password in the normal UI.
-  if (!EngineAlreadyInstalled()) return 2;
+  if (!EngineAlreadyInstalled()) {
+    WriteUpdateErrorLog(
+        L"静默模式仅用于已安装用户的更新。未检测到 Chenyi Office，"
+        L"首次安装请正常启动安装包并输入安装密码。");
+    return 2;
+  }
 
   DWORD threadId = 0;
   HANDLE thread = CreateThread(nullptr, 0, InstallThreadProc, nullptr, 0, &threadId);
-  if (!thread) return 3;
+  if (!thread) {
+    WriteUpdateErrorLog(L"无法创建静默更新线程。");
+    return 3;
+  }
   WaitForSingleObject(thread, INFINITE);
   CloseHandle(thread);
 
   if (InterlockedCompareExchange(&g_state, 0, 0) != 2) {
-    wchar_t temp[MAX_PATH] = {0};
-    GetTempPathW(MAX_PATH, temp);
-    std::wstring log = std::wstring(temp) + L"ChenyiOffice-update-error.txt";
-    FILE* file = _wfopen(log.c_str(), L"wb");
-    if (file) {
-      std::string text = WideToUtf8(g_error.empty() ? L"更新失败" : g_error);
-      fwrite(text.data(), 1, text.size(), file);
-      fclose(file);
-    }
+    WriteUpdateErrorLog(g_error.empty() ? L"更新失败" : g_error);
     return 1;
   }
   return 0;
@@ -896,7 +908,21 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
   g_height = S(600);
 
   // Silent mode is the update path used by the launcher: no UI, no password.
-  bool silent = commandLine && (wcsstr(commandLine, L"/S") || wcsstr(commandLine, L"--silent"));
+  // Parse exact arguments so a path such as "C:\Setup\app.exe" cannot trigger
+  // silent mode by accident.
+  bool silent = false;
+  int argumentCount = 0;
+  LPWSTR* arguments = CommandLineToArgvW(GetCommandLineW(), &argumentCount);
+  if (arguments) {
+    for (int i = 1; i < argumentCount; ++i) {
+      if (_wcsicmp(arguments[i], L"/S") == 0 || _wcsicmp(arguments[i], L"-s") == 0 ||
+          _wcsicmp(arguments[i], L"--silent") == 0) {
+        silent = true;
+        break;
+      }
+    }
+    LocalFree(arguments);
+  }
   if (silent) return RunSilentUpdate();
 
   // Re-running the installer over an existing installation is an update, not a

@@ -54,6 +54,17 @@ for manifest in (
 match("README badge", "README.md", r"badge/version-([0-9.]+)-")
 match("README installer", "README.md", r"ChenyiOffice-([0-9.]+)-x64\.exe")
 
+for path, needle in (
+    ("docs/index.html", f"v{version}"),
+    ("docs/roadmap.md", f"**v{version}**"),
+    ("docs/architecture.md", f"ChenyiOffice-{version}-x64.exe"),
+    ("docs/build.md", f"ChenyiOffice-{version}-x64.exe"),
+    ("docs/signing.md", f"ChenyiOffice-{version}-x64.exe"),
+    ("docs/release-process.md", f"v{version}"),
+):
+    if needle not in text(path):
+        fail(f"{path} does not mention {needle}")
+
 if f"## [{version}]" not in text("CHANGELOG.md"):
     fail(f"CHANGELOG.md has no [{version}] section")
 

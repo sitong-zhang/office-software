@@ -37,12 +37,18 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.5";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.5";
+static const wchar_t* kVersion = L"0.1.6";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.6";
 
-// SHA-1 thumbprint of the code-signing certificate. Updates are accepted only
-// from an installer signed by this certificate, even if the manifest is tampered with.
-static const wchar_t* kExpectedThumbprint = L"FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4";
+// SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
+// only from an installer signed by one of these certificates, even if the
+// manifest is tampered with. During a certificate rotation, ship a launcher
+// containing both the old and new thumbprints before switching the signer.
+static const wchar_t* kExpectedThumbprints[] = {
+    L"FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4",
+};
+static const wchar_t* kReleasesUrl =
+    L"https://github.com/sitong-zhang/office-software/releases/latest";
 
 static const char* kManifestUrl =
     "https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json";
@@ -95,18 +101,24 @@ static bool ReadTextFile(const std::wstring& path, std::string& out) {
   return true;
 }
 
+static bool EndsWithNoCase(const std::wstring& value, const wchar_t* suffix) {
+  size_t length = wcslen(suffix);
+  if (value.size() < length) return false;
+  return _wcsicmp(value.c_str() + value.size() - length, suffix) == 0;
+}
+
 static bool IsAllowedHost(const std::wstring& host) {
-  static const wchar_t* hosts[] = {
+  static const wchar_t* exact[] = {
       L"github.com",
-      L"objects.githubusercontent.com",
-      L"release-assets.githubusercontent.com",
-      L"raw.githubusercontent.com",
       L"cdn.jsdelivr.net",
   };
-  for (const wchar_t* allowed : hosts) {
+  for (const wchar_t* allowed : exact) {
     if (_wcsicmp(host.c_str(), allowed) == 0) return true;
   }
-  return false;
+  // GitHub rotates asset hosts (objects., release-assets., raw., ...), so
+  // accept any subdomain of githubusercontent.com instead of a fixed list.
+  if (_wcsicmp(host.c_str(), L"githubusercontent.com") == 0) return true;
+  return EndsWithNoCase(host, L".githubusercontent.com");
 }
 
 static bool IsAllowedUrl(const std::wstring& url) {
@@ -115,6 +127,7 @@ static bool IsAllowedUrl(const std::wstring& url) {
   parts.dwHostNameLength = (DWORD)-1;
   if (!WinHttpCrackUrl(url.c_str(), (DWORD)url.size(), 0, &parts)) return false;
   if (parts.nScheme != INTERNET_SCHEME_HTTPS) return false;
+  if (parts.nPort != INTERNET_DEFAULT_HTTPS_PORT) return false;
   return IsAllowedHost(std::wstring(parts.lpszHostName, parts.dwHostNameLength));
 }
 
@@ -381,31 +394,27 @@ struct HttpHandle {
   }
 };
 
-static bool HttpRequest(const std::wstring& url, std::string* body, const std::wstring& filePath,
-                        uint64_t expectedSize, std::function<void(uint64_t, uint64_t)> progress,
-                        std::wstring& err) {
-  URL_COMPONENTS parts{};
-  parts.dwStructSize = sizeof(parts);
-  parts.dwSchemeLength = (DWORD)-1;
-  parts.dwHostNameLength = (DWORD)-1;
-  parts.dwUrlPathLength = (DWORD)-1;
-  parts.dwExtraInfoLength = (DWORD)-1;
-  if (!WinHttpCrackUrl(url.c_str(), (DWORD)url.size(), 0, &parts)) {
-    err = L"更新地址无效";
+static bool QueryHeaderString(HINTERNET request, DWORD level, std::wstring& out) {
+  DWORD size = 0;
+  if (!WinHttpQueryHeaders(request, level, WINHTTP_HEADER_NAME_BY_INDEX, nullptr, &size,
+                           WINHTTP_NO_HEADER_INDEX) &&
+      GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     return false;
   }
-
-  std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
-  std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
-  if (parts.dwExtraInfoLength)
-    path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
-  bool secure = parts.nScheme == INTERNET_SCHEME_HTTPS;
-  if (!secure || !IsAllowedHost(host)) {
-    err = L"不安全的更新地址";
+  if (size == 0) return false;
+  std::vector<wchar_t> buffer(size / sizeof(wchar_t) + 1, L'\0');
+  if (!WinHttpQueryHeaders(request, level, WINHTTP_HEADER_NAME_BY_INDEX, buffer.data(), &size,
+                           WINHTTP_NO_HEADER_INDEX)) {
     return false;
   }
+  out.assign(buffer.data());
+  return true;
+}
 
-  HttpHandle session, connection, request;
+static bool HttpRequest(const std::wstring& initialUrl, std::string* body,
+                        const std::wstring& filePath, uint64_t expectedSize,
+                        std::function<void(uint64_t, uint64_t)> progress, std::wstring& err) {
+  HttpHandle session;
   session.h = WinHttpOpen(kUserAgent, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
                           WINHTTP_NO_PROXY_BYPASS, 0);
   if (!session.h) {
@@ -414,115 +423,150 @@ static bool HttpRequest(const std::wstring& url, std::string* body, const std::w
   }
   WinHttpSetTimeouts(session.h, 8000, 8000, 8000, 12000);
 
-  connection.h = WinHttpConnect(session.h, host.c_str(), parts.nPort, 0);
-  if (!connection.h) {
-    err = L"无法连接服务器";
-    return false;
-  }
-
-  request.h = WinHttpOpenRequest(connection.h, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
-                                 WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                 secure ? WINHTTP_FLAG_SECURE : 0);
-  if (!request.h) {
-    err = L"无法创建请求";
-    return false;
-  }
-
-  WinHttpAddRequestHeaders(request.h, L"Cache-Control: no-cache\r\n", (DWORD)-1,
-                           WINHTTP_ADDREQ_FLAG_ADD);
-
-  // Follow redirects, but never downgrade HTTPS to HTTP.
-  DWORD redirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
-  WinHttpSetOption(request.h, WINHTTP_OPTION_REDIRECT_POLICY, &redirectPolicy,
-                   sizeof(redirectPolicy));
-
-  if (!WinHttpSendRequest(request.h, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0,
-                          0, 0) ||
-      !WinHttpReceiveResponse(request.h, nullptr)) {
-    err = L"网络连接失败";
-    return false;
-  }
-
-  // WinHTTP follows redirects automatically; make sure the final URL is still
-  // on an allowed GitHub/CDN host before reading any content.
-  wchar_t finalUrl[2048] = {0};
-  DWORD finalUrlSize = sizeof(finalUrl);
-  if (!WinHttpQueryOption(request.h, WINHTTP_OPTION_URL, finalUrl, &finalUrlSize) ||
-      !IsAllowedUrl(finalUrl)) {
-    err = L"更新地址被重定向到不受信任的主机";
-    return false;
-  }
-
-  DWORD status = 0;
-  DWORD statusSize = sizeof(status);
-  if (!WinHttpQueryHeaders(request.h, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                           WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize,
-                           WINHTTP_NO_HEADER_INDEX)) {
-    err = L"无法读取响应";
-    return false;
-  }
-  if (status != 200) {
-    wchar_t buf[64];
-    swprintf(buf, 64, L"服务器返回 HTTP %lu", status);
-    err = buf;
-    return false;
-  }
-
-  DWORD contentLength = 0;
-  DWORD lengthSize = sizeof(contentLength);
-  WinHttpQueryHeaders(request.h, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
-                      WINHTTP_HEADER_NAME_BY_INDEX, &contentLength, &lengthSize,
-                      WINHTTP_NO_HEADER_INDEX);
-  uint64_t total = contentLength ? contentLength : expectedSize;
-
-  HANDLE file = INVALID_HANDLE_VALUE;
-  if (body == nullptr) {
-    file = CreateFileW(filePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                       FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) {
-      err = L"无法写入临时文件";
+  std::wstring url = initialUrl;
+  // Follow redirects ourselves so every hop is validated before it is
+  // requested. WinHTTP's automatic redirects do not expose that guarantee.
+  for (int hop = 0; hop <= 5; ++hop) {
+    URL_COMPONENTS parts{};
+    parts.dwStructSize = sizeof(parts);
+    parts.dwHostNameLength = (DWORD)-1;
+    parts.dwUrlPathLength = (DWORD)-1;
+    parts.dwExtraInfoLength = (DWORD)-1;
+    if (!WinHttpCrackUrl(url.c_str(), (DWORD)url.size(), 0, &parts)) {
+      err = L"更新地址无效";
       return false;
     }
-  }
 
-  std::vector<char> buffer(64 * 1024);
-  uint64_t done = 0;
-  while (true) {
-    DWORD read = 0;
-    if (!WinHttpReadData(request.h, buffer.data(), (DWORD)buffer.size(), &read)) {
-      err = L"下载中断";
-      if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
-      if (body == nullptr) DeleteFileW(filePath.c_str());
+    std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
+    std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
+    if (parts.dwExtraInfoLength)
+      path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
+    if (parts.nScheme != INTERNET_SCHEME_HTTPS ||
+        parts.nPort != INTERNET_DEFAULT_HTTPS_PORT || !IsAllowedHost(host)) {
+      err = L"不安全的更新地址";
       return false;
     }
-    if (read == 0) break;
-    if (body) {
-      body->append(buffer.data(), read);
-      if (body->size() > 4 * 1024 * 1024) {
-        err = L"响应内容过大";
+
+    HttpHandle connection, request;
+    connection.h = WinHttpConnect(session.h, host.c_str(), parts.nPort, 0);
+    if (!connection.h) {
+      err = L"无法连接服务器";
+      return false;
+    }
+
+    request.h = WinHttpOpenRequest(connection.h, L"GET", path.c_str(), nullptr,
+                                   WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                   WINHTTP_FLAG_SECURE);
+    if (!request.h) {
+      err = L"无法创建请求";
+      return false;
+    }
+
+    WinHttpAddRequestHeaders(request.h, L"Cache-Control: no-cache\r\n", (DWORD)-1,
+                             WINHTTP_ADDREQ_FLAG_ADD);
+    DWORD redirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
+    WinHttpSetOption(request.h, WINHTTP_OPTION_REDIRECT_POLICY, &redirectPolicy,
+                     sizeof(redirectPolicy));
+
+    if (!WinHttpSendRequest(request.h, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                            WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+        !WinHttpReceiveResponse(request.h, nullptr)) {
+      err = L"网络连接失败";
+      return false;
+    }
+
+    DWORD status = 0;
+    DWORD statusSize = sizeof(status);
+    if (!WinHttpQueryHeaders(request.h, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                             WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize,
+                             WINHTTP_NO_HEADER_INDEX)) {
+      err = L"无法读取响应";
+      return false;
+    }
+
+    if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+      std::wstring location;
+      if (!QueryHeaderString(request.h, WINHTTP_QUERY_LOCATION, location) ||
+          location.empty()) {
+        err = L"更新重定向缺少目标地址";
+        return false;
+      }
+      wchar_t resolved[4096] = {0};
+      DWORD resolvedSize = 4096;
+      if (UrlCombineW(url.c_str(), location.c_str(), resolved, &resolvedSize, 0) != S_OK) {
+        err = L"更新重定向地址无效";
+        return false;
+      }
+      url = resolved;
+      continue;
+    }
+
+    if (status != 200) {
+      wchar_t buf[64];
+      swprintf(buf, 64, L"服务器返回 HTTP %lu", status);
+      err = buf;
+      return false;
+    }
+
+    DWORD contentLength = 0;
+    DWORD lengthSize = sizeof(contentLength);
+    WinHttpQueryHeaders(request.h, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                        WINHTTP_HEADER_NAME_BY_INDEX, &contentLength, &lengthSize,
+                        WINHTTP_NO_HEADER_INDEX);
+    uint64_t total = contentLength ? contentLength : expectedSize;
+
+    HANDLE file = INVALID_HANDLE_VALUE;
+    if (body == nullptr) {
+      file = CreateFileW(filePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL, nullptr);
+      if (file == INVALID_HANDLE_VALUE) {
+        err = L"无法写入临时文件";
+        return false;
+      }
+    }
+
+    std::vector<char> buffer(64 * 1024);
+    uint64_t done = 0;
+    while (true) {
+      DWORD read = 0;
+      if (!WinHttpReadData(request.h, buffer.data(), (DWORD)buffer.size(), &read)) {
+        err = L"下载中断";
         if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+        if (body == nullptr) DeleteFileW(filePath.c_str());
         return false;
       }
-    } else {
-      DWORD written = 0;
-      if (!WriteFile(file, buffer.data(), read, &written, nullptr) || written != read) {
-        err = L"写入失败";
-        CloseHandle(file);
-        DeleteFileW(filePath.c_str());
-        return false;
+      if (read == 0) break;
+      if (body) {
+        body->append(buffer.data(), read);
+        if (body->size() > 4 * 1024 * 1024) {
+          err = L"响应内容过大";
+          if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+          return false;
+        }
+      } else {
+        DWORD written = 0;
+        if (!WriteFile(file, buffer.data(), read, &written, nullptr) || written != read) {
+          err = L"写入失败";
+          CloseHandle(file);
+          DeleteFileW(filePath.c_str());
+          return false;
+        }
       }
+      done += read;
+      if (progress) progress(done, total);
     }
-    done += read;
-    if (progress) progress(done, total);
+
+    if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    if (body == nullptr && expectedSize > 0 && done != expectedSize) {
+      err = L"下载文件大小不匹配";
+      DeleteFileW(filePath.c_str());
+      return false;
+    }
+    return true;
   }
 
-  if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
-  if (body == nullptr && expectedSize > 0 && done != expectedSize) {
-    err = L"下载文件大小不匹配";
-    DeleteFileW(filePath.c_str());
-    return false;
-  }
-  return true;
+  err = L"更新地址重定向次数过多";
+  return false;
 }
 
 static bool HttpGet(const std::wstring& url, std::string& body, std::wstring& err) {
@@ -626,11 +670,18 @@ static std::wstring SignerThumbprint(const std::wstring& path) {
   return result;
 }
 
+static bool IsTrustedThumbprint(const std::wstring& thumbprint) {
+  if (thumbprint.empty()) return false;
+  for (const wchar_t* expected : kExpectedThumbprints) {
+    if (_wcsicmp(thumbprint.c_str(), expected) == 0) return true;
+  }
+  return false;
+}
+
 static bool VerifyInstallerSignature(const std::wstring& path) {
   if (!FileExists(path)) return false;
 
-  std::wstring thumbprint = SignerThumbprint(path);
-  if (thumbprint.empty() || _wcsicmp(thumbprint.c_str(), kExpectedThumbprint) != 0) return false;
+  if (!IsTrustedThumbprint(SignerThumbprint(path))) return false;
 
   WINTRUST_FILE_INFO fileInfo{};
   fileInfo.cbStruct = sizeof(fileInfo);
@@ -650,8 +701,11 @@ static bool VerifyInstallerSignature(const std::wstring& path) {
   WinVerifyTrust(nullptr, &action, &data);
 
   // The publisher certificate is self-signed and therefore not in the Windows
-  // trust store. The pinned thumbprint above is the identity check.
-  return status == ERROR_SUCCESS || status == CERT_E_UNTRUSTEDROOT;
+  // trust store. The pinned thumbprint above is the identity check. Expired
+  // certificates are also accepted: with a pinned self-signed identity,
+  // expiry would otherwise deadlock the mandatory update screen forever.
+  return status == ERROR_SUCCESS || status == CERT_E_UNTRUSTEDROOT ||
+         status == CERT_E_EXPIRED;
 }
 
 // ---------------------------------------------------------------------------
@@ -1289,15 +1343,15 @@ static void DrawError(HDC dc) {
   DrawTextLine(dc, L"更新未能完成", title, 30, FW_SEMIBOLD, RGB(244, 241, 232),
                L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
 
-  RECT msg{pad, S(168), g_width - pad, S(230)};
+  RECT msg{pad, S(168), g_width - pad, S(318)};
   DrawTextLine(dc, GetDownloadError(), msg, 15, FW_NORMAL, RGB(226, 166, 158),
                L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
 
-  RECT linkLabel{pad, S(248), g_width - pad, S(272)};
+  RECT linkLabel{pad, S(336), g_width - pad, S(360)};
   DrawTextLine(dc, L"手动下载地址：", linkLabel, 12, FW_NORMAL, RGB(150, 170, 158),
                L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
 
-  RECT link{pad, S(274), g_width - pad, S(330)};
+  RECT link{pad, S(362), g_width - pad, S(410)};
   DrawTextLine(dc, g_update.url, link, 11, FW_NORMAL, RGB(136, 196, 168), L"Consolas",
                DT_LEFT | DT_WORDBREAK | DT_END_ELLIPSIS);
 
@@ -1337,6 +1391,110 @@ static std::wstring FileUrlFromPath(const std::wstring& path) {
   return Utf8ToWide(url);
 }
 
+static bool ReadWholeFile(const std::wstring& path, std::string& out) {
+  out.clear();
+  HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file == INVALID_HANDLE_VALUE) return false;
+  LARGE_INTEGER size{};
+  if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 ||
+      size.QuadPart > 32LL * 1024 * 1024) {
+    CloseHandle(file);
+    return false;
+  }
+  out.resize((size_t)size.QuadPart);
+  DWORD read = 0;
+  bool ok = out.empty() || (ReadFile(file, &out[0], (DWORD)out.size(), &read, nullptr) &&
+                            read == out.size());
+  CloseHandle(file);
+  return ok;
+}
+
+static bool WriteWholeFile(const std::wstring& path, const std::string& data) {
+  HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file == INVALID_HANDLE_VALUE) return false;
+  DWORD written = 0;
+  bool ok = WriteFile(file, data.data(), (DWORD)data.size(), &written, nullptr) &&
+            written == data.size();
+  CloseHandle(file);
+  return ok;
+}
+
+static bool LoadResourceString(int id, std::string& out) {
+  HRSRC res = FindResourceW(g_instance, MAKEINTRESOURCEW(id), RT_RCDATA);
+  if (!res) return false;
+  HGLOBAL data = LoadResource(g_instance, res);
+  DWORD size = SizeofResource(g_instance, res);
+  void* bytes = LockResource(data);
+  if (!bytes) return false;
+  out.assign((const char*)bytes, size);
+  return true;
+}
+
+static std::string XmlAttribute(const std::string& block, const char* attribute) {
+  std::string needle = std::string(attribute) + "=\"";
+  size_t start = block.find(needle);
+  if (start == std::string::npos) return "";
+  start += needle.size();
+  size_t end = block.find('"', start);
+  if (end == std::string::npos) return "";
+  return block.substr(start, end - start);
+}
+
+static std::string ProfileKey(const std::string& path, const std::string& name) {
+  return path + '\x1f' + name;
+}
+
+static void CollectProfileItems(const std::string& xml, std::set<std::string>& keys,
+                                std::vector<std::string>* blocks) {
+  size_t pos = 0;
+  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
+    size_t end = xml.find("</item>", pos);
+    if (end == std::string::npos) break;
+    end += 7;
+    std::string block = xml.substr(pos, end - pos);
+    std::string path = XmlAttribute(block, "oor:path");
+    std::string name = XmlAttribute(block, "oor:name");
+    if (!path.empty() && !name.empty()) {
+      keys.insert(ProfileKey(path, name));
+      if (blocks) blocks->push_back(block);
+    }
+    pos = end;
+  }
+}
+
+// Add brand defaults that the user's profile does not have yet. Existing
+// values are kept, so upgrades never wipe user toolbar/icon/option changes.
+static std::string MergeProfile(const std::string& existing, const std::string& tmpl) {
+  std::set<std::string> existingKeys;
+  CollectProfileItems(existing, existingKeys, nullptr);
+
+  std::set<std::string> templateKeys;
+  std::vector<std::string> templateBlocks;
+  CollectProfileItems(tmpl, templateKeys, &templateBlocks);
+
+  std::string additions;
+  for (const auto& block : templateBlocks) {
+    std::string path = XmlAttribute(block, "oor:path");
+    std::string name = XmlAttribute(block, "oor:name");
+    if (path.empty() || name.empty()) continue;
+    if (existingKeys.count(ProfileKey(path, name))) continue;
+    additions += block;
+    additions += "\n";
+  }
+  if (additions.empty()) return existing;
+
+  std::string merged = existing;
+  size_t close = merged.rfind("</oor:items>");
+  if (close == std::string::npos) {
+    merged += "\n" + additions;
+  } else {
+    merged.insert(close, additions);
+  }
+  return merged;
+}
+
 static void EnsureProfile() {
   std::wstring dir = ProfileDirectory();
   std::wstring path = dir + L"\\user\\registrymodifications.xcu";
@@ -1348,29 +1506,31 @@ static void EnsureProfile() {
     return;
   }
 
-  if (FileExists(path)) {
-    CopyFileW(path.c_str(), (path + L".bak").c_str(), FALSE);
-  }
-
-  HRSRC res = FindResourceW(g_instance, MAKEINTRESOURCEW(106), RT_RCDATA);
-  if (!res) {
+  std::string tmpl;
+  if (!LoadResourceString(106, tmpl) || tmpl.empty()) {
     LogLine(L"brand profile resource missing");
     return;
   }
-  HGLOBAL data = LoadResource(g_instance, res);
-  DWORD size = SizeofResource(g_instance, res);
-  void* bytes = LockResource(data);
-  if (!bytes) return;
 
-  HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL, nullptr);
-  if (file == INVALID_HANDLE_VALUE) {
-    LogLine(L"cannot write brand profile");
-    return;
+  bool created = !FileExists(path);
+  if (created) {
+    if (!WriteWholeFile(path, tmpl)) {
+      LogLine(L"cannot create brand profile");
+      return;
+    }
+  } else {
+    CopyFileW(path.c_str(), (path + L".bak").c_str(), FALSE);
+    std::string existing;
+    if (!ReadWholeFile(path, existing)) {
+      LogLine(L"cannot read existing brand profile");
+      return;
+    }
+    std::string merged = MergeProfile(existing, tmpl);
+    if (merged != existing && !WriteWholeFile(path, merged)) {
+      LogLine(L"cannot merge brand profile");
+      return;
+    }
   }
-  DWORD written = 0;
-  WriteFile(file, bytes, size, &written, nullptr);
-  CloseHandle(file);
 
   FILE* versionFile = _wfopen(marker.c_str(), L"wb");
   if (versionFile) {
@@ -1378,16 +1538,23 @@ static void EnsureProfile() {
     fwrite(version.data(), 1, version.size(), versionFile);
     fclose(versionFile);
   }
-  LogLine(L"brand profile applied for " + std::wstring(kVersion));
+  LogLine(std::wstring(created ? L"brand profile created for " : L"brand profile merged for ") +
+          kVersion);
 }
 
 static void LaunchEngine() {
   std::wstring engine = FindEngine();
   LogLine(engine.empty() ? L"engine not found" : L"launch engine: " + engine);
   if (engine.empty()) {
-    MessageBoxW(g_window,
-                L"没有找到办公套件内核。请重新运行安装包，或检查 LibreOffice 是否已正确安装。",
-                kProductName, MB_ICONERROR | MB_OK);
+    LogLine(L"engine missing; EnginePath and standard locations were checked");
+    int answer = MessageBoxW(
+        g_window,
+        L"没有找到办公套件内核。它可能已被卸载，或被系统中的 LibreOffice 升级替换。\n\n"
+        L"是否打开下载页，重新安装 Chenyi Office 内核？",
+        kProductName, MB_ICONERROR | MB_YESNO);
+    if (answer == IDYES) {
+      ShellExecuteW(nullptr, L"open", kReleasesUrl, nullptr, nullptr, SW_SHOWNORMAL);
+    }
     PostQuitMessage(0);
     return;
   }
@@ -1460,7 +1627,17 @@ static void RunInstallerAndRestart() {
     GetExitCodeProcess(info.hProcess, &code);
     CloseHandle(info.hProcess);
     if (code != 0) {
-      SetDownloadError(L"更新安装失败，请重新运行安装包或联系发布者。");
+      wchar_t temp[MAX_PATH] = {0};
+      GetTempPathW(MAX_PATH, temp);
+      std::wstring log = std::wstring(temp) + L"ChenyiOffice-update-error.txt";
+      if (code == 2) {
+        SetDownloadError(
+            L"静默更新已取消：没有检测到已安装的 Chenyi Office。\n\n"
+            L"请手动运行下载的安装包，并输入首次安装密码。\n诊断日志：" + log);
+      } else {
+        SetDownloadError(L"更新安装失败。\n\n诊断日志：" + log +
+                         L"\n\n请重试，或打开下载页手动安装。");
+      }
       g_screen = 4;
       InvalidateRect(g_window, nullptr, FALSE);
       return;

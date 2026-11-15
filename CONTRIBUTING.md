@@ -1,57 +1,57 @@
-# Contributing to Chenyi Office（胡辰逸定制版）
+# 参与贡献
 
-Thanks for your interest. The project is in its foundation stage, so the development workflow is still being defined. This document describes how to participate now and what the workflow will look like once source integration lands.
+感谢你关注 Chenyi Office。欢迎通过反馈、文档和代码帮助项目变得更好。
 
-The first supported platform is Windows 10/11 x64; changes targeting other platforms are out of scope until version 1.0.
+目前正式支持的平台是 Windows 10 / 11 64 位。在 1.0 版本之前，其他平台暂不在支持范围内。
 
-## Ways to contribute
+## 参与方式
 
-- **Report a bug** — use the [bug report form](https://github.com/sitong-zhang/office-software/issues/new?template=bug_report.yml). Include the version, operating system, and exact steps to reproduce.
-- **Request a feature** — use the [feature request form](https://github.com/sitong-zhang/office-software/issues/new?template=feature_request.yml). Explain the problem before proposing the solution.
-- **Ask a question or share an idea** — start a thread in [Discussions](https://github.com/sitong-zhang/office-software/discussions).
-- **Improve documentation** — open a pull request with the change and a short rationale.
-- **Contribute code** — see the workflow below. Build instructions will be published with the first source integration.
+- **反馈问题**：使用 [问题反馈表单](https://github.com/sitong-zhang/office-software/issues/new?template=bug_report.yml)，并附上版本、操作系统和复现步骤。
+- **提出建议**：使用 [功能建议表单](https://github.com/sitong-zhang/office-software/issues/new?template=feature_request.yml)，先说明遇到的问题，再描述期望的方案。
+- **交流想法**：在 [Discussions](https://github.com/sitong-zhang/office-software/discussions) 发起讨论。
+- **改进文档**：直接提交 Pull Request，并简要说明改动原因。
+- **贡献代码**：参照下方流程提交。
 
-## Development workflow
+## 提交流程
 
-1. Fork the repository and create a topic branch from `main`:
+1. Fork 本仓库，从 `main` 创建主题分支：
 
    ```bash
    git checkout -b feature/short-description
    ```
 
-2. Keep changes focused. One pull request should address one problem.
-3. Follow the coding style of the surrounding code. Third-party source keeps its original style and license headers.
-4. Add or update documentation when behavior changes.
-5. Open a pull request and describe what changed, why, and how it was tested.
+2. 保持改动聚焦，一个 Pull Request 只解决一个问题。
+3. 遵循项目现有代码风格。第三方资源保留其原始风格与许可证声明。
+4. 行为发生变化时，同步更新相关文档。
+5. 提交 Pull Request，说明改动内容、原因与验证方式。
 
-## Commit messages
+## 提交信息
 
-Use the conventional prefix style:
+建议使用统一的简洁格式：
 
 ```text
-feat: add first-run setup screen
-fix: correct PDF export page range
-docs: clarify release checklist
-build: pin toolchain version
+feat: 增加首次启动引导页
+fix: 修正 PDF 导出页范围
+docs: 完善发布说明
+build: 固定工具链版本
 ```
 
-Keep the subject under 72 characters. Explain the reason in the body when it is not obvious.
+标题控制在 72 个字符以内；原因不明显时，在正文中补充说明。
 
-## Licensing of contributions
+## 贡献的授权
 
-This project is licensed under the Mozilla Public License 2.0. By submitting a pull request you confirm that:
+本项目采用 Mozilla Public License 2.0 授权。提交 Pull Request 即表示你确认：
 
-- you have the right to contribute the code;
-- new files are licensed under MPL 2.0 and carry the appropriate header;
-- you did not copy code from a source that is incompatible with MPL 2.0.
+- 你有权贡献这些代码；
+- 新文件采用 MPL 2.0 授权并带有相应声明；
+- 你没有复制与 MPL 2.0 不兼容来源的代码。
 
-There is no separate contributor license agreement. Do not remove or alter third-party copyright notices or license headers.
+项目不要求额外的贡献者许可协议。请勿移除或更改第三方版权与许可证声明。
 
-## Branding rules
+## 品牌规范
 
-Use Chenyi Office naming consistently across user-facing surfaces. See [docs/branding.md](docs/branding.md) for the rules that apply to product naming, icons, splash screens, and documentation.
+在面向用户的内容中统一使用 Chenyi Office 名称。产品命名、图标和文档中的视觉规范以一致、独立的产品身份为准。
 
-## Code of conduct
+## 行为准则
 
-All participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md). Report unacceptable behavior according to the process described there.
+所有参与均受[行为准则](CODE_OF_CONDUCT.md)约束。如遇到不恰当行为，请按其中的流程反馈。

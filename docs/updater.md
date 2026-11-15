@@ -1,16 +1,16 @@
-# Update protocol
+# 更新机制
 
-Every launch checks this repository for a newer build. When a new version has been published, the launcher shows an optional update prompt: the user can install it now, choose to be reminded later, or close the window. The current build stays fully usable until an update is chosen. Updates never interrupt work.
+Chenyi Office 在每次启动时检查是否有新版本。发现新版本后，会给出可选更新提示：你可以立即安装、稍后提醒，或直接关闭。在作出选择之前，当前版本始终可以正常使用，更新不会打断工作。
 
-## Endpoint
+## 检查地址
 
 ```text
 https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json
 ```
 
-The file is attached to every release by the workflow in `.github/workflows/update-manifest.yml`. Because the URL uses `releases/latest`, it always points at the newest non-prerelease release.
+该文件随每个版本发布，始终指向最新的正式版本。
 
-## Manifest schema
+## 清单格式
 
 ```json
 {
@@ -24,93 +24,59 @@ The file is attached to every release by the workflow in `.github/workflows/upda
     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "size": 348192768
   },
-  "notes": "Short summary shown on the update screen."
+  "notes": "更新页面上显示的简短说明。"
 }
 ```
 
-| Field | Meaning |
+| 字段 | 含义 |
 | --- | --- |
-| `version` | Latest version, compared with the running build |
-| `mandatory` | Always `false`. Retained for manifest compatibility; it never blocks the user. See [Compatibility with clients before 0.4.1](#compatibility-with-clients-before-041). |
-| `min_supported_version` | Builds below this are offered an update even when `version` is not newer |
-| `installer.url` | Direct asset URL on the repository host |
-| `installer.sha256` | Required; the download is rejected on mismatch |
-| `installer.size` | Used for the progress display and a sanity check |
+| `version` | 最新版本号，与当前运行的版本比较 |
+| `mandatory` | 恒为 `false`；为兼容旧版客户端保留，从不阻止用户 |
+| `min_supported_version` | 低于此版本时，即使 `version` 没有更新也会提示更新 |
+| `installer.url` | 发布主机上的安装包直链 |
+| `installer.sha256` | 必填；不匹配时拒绝下载 |
+| `installer.size` | 用于进度显示与基本校验 |
 
-`latest.json` is a version hint, not a command. Integrity is enforced on the downloaded installer, and the decision to install always rests with the user.
+`latest.json` 只是版本提示，不是强制命令。完整性校验作用于下载的安装包，是否安装始终由你决定。
 
-## Launch sequence
+## 启动流程
 
-1. Splash starts immediately and renders the update-check state.
-2. The client makes one request to the manifest with 8 s connect/send/receive timeouts and a 12 s total timeout, plus `Cache-Control: no-cache`. There is no automatic retry loop; the next launch retries.
-3. The announcement feed is fetched on the same check, even when an update is available, so deferring an update does not hide release notices (see [announcements.md](announcements.md)).
-4. If the remote `version` is greater than the running version, or the running version is below `min_supported_version`, the splash transitions to the **optional update prompt**. Otherwise the application opens normally, after any unseen announcements.
+1. 启动动画立即开始，并显示更新检查状态。
+2. 客户端向清单地址发起一次请求（连接/发送/接收超时 8 秒，总超时 12 秒），并附带 `Cache-Control: no-cache`。没有自动重试循环，下次启动会再试。
+3. 即使存在可用更新，也会同时获取公告，因此推迟更新不会错过版本通知（见[公告机制](announcements.md)）。
+4. 当远端 `version` 高于当前版本，或当前版本低于 `min_supported_version` 时，进入**可选更新提示**；否则在展示未读公告后正常打开应用。
 
-## Optional update prompt
+## 可选更新提示
 
-- Full-window but never blocking: a title-bar close button, `Esc`, and a reminder action are all available.
-- Shows current version, target version, download size, and progress.
-- Actions: **立即更新** (Update now) and **稍后提醒** (Remind me later); the Chinese labels are the ones shown in the product UI.
-- Deferring or closing leaves the running build fully usable. The check runs again on the next launch, so the offer is repeated but never forced. Unseen announcements are still shown before the home screen.
-- Download, verification and installation screens are also closable; leaving the launcher simply defers the update.
-- After a chosen update installs, the app relaunches and re-runs the check.
+- 全屏展示但绝不阻塞：标题栏关闭按钮、`Esc` 和"稍后提醒"都可用。
+- 显示当前版本、目标版本、下载大小与进度。
+- 操作按钮：**立即更新** 与 **稍后提醒**。
+- 推迟或关闭后，当前版本仍可正常使用。下次启动会再次检查，提示会重复出现但从不强制。未读公告仍会在进入首页前展示。
+- 下载、校验和安装界面同样可以关闭；关闭只是推迟更新。
+- 更新安装完成后，应用会重新启动并再次检查。
 
-## Download, verify, install
+## 下载、校验与安装
 
-1. Download to a temporary directory.
-2. Verify size, then SHA-256 against the manifest. A missing or mismatched hash is a failure, never a skip.
-3. Verify the Authenticode signature of the installer and require it to be signed by a pinned Chenyi Office certificate. A self-signed certificate is expected; the pinned thumbprint, not the Windows trust store, is the identity check. Multiple thumbprints may be compiled in for rotation, and `CERT_E_EXPIRED` is accepted for a pinned identity.
-4. Run the installer silently (`/S` for the EXE wrapper). Silent mode is reserved for updates: the installer refuses it when Chenyi Office is not already installed, and it never asks for the install password. After installation the launcher relaunches.
-5. If any step fails, show the retry screen with the path of `%TEMP%\ChenyiOffice-update-error.txt`. The retry screen also offers the reminder action and a close button, so a failed update never traps the user.
+1. 下载到临时目录。
+2. 先校验大小，再按清单校验 SHA-256。缺失或不匹配的校验值会被视为失败，不会跳过。
+3. 校验安装包签名，要求由本项目固定的证书签署。安装包的完整性是信任根基：被篡改的清单无法让客户端运行未签名的程序。
+4. 静默安装。静默模式仅用于更新：若 Chenyi Office 尚未安装，安装器会拒绝该模式，且更新过程从不询问安装密码。安装完成后启动器会重新打开应用。
+5. 任一步失败都会显示重试界面，并给出诊断日志路径。重试界面同样提供"稍后提醒"和关闭按钮，因此更新失败不会把你困住。
 
-## Offline and failure behavior
+## 离线与失败处理
 
-- If the manifest cannot be fetched (offline, DNS failure, timeout), the splash shows "无法检查更新" and the app opens without interruption. The next launch retries.
-- An update can be deferred indefinitely; there is no deadline and no forced install.
-- An update cannot be deferred by changing the system clock; the running version is compared to the manifest, not to time.
+- 若无法获取清单（离线、DNS 故障、超时），启动动画显示"无法检查更新"，应用正常打开，下次启动再试。
+- 更新可以无限期推迟，没有期限，也没有强制安装。
+- 修改系统时间无法绕过检查；比较的是版本号，而不是时间。
 
-## Compatibility with clients before 0.4.1
+## 旧版本兼容
 
-Launchers up to and including 0.4.0 shipped with a blocking update screen. Those builds read the manifest but decided on their own that an update was mandatory; they ignore the `mandatory` field. Publishing 0.4.1 is therefore the last delivery through that older blocking flow: users still on 0.4.0 are upgraded to 0.4.1 by their own launcher. From 0.4.1 onward every client offers updates as described here, and no release marks itself mandatory.
+0.4.0 及更早的客户端曾使用强制更新界面。这些版本会自行判定更新为强制，并忽略 `mandatory` 字段。因此发布 0.4.1 是通过旧流程交付的最后一个版本：仍停留在 0.4.0 的用户会被其自身的启动器升级到 0.4.1。从 0.4.1 起，所有客户端都按上述方式提供可选更新，没有任何版本会标记为强制。
 
-## Security requirements
+## 安全要求
 
-- HTTPS only. Automatic redirects are disabled; the client follows `Location` one hop at a time (at most five hops) and validates scheme, port 443, and host before every request. Allowed hosts are `github.com`, `*.githubusercontent.com`, and `cdn.jsdelivr.net`.
-- `installer.sha256` is required and must be 64 hex characters. An empty or malformed value rejects the manifest.
-- The downloaded installer must carry an Authenticode signature whose signer certificate thumbprint matches the value compiled into the launcher. This is the trust anchor: a tampered manifest cannot make the client run an unsigned binary.
-- The manifest itself is not separately signed. It is treated as an untrusted hint; integrity is enforced on the downloaded envelope instead.
-- Downgrades are never installed: the remote version must be greater than the running version (or the running version must be below `min_supported_version`), and a manifest whose `min_supported_version` is greater than its `version` is rejected. A rollback is published as a higher version number.
-- The updater runs with the same integrity level as the application and requests elevation only when launching the installer.
-
-## First hop from v0.1.4
-
-v0.1.4 shipped before signature verification existed in the launcher. Its first update to a later version is therefore protected only by HTTPS and the SHA-256 from `latest.json`. From the v0.1.5 launcher onward, every update also requires the pinned Authenticode publisher. Users who want certificate-level assurance for that first hop can download the installer manually and compare both the SHA-256 and the certificate thumbprint (`FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4`).
-
-## Certificate lifecycle
-
-- The launcher accepts one or more pinned SHA-1 thumbprints.
-- For rotation: ship a launcher containing both the old and the new thumbprint while the old certificate still signs releases. After that launcher is widely installed, switch the signing certificate and keep the old thumbprint for one release.
-- Expired certificates are accepted only when the signer thumbprint matches a pin, so expiry cannot stall the update prompt.
-- A revoked certificate is not accepted.
-
-## Release-side automation
-
-`.github/workflows/update-manifest.yml` runs when a release is published:
-
-- selects the `ChenyiOffice-<version>-x64.exe` installer asset by name, so the bundled engine MSI is never used as an update payload;
-- computes SHA-256 and size;
-- writes `latest.json` with `mandatory: false` and `min_supported_version` from the repository variable `MIN_SUPPORTED_VERSION` (defaults to `0.0.0`);
-- uploads it to the release, replacing any previous copy.
-
-If a release has no matching installer, the workflow exits without publishing a manifest so clients are never pointed at a missing file. `windows-smoke.yml` additionally asserts that the published manifest is not marked mandatory.
-
-## Acceptance criteria
-
-- [x] Fresh install checks on every launch.
-- [x] Published newer release offers an update within one launch.
-- [x] Update prompt can be deferred or closed and leaves the current build usable.
-- [x] Tampered download and unsigned installer are rejected and surface a retry.
-- [x] Updates never ask for the install password.
-- [x] Published installer hash, signature, and silent-mode guard verified on a Windows runner (`windows-smoke.yml`).
-- [ ] Full install → optional update → restart loop verified on Windows 10 and 11 hardware.
-- [ ] Relaunch after install reports the new version on Windows hardware.
+- 仅使用 HTTPS。禁止自动重定向；客户端逐跳跟随 `Location`（最多五跳），每次请求前校验协议、443 端口和主机。允许的主机为 `github.com`、`*.githubusercontent.com` 和 `cdn.jsdelivr.net`。
+- `installer.sha256` 必填且必须是 64 位十六进制字符。为空或格式错误会拒绝该清单。
+- 下载的安装包必须带有签名，且签名证书指纹与启动器内置值一致。
+- 清单本身不单独签名，被视为不可信提示；完整性在对下载安装包校验时强制执行。
+- 从不安装降级版本：远端版本必须高于当前版本（或当前版本低于 `min_supported_version`），且 `min_supported_version` 大于 `version` 的清单会被拒绝。回退通过发布更高版本号实现。

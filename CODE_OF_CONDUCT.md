@@ -1,54 +1,54 @@
-# Code of Conduct
+# 行为准则
 
-## Our pledge
+## 我们的承诺
 
-We as members, contributors, and maintainers pledge to make participation in this project a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+作为本项目的成员、贡献者和维护者，我们承诺让每个人都能在不受骚扰的环境中参与，无论年龄、体型、残障状况、族裔、性别特征、性别认同与表达、经验水平、教育程度、社会经济地位、国籍、外貌、种族、宗教或性取向如何。
 
-We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
+我们承诺以有助于营造开放、友善、多元、包容和健康社区的方式行事与交流。
 
-## Our standards
+## 我们的标准
 
-Examples of behavior that contributes to a positive environment:
+有助于营造积极环境的行为示例：
 
-- Demonstrating empathy and kindness toward other people
-- Being respectful of differing opinions, viewpoints, and experiences
-- Giving and gracefully accepting constructive feedback
-- Accepting responsibility and apologizing to those affected by our mistakes, and learning from the experience
-- Focusing on what is best for the overall community and product
+- 对他人表现出同理心和善意
+- 尊重不同的观点、看法和经历
+- 给出并得体地接受建设性反馈
+- 承担责任，向受我们错误影响的人致歉，并从中学习
+- 以整个社区和产品的利益为重
 
-Examples of unacceptable behavior:
+不可接受的行为示例：
 
-- The use of sexualized language or imagery, and sexual attention or advances of any kind
-- Trolling, insulting or derogatory comments, and personal or political attacks
-- Public or private harassment
-- Publishing others' private information, such as a physical or email address, without their explicit permission
-- Other conduct which could reasonably be considered inappropriate in a professional setting
+- 使用性化的语言或图像，以及任何形式的性关注或挑逗
+- 挑衅、侮辱或贬低性评论，以及人身或政治攻击
+- 公开或私下的骚扰
+- 未经明确许可发布他人的私人信息，例如住址或电子邮箱
+- 其他在专业场合可被合理视为不当的行为
 
-## Enforcement responsibilities
+## 执行责任
 
-Maintainers are responsible for clarifying and enforcing these standards and will take appropriate and fair corrective action in response to any behavior they deem inappropriate, threatening, offensive, or harmful.
+维护者负责澄清并执行这些标准，并会对任何其认为不当、具有威胁性、冒犯性或有害的行为采取适当且公正的纠正措施。
 
-Maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, issues, and other contributions that are not aligned with this Code of Conduct, and will communicate reasons for moderation decisions when appropriate.
+维护者有权和责任删除、编辑或拒绝不符合本行为准则的评论、提交、代码、Issue 及其他贡献，并会在适当时候说明管理决定的原因。
 
-## Scope
+## 适用范围
 
-This Code of Conduct applies within all project spaces — issues, pull requests, discussions, and the project site — and also applies when an individual is officially representing the project in public spaces.
+本行为准则适用于所有项目空间——Issue、Pull Request、讨论区和项目站点，也适用于个人在公共场合正式代表本项目时。
 
-## Enforcement
+## 执行
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the maintainers through a private report on GitHub (mention the maintainer in a direct message or use the repository's reporting channels). All complaints will be reviewed and investigated promptly and fairly.
+辱骂、骚扰或其他不可接受的行为，可通过 GitHub 的私密报告渠道向维护者反馈。所有投诉都会被及时、公正地审查和调查。
 
-Maintainers are obligated to respect the privacy and security of the reporter of any incident.
+维护者有义务尊重事件报告者的隐私与安全。
 
-## Enforcement guidelines
+## 处理分级
 
-1. **Correction** — a private, written warning providing clarity around the nature of the violation and an explanation of why the behavior was inappropriate. A public apology may be requested.
-2. **Warning** — a warning with consequences for continued behavior, including no interaction with the people involved for a specified period of time.
-3. **Temporary ban** — a temporary ban from any sort of interaction or public communication with the community for a specified period of time.
-4. **Permanent ban** — a permanent ban from any sort of public interaction within the project.
+1. **纠正** —— 私密书面警告，说明违规性质并解释为何行为不当，可要求公开致歉。
+2. **警告** —— 附带后果的警告，若继续该行为将受到限制，包括在指定期间内不得与相关人员互动。
+3. **临时封禁** —— 在指定期间内禁止与社区进行任何形式的互动或公开交流。
+4. **永久封禁** —— 永久禁止在项目内进行任何形式的公开互动。
 
-## Attribution
+## 来源
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available at https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.
+本行为准则改编自 [Contributor Covenant](https://www.contributor-covenant.org) 2.1 版，原文见 https://www.contributor-covenant.org/version/2/1/code_of_conduct.html。
 
-Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder](https://github.com/mozilla/inclusion).
+社区影响分级参考了 [Mozilla 的行为准则执行阶梯](https://github.com/mozilla/inclusion)。

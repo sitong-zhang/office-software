@@ -864,8 +864,7 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
 
   bool filesOk = WriteResourceFile(102, g_installDir + L"\\ChenyiOffice.exe") &&
                  WriteResourceFile(103, g_installDir + L"\\Uninstall.exe") &&
-                 WriteResourceFile(104, g_installDir + L"\\LICENSE") &&
-                 WriteResourceFile(105, g_installDir + L"\\NOTICE");
+                 WriteResourceFile(104, g_installDir + L"\\LICENSE");
   if (!filesOk) {
     Fail(L"无法写入程序文件，请以管理员身份重试。");
     return 0;

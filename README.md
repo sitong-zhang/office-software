@@ -1,104 +1,48 @@
 # Chenyi Office（胡辰逸定制版）
 
-**A Windows 64-bit office suite with a bespoke launcher, a rebuilt editor ribbon, optional updates, and in-app announcements.**
+**一套面向 Windows 10 / 11 64 位的办公软件，拥有统一的界面设计、专属启动动画、可选更新和应用内公告。**
 
-[![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
-[![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.4.2-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![许可证：MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-1f5c46.svg)](LICENSE)
+[![平台：Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](https://sitong-zhang.github.io/office-software/)
+[![版本](https://img.shields.io/badge/version-0.4.2-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
-## Status
+Chenyi Office 提供文字文档、电子表格、演示文稿、绘图和公式等常用办公能力，并把启动、界面、更新和公告整合为一致的体验。
 
-**v0.4.2 — Windows preview with a fully configured editor interface.** Writer, Calc, Impress and Draw now launch directly into the tabbed notebookbar with the full set of layout variants available from View → User Interface, so the interface is never locked. The About dialog is reachable, the Start Center is fully localized, and a coordinated icon theme is applied. Updates are optional: the current build stays usable until you choose to install, and the downloaded installer is accepted only when it carries the pinned Chenyi Office Authenticode signature.
+## 下载与安装
 
-## Download
+- **安装包**：[ChenyiOffice-0.4.2-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **适用平台**：Windows 10 / Windows 11，64 位
+- **安装说明**：首次安装需要发布者提供的安装密码，更新时无需再次输入。
 
-- **Installer:** [ChenyiOffice-0.4.2-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
-- **Platform:** Windows 10 or Windows 11, 64-bit
-- **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start and offers it without interrupting your work.
+安装包、校验值与公开证书统一在 [Releases](https://github.com/sitong-zhang/office-software/releases) 发布。建议只从本项目官方发布页下载。
 
-## What the launcher does
+## 产品特性
 
-1. Shows the branded splash animation.
-2. Reads `latest.json` from the latest GitHub Release. If a newer version exists, a non-blocking update prompt offers an immediate update and a reminder; the current build stays usable. A chosen update is downloaded, verified against its SHA-256 and the pinned publisher signature, installed silently with `/S`, and then relaunches.
-3. Reads `announcements.json` from the repository and shows unseen notices once, dismissed with **继续**.
-4. Prepares a dedicated engine profile with the Chenyi Office interface settings and starts the editor.
+- **统一界面**：启动中心、编辑界面、菜单、对话框与设置使用一致的设计语言；文字文档、电子表格、演示文稿和绘图默认采用三段式标签页，界面模式可随时切换，不会在安装后被锁死。
+- **专属启动动画**：品牌开屏兼具启动与更新检查，动画结束即进入工作状态。
+- **可选更新**：每次启动检查新版本，发现更新时可以选择立即安装、稍后提醒或直接关闭；在作出选择前，当前版本始终可以正常使用。详见[更新机制](docs/updater.md)。
+- **应用内公告**：版本发布与维护通知在启动时展示一次，不打断正常使用。详见[公告机制](docs/announcements.md)。
+- **中文体验**：界面、菜单、启动中心与模块名称均为中文。
 
-## Interface layer
+## 项目文档
 
-The installer writes a signed-in launcher, a brand profile, and the generated editor layout. On first start, the launcher creates `%LOCALAPPDATA%\ChenyiOffice\lo-profile` and launches the engine with `-env:UserInstallation`, so the office UI uses:
-
-- **Tabbed ribbon** in Writer, Calc, Impress, and Draw, reordered into a grouped sequence.
-- **编辑** group on the Home tab of all four applications (Find & Replace, Select All).
-- **Sifr** icon theme for a quieter, modern look.
-- **Chenyi Office** as the product name and vendor.
-- Custom splash screens and Start Center / About marks written into the engine at install time.
-- No first-run tip, What's New, feedback, or getting-involved entries.
-- A clean first-run experience behind the Chenyi Office splash.
-
-When the brand version changes, the launcher merges only missing product defaults into the existing profile and keeps the previous file as `registrymodifications.xcu.bak`. User toolbar, icon, and option changes are preserved across upgrades. See [docs/ui.md](docs/ui.md).
-
-If a compatible engine is already installed, the installer reuses it, leaves its artwork and layout files untouched, and records that fact so uninstalling Chenyi Office does not remove the user's own installation. If that engine is later removed or replaced, the launcher offers a download-page shortcut to reinstall the kernel.
-
-## Product direction
-
-- **Interface rebuild** — one visual language across the launcher, Start Center, editor ribbon, dialogs, and settings. See [docs/ui.md](docs/ui.md).
-- **Optional updates** — a new version is offered, never forced; the current build keeps working until you choose to update. See [docs/updater.md](docs/updater.md).
-- **In-app announcements** — delivered at launch, independent of releases. See [docs/announcements.md](docs/announcements.md).
-- **Windows 64-bit only**; macOS and Linux builds are not planned.
-
-## Project links
-
-| Resource | Link |
+| 文档 | 说明 |
 | --- | --- |
-| Project site | https://sitong-zhang.github.io/office-software/ |
-| Downloads | [Releases](https://github.com/sitong-zhang/office-software/releases) |
-| Update manifest | https://github.com/sitong-zhang/office-software/releases/latest/download/latest.json |
-| Announcement feed | https://raw.githubusercontent.com/sitong-zhang/office-software/main/announcements.json |
-| Announcements | [Discussions → Announcements](https://github.com/sitong-zhang/office-software/discussions/categories/announcements) |
-| Bug reports | [Issues](https://github.com/sitong-zhang/office-software/issues) |
+| [项目主页](https://sitong-zhang.github.io/office-software/) | 产品介绍、下载入口与更新策略 |
+| [路线图](docs/roadmap.md) | 各阶段目标与当前进度 |
+| [更新机制](docs/updater.md) | 版本检查、下载校验与安装流程 |
+| [公告机制](docs/announcements.md) | 应用内公告的格式与展示规则 |
+| [更新日志](CHANGELOG.md) | 每个版本面向用户的变更 |
+| [安全政策](SECURITY.md) | 支持的版本与安全漏洞报告方式 |
 
-## Repository layout
+## 参与贡献
 
-```text
-.
-├── .github/              # Issue forms, update-manifest and build workflows
-├── app/
-│   ├── branding/         # Logo and icon sources
-│   ├── engine-ui/        # Generated editor ribbon, menu and Start Center layouts
-│   └── launcher/         # Splash, optional update prompt, announcements, engine start
-├── installer/            # Password-gated welcome page and Windows installer
-├── uninstaller/          # Uninstall entry
-├── docs/                 # Project site, architecture, UI, updater, announcements, roadmap
-├── scripts/              # Brand asset generation, engine UI generation, Linux cross-build
-├── announcements.json    # In-app announcement feed
-├── CHANGELOG.md          # User-visible changes per release
-└── README.md
-```
+欢迎通过 [Issues](https://github.com/sitong-zhang/office-software/issues) 反馈问题、提交功能建议，或通过 Pull Request 改进文档与代码。参与前请先阅读[贡献指南](CONTRIBUTING.md)与[行为准则](CODE_OF_CONDUCT.md)。
 
-## Building
+## 许可证
 
-The Windows installer is cross-built on Linux with MinGW-w64; no Windows machine is required.
+本项目源代码采用 [Mozilla Public License 2.0](LICENSE) 授权。产品图标使用 Lucide（ISC）与 Material Design Icons（Apache 2.0）等开源资源，对应的许可证文件随资源一并保存在 `app/branding/third-party/` 目录中。
 
-Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`, `osslsigncode`, `openssl`.
+## 安全
 
-```bash
-SIGN_PFX_PASS=... ./scripts/build-windows.sh
-```
-
-The script generates brand assets and the editor layout, compiles and signs the launcher and uninstaller, verifies the pinned branded engine MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.4.2-x64.exe` plus its SHA-256 and the public signing certificate.
-
-See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
-
-## Security
-
-The install password is a distribution gate, not a cryptographic protection: the payload can be extracted by anyone who obtains the installer. Do not reuse it for anything sensitive. Updates are accepted only from an installer signed by the pinned Chenyi Office certificate, even though the certificate is self-signed; Windows shows "Unknown publisher" until the certificate is trusted. See [docs/signing.md](docs/signing.md) and [SECURITY.md](SECURITY.md).
-
-## Contributing
-
-The shell uses a consistent layout and design-token system; [docs/ui-references.md](docs/ui-references.md) records the sources and licenses of the bundled interface assets.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first. Interface work, launcher fixes, documentation, and translation are all welcome.
-
-## License
-
-Source code in this repository is licensed under the [Mozilla Public License 2.0](LICENSE). The bundled engine includes components under the same license, and the required license texts ship with the installation. Product icons come from [Google Material Design Icons](https://github.com/google/material-design-icons) under the Apache License 2.0; the pinned source, commit, and license are in `app/branding/third-party/material-design-icons/`. See [NOTICE](NOTICE) for third-party notices.
+更新仅接受由本项目固定签名证书签署、且 SHA-256 与发布清单一致的安装包。若需报告安全漏洞，请按[安全政策](SECURITY.md)中的私密渠道提交，不要通过公开 Issue 披露细节。

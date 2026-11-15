@@ -1,252 +1,191 @@
-# Changelog
+# 更新日志
 
-All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+这里记录 Chenyi Office（胡辰逸定制版）每个版本面向用户的重要变更。
 
 ## [0.4.2] — 2026-11-16
 
-### Fixed
+### 修复
 
-- The editor now starts in the tabbed notebookbar layout as configured. Earlier builds wrote a file name where the engine expects a toolbar-mode name, so new documents fell back to the standard toolbar. The active mode is now a valid mode name and is corrected on upgrade even for existing profiles.
-- View → User Interface is reachable again in every module, so the interface mode can be switched at any time and is no longer locked after installation.
-- The About dialog is reachable from the menus again; it is no longer an unused resource.
-- The Draw interface no longer stacks the classic menu bar over the tabbed controls.
+- 编辑界面现在会按配置直接进入三段式标签页。此前版本把界面模式写成了文件名，导致新建文档仍落回经典工具栏；现已改为正确的模式名，升级时也会自动纠正已有配置。
+- 「视图 → 用户界面」入口在所有模块中恢复，界面模式可随时切换，不再安装后即锁死。
+- 「关于」对话框重新可从菜单打开。
+- 绘图模块不再出现经典菜单栏与标签页叠加的问题。
 
-### Changed
+### 变更
 
-- All published notebookbar layout variants are installed, not only the default one.
-- A coordinated icon theme is applied across editor commands, sourced from permissively licensed icon libraries with attribution recorded in the repository.
-- The Start Center is fully localized, the unused database entry and upstream illustration are hidden, and no promotional strings remain.
-- The update-failure screen now shows the failure stage, an error code and a button that opens the diagnostic log. Announcement cards size to their content.
+- 随安装包提供全部界面布局变体，不再只安装默认布局。
+- 编辑命令启用统一的图标主题，图标来自宽松许可的开源图标库。
+- 启动中心全面中文化，隐藏未安装的应用入口与推广内容，不再保留推广文字。
+- 更新失败页新增失败阶段、错误码与诊断日志入口；公告卡片按内容自适应大小。
 
 ## [0.4.1] — 2026-11-15
 
-### Changed
+### 变更
 
-- Updates are now optional. When a newer version is available, the launcher offers an immediate-update action and a reminder choice, and the update screen can be closed; the current version remains fully usable until you choose to update.
-- The update manifest no longer marks releases as mandatory. This is the last release delivered through the previous blocking flow; from the next version onward, no update will interrupt your work.
-- Download, SHA-256 verification, publisher signature pinning, host allow-listing and downgrade protection are unchanged.
-
-### Notes
-
-- The bundled engine payload now ships with its own product identity; see `engine/SOURCE.md` for the pinned checksum.
+- 更新改为可选。发现新版本时，可以选择立即更新、稍后提醒或关闭提示；在作出选择前，当前版本始终可以正常使用。
+- 更新清单不再将任何版本标记为强制。这是通过旧流程交付的最后一个版本；从下一版起，更新不再打断工作。
+- 下载校验、SHA-256 校验、发布者签名校验、主机白名单与防降级保护保持不变。
 
 ## [0.4.0] — 2026-11-15
 
-### Changed
+### 变更
 
-- The Math editor now receives the same unified ribbon/menu treatment as Writer, Calc, Impress, and Draw.
-- The editor interface uses Chinese module names (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 主控文档 / HTML 文档), and new presentations open directly into a blank document.
-- The About dialog shows the Chenyi Office title, description, copyright, project link, and release-notes link.
-- Fresh installations place the engine in `%ProgramFiles%\ChenyiOffice\Engine`; existing installations keep their current path, so updates do not relocate files.
-- The Start Center create list and document filter use Chinese labels (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库).
-- The engine payload carries its own product identity and install location, and the editor runs under a Chenyi Office process name; setup UI, feature names, shortcuts, and registry descriptions use the product's own branding.
-- The launcher, installer, and uninstaller handle `WM_DPICHANGED` and resize/reposition their windows and controls.
-- The engine card offers a **重新安装内核** action when no engine is found.
-- The build supports a locally prepared engine payload and pins its checksum; `engine/SOURCE.md` records the engine version, checksum, generated files, and license information.
-- The Windows smoke workflow fails on a dirty runner, verifies the pinned engine payload checksum, the public signing certificate, and the minimum-supported-version policy, and checks that `latest.json` matches the release tag.
+- 公式编辑器与其他模块一样采用统一的界面布局与菜单。
+- 编辑界面使用中文化模块名称（文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 主控文档 / HTML 文档），新建演示文稿直接进入空白文档。
+- 「关于」对话框展示产品名称、说明、版权、项目链接与发行说明链接。
+- 全新安装使用独立的程序目录；已有安装保留原路径，更新不会搬动文件。
+- 启动中心的新建列表与文档筛选使用中文化标签（文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库）。
+- 启动器、安装器与卸载器更好地适配系统 DPI，窗口与控件会随缩放调整。
+- 未检测到办公组件时，相关入口提供「重新安装」操作。
 
 ## [0.3.1] — 2026-11-15
 
-### Changed
+### 变更
 
-- Regenerated the ribbon and Start Center layouts with the current generator; installed UI resources carry only Chenyi Office layout metadata.
+- 重新生成标签页与启动中心布局，安装的界面资源只保留产品自身的布局信息。
 
 ## [0.3.0] — 2026-11-15
 
-### Changed
+### 变更
 
-- Rebuilt the editor interface: Writer, Calc, Impress, and Draw now use a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展, with 公式 before 数据 in Calc).
-- Added a compact **编辑** group (Find & Replace, Select All) to the Home tab of all four applications.
-- The Start Center and editor Help menus show a focused, streamlined set of actions; the licence entry remains reachable.
-- Applied consistent Chenyi Office branding across the launcher, installer, uninstaller, splash, About artwork, README, project site, announcements, and documentation.
-- The installer writes the generated ribbon, menu, and Start Center layouts into the engine it installs, presents Chenyi Office as the sole product in Add/Remove Programs and shell shortcuts, and names the temporary payload accordingly.
+- 重建编辑界面：文字文档、电子表格、演示文稿和绘图采用分组标签顺序（文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展，电子表格中公式位于数据之前）。
+- 在四个应用的首页新增精简的**编辑**分组（查找替换、全选）。
+- 启动中心与编辑器的帮助菜单更聚焦，同时保留许可证入口。
+- 启动器、安装器、卸载器、开屏、「关于」视觉、README、项目站、公告与文档统一为产品品牌。
+- 安装器在系统中只呈现 Chenyi Office 一个产品，并清理多余的快捷方式。
 
-### Fixed
+### 已知限制
 
-- An engine that existed before Chenyi Office is left completely untouched; the deep UI layout is applied only to the bundled engine.
-
-### Known limitations
-
-- The licence texts required by the Mozilla Public License remain inside the engine directory; they are not exposed in the product interface.
+- 许可证要求的授权文本随组件一起提供，不在产品界面中展示。
 
 ## [0.2.0] — 2026-11-15
 
-### Changed
+### 变更
 
-- Rebuilt the shell UI around a grouped workspace: vertical sidebar navigation, a hero greeting card, quick-create cards for Writer / Calc / Impress / Draw, a recent-documents list, and a right rail with version, announcement, and engine status.
-- The launcher now has a real home screen instead of jumping straight into the engine. Sidebar actions: 首页、新建、打开、最近、公告、设置.
-- Added working actions: create a document, open an existing file, open recent files, check for updates, view announcements, open the local data folder, clear recent records, and show About information.
-- Rebuilt the installer as a two-column wizard with a dark brand sidebar, three-step progress, feature rows, password field, and a bottom-right primary action.
-- Rebuilt the uninstaller as a two-column layout with a four-step cleanup list and a completion card.
-- Added custom window chrome: rounded corners, DWM shadow/corner hints, drag regions, hover states, minimize/close controls, and disabled close while installing or updating.
-- Ported layout structure and design tokens from **Tabler** (42k, MIT), **shadcn/ui** (128k, MIT), and **Fluent UI** (20k, MIT). See `docs/ui-references.md`.
-- Added 24 **Lucide** interface icons (25.7k, ISC), vendored with license and pinned commit in `app/branding/third-party/lucide/`.
+- 启动器重作为分组工作台：竖向侧边栏、欢迎卡片、常用文档快捷卡片、最近文档列表，以及版本、公告等状态栏。
+- 启动器新增真正的首页，不再直接进入编辑器。侧边栏包含：首页、新建、打开、最近、公告、设置。
+- 补齐可用操作：新建文档、打开已有文件、打开最近文件、检查更新、查看公告、打开本地数据目录、清空最近记录、查看「关于」。
+- 安装器改为双栏向导，含深色品牌侧栏、三步进度与密码输入；卸载器改为双栏布局与清理进度。
+- 加入自定义窗口外观：圆角、阴影、可拖拽区域、悬停状态、最小化与关闭控制。
+- 界面布局与设计参考了 Tabler、shadcn/ui、Fluent UI 等开源项目；图标使用 Lucide，品牌主图标使用 Material Design Icons，来源与许可证见对应资源目录。
+- 新增 24 个界面图标，随许可证与固定版本一并保存。
 
-### Build
+### 已知限制
 
-- The shell now uses GDI+ and DWM (`-lgdiplus -ldwmapi`); `make-ui-icons.py` rasterizes the Lucide SVGs at build time.
-
-### Known limitations
-
-- The editor's Start Center, dialogs, and toolbar keep their standard control layouts; this release focuses on the Chenyi Office shell.
-- No Windows 10/11 hardware test was available; the new UI was verified under Wine and the Windows smoke workflow still covers hash, signature, and the silent-mode guard.
+- 编辑器的启动中心、对话框与工具栏仍沿用标准控件布局；本版本聚焦启动器界面。
+- 尚未在 Windows 10 / 11 实体机上测试；新界面在 Wine 环境下验证。
 
 ## [0.1.7] — 2026-11-15
 
-### Changed
+### 变更
 
-- Replaced every hand-drawn brand mark with the `description` glyph from **Google Material Design Icons** (54,299 stars, Apache 2.0, pinned commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`).
-- The application icon, installer/uninstaller icons, splash mark, Start Center mark, About mark, installer welcome background, and project-site logo now use that 原厂 glyph. Only rasterization and fill color are local changes; the path geometry is untouched.
-- Added `app/branding/third-party/material-design-icons/` with the original SVG, Apache 2.0 license, and a `SOURCE.md` provenance record. `NOTICE`, `docs/branding.md`, and the build requirements were updated accordingly.
-- Simplified the Start Center mark to the 原厂 glyph plus "CHENYI OFFICE" on dark ink, removing the low-contrast subtitle and duplicate text that caused ghosting.
-- Added a platform line to the About artwork.
-- Removed the hand-drawn square "✓" badge from the installer finish page; the page now uses the product icon in the top brand row instead.
-- Moved the install percentage above the progress bar so it no longer overlaps the welcome illustration.
-
-### Build
-
-- `librsvg2-bin` (`rsvg-convert`) is now required to rasterize the 原厂 SVG. CI installs it.
+- 品牌视觉统一使用 Material Design Icons 的 `description` 图形。应用图标、安装器与卸载器图标、开屏、启动中心标、「关于」标、安装背景与项目站 Logo 均使用该图形；仅做栅格化与品牌配色，图形路径保持不变。
+- 简化启动中心品牌标，移除低对比度副标题与重复文字。
+- 「关于」视觉加入平台信息。
+- 安装完成页改用产品图标，移除原有的手绘勾选标记。
+- 安装百分比移至进度条上方，不再与欢迎插画重叠。
 
 ## [0.1.6] — 2026-11-15
 
-### Fixed
+### 修复
 
-- Brand profile upgrades now **merge** missing product defaults into the existing `registrymodifications.xcu` instead of overwriting it, so user toolbar, icon, and option changes survive version upgrades.
-- The launcher accepts multiple pinned certificate thumbprints and tolerates `CERT_E_EXPIRED` for the pinned self-signed identity, so certificate expiry or rotation can no longer deadlock the mandatory update screen. The rotation procedure is documented.
-- Silent mode is parsed from exact command-line arguments (`/S`, `-s`, `--silent`) instead of substring matching, so paths containing `/S` cannot trigger it.
-- A failed silent update writes a diagnostic file, and the launcher error screen now shows its path.
-- Update redirects are followed one hop at a time with HTTPS, port 443, and host checks before each request; automatic WinHTTP redirects are disabled.
-- The host allowlist accepts any `*.githubusercontent.com` subdomain, so GitHub asset-host rotations do not require an emergency release.
-- If the configured engine disappears, the launcher offers a one-click link to the download page instead of only reporting a missing engine.
-- The uninstaller refuses to start while `soffice`, `soffice.bin`, or `ChenyiOffice.exe` is running, and reports an incomplete cleanup instead of claiming success when files remain locked.
-- Version consistency checks now also cover the project site, roadmap, architecture, build, signing, and release documents.
+- 品牌配置升级改为**合并**缺失的默认值，而不再整体覆盖，因此用户的工具栏、图标与选项设置在升级后仍然保留。
+- 启动器接受多个固定证书指纹，并对固定的自签名证书容忍证书过期，避免证书过期或轮换导致更新卡死。
+- 静默模式只从精确命令行参数识别，避免路径中包含相关字符被误触发。
+- 静默更新失败会写入诊断文件，启动器错误页显示其路径。
+- 更新重定向逐跳跟随，并在每次请求前校验 HTTPS、443 端口与主机。
+- 主机白名单接受 `*.githubusercontent.com` 的任意子域。
+- 配置中的组件缺失时，启动器提供前往下载页的一键链接。
+- 相关程序仍在运行时，卸载器拒绝启动并提示清理未完成。
 
-### Changed
+### 变更
 
-- The README and architecture docs no longer claim every installation uses engine 26.8.3; a pre-existing engine is reused and its version may differ.
-- The v0.1.4 → v0.1.5/v0.1.6 first hop is documented as relying on HTTPS and SHA-256 because the old launcher predates signature verification.
+- 项目文档不再声称所有安装都使用同一版本组件；已有安装会被复用，版本可能不同。
 
-### Known limitations
+### 已知限制
 
-- No full Windows install → forced update → restart loop is automated yet; a Windows smoke workflow verifies the published installer's hash, signature, and silent-mode guard.
-- The install password remains a distribution gate, not a security boundary.
+- 尚未实现完整的 Windows 安装 → 更新 → 重启自动化流程。
+- 安装密码只是分发控制手段，不构成安全边界。
 
 ## [0.1.5] — 2026-11-15
 
-### Fixed
+### 修复
 
-- Updates no longer ask for the install password. The launcher runs the downloaded installer with `/S`; the installer also skips the password page when it detects an existing installation.
-- The installer recognizes an office engine that was already on the machine, reuses it without overwriting its splash/About artwork, and records that fact so uninstall never removes the user's own engine.
-- The launcher now rejects an update whose downloaded file is not signed by the pinned Chenyi Office certificate, and requires a 64-character SHA-256 instead of silently skipping the check.
-- Update downloads are rejected when redirects leave the allowlisted GitHub/CDN hosts, and HTTPS-to-HTTP redirects are disabled.
-- `min_supported_version` is enforced; a manifest that points below it is rejected.
-- Uninstall now removes `%LOCALAPPDATA%\ChenyiOffice` (profile, seen announcements, logs), so a reinstall starts clean.
-- The dead `--uninstall` branch was removed from the installer; uninstalling is handled only by `Uninstall.exe`.
-- Version resources now match the product version instead of reporting `0.1.3`.
-- The installer and uninstaller scale with the system DPI; the uninstaller manifest declares Per-Monitor V2 awareness.
-- Announcement timezone parsing accepts both `+08:00` and `+0800`, and announcements are ordered by publication time.
-- Launcher state shared between worker threads and the UI is protected by a lock; the splash status text now reflects the actual check result.
-- Only one launcher instance can run at a time.
-- The launcher accepts a close request on the splash and announcement screens; the mandatory update screen still cannot be dismissed.
+- 更新不再询问安装密码。启动器静默运行安装包，安装器检测到已有安装时也会跳过密码页。
+- 安装器可识别机器上已有的兼容办公组件并复用，不覆盖其原有视觉，卸载时也不会删除用户自己的组件。
+- 启动器拒绝未由固定证书签署的更新，并要求完整的 64 位 SHA-256，不再静默跳过校验。
+- 更新下载在重定向离开白名单主机、或 HTTPS 降级为 HTTP 时会被拒绝。
+- 卸载会清理本地配置（配置、已读公告、日志），重装后从头开始。
+- 移除安装器中无效的卸载分支；卸载统一由卸载器处理。
+- 版本资源与实际产品版本一致。
+- 安装器与卸载器随系统 DPI 缩放。
+- 公告时区解析同时接受 `+08:00` 与 `+0800`，并按发布时间排序。
+- 同一时间只允许一个启动器实例运行。
 
-### Changed
+### 变更
 
-- Build script no longer contains a default signing password. It reads `SIGN_PFX_PASS` or a git-ignored `build/signing/password.txt`, and `REQUIRE_SIGN=1` fails the build when signing material is missing.
-- The engine MSI is verified against a pinned SHA-256 before use.
-- CI installs `osslsigncode`, requires signing secrets, and uploads the public certificate alongside the installer.
-- The brand profile is re-applied when the brand version changes (with a `.bak` copy), instead of only on first run.
-
-### Known limitations
-
-- The install password is a distribution gate, not a security boundary; the appended MSI can still be extracted by anyone who obtains the installer.
-- A pre-existing engine shares its ProductCode with the bundled engine, so Chenyi Office reuses it rather than installing a fully isolated copy.
-- No Windows 10/11 hardware test was available; verification was done with cross-compilation and Wine where possible.
+- 构建脚本不再内置默认签名密码，改为读取环境变量或本地未纳入版本控制的配置；正式发布缺少签名材料时构建失败。
+- 引入代码签名，公开证书随安装包一起发布。
+- 品牌配置在品牌版本变化时重新应用（保留备份），而非仅在首次启动时应用。
 
 ## [0.1.4] — 2026-11-15
 
-### Added
+### 新增
 
-- Engine-level brand artwork applied during installation: custom splash screens (`intro.png`, `intro-highres.png`) and new Start Center / About marks (`logo.svg`, `logo-sc.svg`, `about.svg`).
-- **Sifr** icon theme as the default interface icon set.
-- Installer step that writes brand artwork into the installed engine.
-
-### Changed
-
-- Interface now combines the Tabbed notebookbar, Sifr icons, and Chenyi Office splash and marks.
-
-### Known limitations
-
-- Notification icons, Windows file-type icons, and dialog layouts still come from the stock engine.
-- Source-level UI rebuild remains the next track.
+- 安装时应用品牌视觉：专属开屏、启动中心与「关于」标识。
+- 统一的现代图标主题作为默认图标集。
 
 ## [0.1.3] — 2026-11-15
 
-### Added
+### 新增
 
-- Branded engine interface profile with the Tabbed ribbon for Writer, Calc, Impress, and Draw.
-- Product name and vendor set to Chenyi Office inside the office engine.
-- Dedicated profile in `%LOCALAPPDATA%\ChenyiOffice\lo-profile`, launched with `-env:UserInstallation`.
-- First-run tips, What's New, and promotional infobars disabled.
-
-### Changed
-
-- Launcher prepares the brand profile before starting the engine.
-- Profile settings are applied only on first run, preserving later user customization.
-
-### Known limitations
-
-- Dialogs, widgets, and the Start Center still use 原厂 控件层 layouts; source-level redesign is the next step.
+- 统一界面配置，文字文档、电子表格、演示文稿和绘图默认采用三段式标签页。
+- 产品名称与厂商统一为 Chenyi Office。
+- 独立的用户配置，与其他安装互不干扰。
+- 关闭首次提示、新功能介绍与推广信息栏。
 
 ## [0.1.2] — 2026-11-15
 
-### Added
+### 新增
 
-- Authenticode SHA-256 signing for the launcher, uninstaller, and installer using a self-signed certificate.
-- Public signing certificate attached to the release and documented in [docs/signing.md](docs/signing.md).
+- 为启动器、卸载器和安装器加入代码签名。
 
-### Changed
+### 变更
 
-- Install password updated (distributed separately; only its hash is stored).
-
-### Fixed
-
-- The installer locates its engine payload correctly when an Authenticode certificate table is appended after the payload footer.
+- 更新安装密码（单独分发，仅保存哈希）。
 
 ## [0.1.1] — 2026-11-15
 
-### Fixed
+### 修复
 
-- Announcement publication times with a non-UTC offset were parsed incorrectly, which could hide new notices.
-- The Linux CI build failed with a broken pipe while reading the MSI product code.
-- Added launcher logging under `%LOCALAPPDATA%\ChenyiOffice\launcher.log` for update and announcement failures.
+- 修正带非 UTC 时区的公告发布时间解析错误，避免新公告被隐藏。
+- 修正 Linux CI 构建中的问题。
+- 在启动器日志中记录更新与公告失败信息。
 
 ## [0.1.0] — 2026-11-15
 
-First Windows preview.
+首个 Windows 预览版。
 
-### Added
+### 新增
 
-- Windows 10/11 x64 installer built on Linux with MinGW-w64, bundling engine 26.8.3.
-- Branded welcome page with a background image, logo, product introduction, install-password gate, and a **下一步确认** action.
-- Launcher with a custom splash animation, update check, blocking update screen (no exit or skip), in-app announcements, and engine start.
-- Brand identity: logo, application icon, installer artwork.
-- In-app announcement feed (`announcements.json`) with validation workflow.
-- Uninstaller and shell integration (shortcuts, registry entries).
+- 通过 Linux 交叉构建生成 Windows 10 / 11 64 位安装包。
+- 带背景图、Logo、产品介绍、安装密码校验的品牌欢迎页。
+- 启动器：专属开屏动画、更新检查、公告展示与编辑器启动。
+- 品牌标识：Logo、应用图标、安装视觉。
+- 应用内公告数据源与校验流程。
+- 卸载器与系统集成（快捷方式、注册表项）。
 
-### Changed
+### 变更
 
-- Product named **Chenyi Office（胡辰逸定制版）**.
-- Update screen has a single action, **Download and install**.
+- 产品命名为 **Chenyi Office（胡辰逸定制版）**。
 
-### Known limitations
+### 已知限制
 
-- The engine interface itself is not redesigned yet; this release ships the stock interface with Chenyi Office branding around it.
-- The installer is unsigned. Windows SmartScreen will warn until a code-signing certificate is configured.
-- Updates require access to GitHub.
+- 更新需要访问 GitHub。
 
 ## [0.0.0] — 2026-11-15
 
-Initial project setup.
+项目初始化。
 
 [0.4.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.2
 [0.4.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.1

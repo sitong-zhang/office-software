@@ -1,22 +1,22 @@
-# In-app announcements
+# 公告机制
 
-Announcements are messages delivered inside the application without shipping a release. They are read from this repository at startup, shown once, and dismissed with **继续** (Continue) before the application opens.
+公告是无需发布新版本即可送达的消息。它们在启动时从本仓库读取，每条只展示一次，点击**继续**后进入应用。
 
-## Source of truth
+## 数据来源
 
 ```text
-announcements.json          (repository root, branch main)
+announcements.json          （仓库根目录，main 分支）
 ```
 
-The client reads the raw file:
+客户端读取原始文件：
 
 ```text
 https://raw.githubusercontent.com/sitong-zhang/office-software/main/announcements.json?t=<unix-ms>
 ```
 
-The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale copy for several minutes.
+其中 `t` 参数用于绕过缓存；不加该参数时，CDN 可能返回几分钟前的旧内容。
 
-## Schema
+## 格式
 
 ```json
 {
@@ -26,7 +26,7 @@ The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale c
     {
       "id": "2026-11-15-project-start",
       "title": "Chenyi Office（胡辰逸定制版）项目启动",
-      "body": "First paragraph.\n\nSecond paragraph.",
+      "body": "第一段。\n\n第二段。",
       "severity": "info",
       "published_at": "2026-11-15T12:00:00+08:00",
       "expires_at": null,
@@ -39,58 +39,33 @@ The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale c
 }
 ```
 
-| Field | Required | Meaning |
+| 字段 | 必填 | 含义 |
 | --- | --- | --- |
-| `schema_version` | yes | Currently `1` |
-| `updated_at` | yes | Last edit time, ISO 8601 with offset |
-| `announcements[].id` | yes | Stable unique id; never reuse or change it, since clients remember what they have seen |
-| `title` | yes | Short headline, plain text |
-| `body` | yes | Plain text; `\n` for line breaks; keep under ~2000 characters |
-| `severity` | yes | `info` or `important`; controls emphasis only |
-| `published_at` | yes | Not shown before this time |
-| `expires_at` | no | Hidden after this time; `null` means no expiry |
-| `min_version` / `max_version` | no | Inclusive client version range; `null` means no bound |
-| `action_label` / `action_url` | no | Optional link opened in the browser; it never replaces **继续** |
+| `schema_version` | 是 | 当前为 `1` |
+| `updated_at` | 是 | 最后编辑时间，ISO 8601 带时区 |
+| `announcements[].id` | 是 | 稳定唯一标识；不要复用或修改，因为客户端会记住已读记录 |
+| `title` | 是 | 简短标题，纯文本 |
+| `body` | 是 | 纯文本，`\n` 换行，建议控制在 2000 字以内 |
+| `severity` | 是 | `info` 或 `important`，仅影响强调程度 |
+| `published_at` | 是 | 该时间之前不展示 |
+| `expires_at` | 否 | 该时间之后隐藏；`null` 表示不过期 |
+| `min_version` / `max_version` | 否 | 适用的客户端版本范围；`null` 表示不限 |
+| `action_label` / `action_url` | 否 | 可选链接，在浏览器中打开；不会替代**继续**按钮 |
 
-## Client behavior
+## 客户端行为
 
-1. Startup begins with the update check (see [updater.md](updater.md)).
-2. The announcement feed is fetched even when an update is available, so deferring an update does not hide release notices.
-3. Otherwise the client fetches the announcement feed with a 10 s timeout and 2 attempts.
-4. Entries are filtered by publication time, expiry, client version range, and the local "seen" set.
-5. If at least one entry remains, a full-window announcement screen lists them in publication order. The only action is **继续**; there is no skip link.
-6. **继续** records the shown ids locally and opens the application. The screen is shown once per id per installation.
-7. If the fetch fails, the application opens normally and retries on the next launch. Announcements never block startup on network failure.
-8. The seen set is stored locally per user profile and survives updates.
+1. 启动先进行更新检查（见[更新机制](updater.md)）。
+2. 即使存在可用更新，也会获取公告，因此推迟更新不会隐藏版本通知。
+3. 获取公告的超时为 10 秒，最多尝试 2 次。
+4. 按发布时间、过期时间、客户端版本范围和本地已读记录进行过滤。
+5. 若仍有公告，全屏公告页按发布时间顺序展示。**继续**是唯一操作，没有跳过链接。
+6. 点击**继续**会在本地记录已读的公告标识并打开应用。每条公告在每次安装中只展示一次。
+7. 若获取失败，应用正常打开，下次启动再试。网络故障不会阻塞启动。
+8. 已读记录按用户配置保存在本地，升级后仍然保留。
 
-## Publishing an announcement
+## 内容规范
 
-1. Edit `announcements.json` directly on `main` or through a pull request.
-2. Give the entry a new, unique `id` (date plus short slug).
-3. Run the validation workflow or locally:
-
-   ```bash
-   python -m json.tool announcements.json > /dev/null
-   ```
-
-4. Commit. No release is required; the next client launch picks it up, allowing a few minutes for CDN propagation.
-5. Verify with:
-
-   ```bash
-   curl -s 'https://raw.githubusercontent.com/sitong-zhang/office-software/main/announcements.json?t=1' | head -40
-   ```
-
-## Content rules
-
-- No credentials, personal data, or links outside this repository's releases and documentation.
-- `important` is reserved for release notices, security notices, and service-impacting changes.
-- Expired entries may be removed after 90 days; keep at least the most recent entry.
-- Announcements are not a substitute for release notes: version-specific details belong in the release.
-
-## Acceptance criteria
-
-- [ ] A new entry appears once on the next launch and not again.
-- [ ] **继续** opens the application.
-- [ ] Multiple new entries appear on a single screen in publication order.
-- [ ] Announcements remain visible when an update is deferred.
-- [ ] Malformed or unreachable feed never blocks startup.
+- 不包含凭据、个人信息，或指向本仓库发布页与文档之外的链接。
+- `important` 仅用于版本发布、安全通知和影响使用的变更。
+- 过期公告可在 90 天后移除，但至少保留最近一条。
+- 公告不替代发行说明：版本相关的细节应放在版本发布页。

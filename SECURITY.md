@@ -1,30 +1,30 @@
-# Security Policy
+# 安全政策
 
-## Supported versions
+## 支持的版本
 
-Windows 10/11 x64 builds are published on the Releases page. The latest release receives security fixes; older releases are offered an upgrade through the optional update channel. The current release is **0.4.2**.
+Windows 10 / 11 64 位版本在 Releases 页面发布。最新版本会获得安全修复；较旧的版本可通过可选更新通道升级。当前版本为 **0.4.2**。
 
-The launcher accepts an update only from an installer signed by the pinned Chenyi Office certificate, with a matching SHA-256. The install password is a distribution gate for the first installation and is not used for updates; it is not a security boundary.
+更新仅接受由本项目固定签名证书签署、且 SHA-256 与发布清单一致的安装包。首次安装密码只是分发控制手段，不用于更新，也不构成安全边界。
 
-## Reporting a vulnerability
+## 报告安全漏洞
 
-Please do not report security vulnerabilities through public issues, discussions, or pull requests.
+请勿通过公开 Issue、Discussion 或 Pull Request 报告安全漏洞。
 
-Use GitHub's private vulnerability reporting instead:
+请使用 GitHub 的私密漏洞报告功能：
 
-1. Open the [Security tab](https://github.com/sitong-zhang/office-software/security).
-2. Choose **Report a vulnerability**.
-3. Describe the issue, the affected version or commit, and the steps to reproduce it.
+1. 打开[安全页面](https://github.com/sitong-zhang/office-software/security)。
+2. 选择 **Report a vulnerability**（报告漏洞）。
+3. 描述问题、受影响版本或提交，以及复现步骤。
 
-If private reporting is unavailable, contact the maintainers through their GitHub profiles and ask for a private channel. Do not include exploit details in a public message.
+如果无法使用私密报告，请通过维护者的 GitHub 主页联系并请求私密渠道。不要在公开消息中包含漏洞利用细节。
 
-## What to expect
+## 你会收到
 
-- Acknowledgement of the report as soon as possible.
-- An assessment of severity and impact.
-- A fix and coordinated disclosure timeline, agreed with the reporter.
-- Credit in the advisory unless you prefer to remain anonymous.
+- 尽快确认收到报告；
+- 对严重程度与影响的评估；
+- 与报告者协商确定的修复与披露时间表；
+- 除非你希望匿名，否则会在安全公告中致谢。
 
-## Scope
+## 适用范围
 
-This policy covers this repository, its build artifacts, and the project site. Vulnerabilities in third-party engine components should also be reported to their maintainers; we coordinate on packaging and mitigation where applicable.
+本政策适用于本仓库、其构建产物与项目站点。

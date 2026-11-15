@@ -1,86 +1,55 @@
-# Interface direction
+# 界面设计
 
-The product is rebuilt around its interface: a consistent, quieter workspace that a first-time user can operate without instruction.
+Chenyi Office 以界面为核心：提供一致、安静、初次使用即可上手的工作环境。
 
-The shell follows a consistent layout and spacing system; see
-[ui-references.md](ui-references.md) for the bundled interface assets and
-their licenses.
+启动器、安装器、编辑界面、对话框和设置遵循统一的布局与间距系统。
 
-## Implemented in v0.3.1
+## 已实现的界面
 
-- **Tabbed ribbon** is the default UI for Writer, Calc, Impress, and Draw, with a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展).
-- **编辑 group** on the Home tab of all four applications, with Find & Replace and Select All.
-- **Sifr icon theme** for a quieter, modern look.
-- **Engine artwork**: custom splash screens (`intro.png`, `intro-highres.png`) and Start Center / About marks (`logo.svg`, `logo-sc.svg`, `about.svg`) are written into the installed engine.
-- **Product identity** inside the engine is set to Chenyi Office (name and vendor).
-- **Clean first run**: tip of the day, What's New, feedback, and getting-involved entries are disabled or removed. The editor Help menus keep help, safe mode, command search, and the licence entry.
-- **Start Center** no longer shows the promotional panel or button.
-- **Isolated profile**: the launcher starts the engine with `-env:UserInstallation=%LOCALAPPDATA%\ChenyiOffice\lo-profile`, so the branded configuration does not collide with other installations.
-- **Brand shell**: splash animation, password-gated installer, update screen, and announcement screen.
+- **三段式标签页**：文字文档、电子表格、演示文稿和绘图默认采用统一的标签顺序（文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展）。
+- **常用功能分组**：四个应用的首页都提供精简的**编辑**分组（查找替换、全选）。
+- **统一图标主题**：编辑命令使用一致的现代图标风格。
+- **品牌视觉**：专属开屏、启动中心与「关于」标识。
+- **干净的首次启动**：关闭每日提示、新功能介绍、反馈与参与贡献等入口；帮助菜单保留帮助、安全模式、命令搜索和许可证。
+- **独立配置**：产品使用自己的用户配置，与其他安装互不干扰。
 
-## Next: deeper interface work
+## 设计原则
 
-The following require rebuilding the engine with the platform toolchain:
+1. **文档优先。** 用户开始输入时，界面元素自然退居背景；命令按场景出现，而非一次全部呈现。
+2. **统一的视觉语言。** 启动中心、编辑器、对话框、设置和更新界面共享字体、间距、图标风格与动效。
+3. **更少、更清晰的默认项。** 只展示精选的模板与命令，其余保持在下一层级。
+4. **克制的动效。** 动画用于表达状态（启动、加载、更新），绝不拖延工作。
+5. **符合 Windows 习惯。** DPI 缩放、高对比度、键盘导航与窗口控制遵循 Windows 10 / 11 惯例。
 
-- Dialog and settings reorganization.
-- Consistent typography, spacing, and color tokens across controls.
-- Dark theme, high contrast, and per-monitor DPI review.
-- Engine-level icons, default templates, and individual dialog layouts.
+## 涉及界面
 
-## Principles
-
-1. **Document first.** Chrome recedes when the user types; commands appear in context rather than all at once.
-2. **One visual language.** The Start Center, editor, dialogs, settings, and update screens share typography, spacing, icon style, and motion.
-3. **Fewer, clearer defaults.** A curated set of templates and commands is visible; the rest stays one level away.
-4. **Calm motion.** Animation communicates state — startup, loading, update — and never delays work.
-5. **Windows-native behavior.** DPI scaling, high-contrast mode, keyboard navigation, and window controls follow Windows 10/11 conventions.
-
-## Surfaces in scope
-
-| Surface | Change |
+| 界面 | 变更 |
 | --- | --- |
-| Installer welcome | Branded background, logo, introduction, password gate, **下一步确认** |
-| Splash | Branded startup animation, doubles as the update check state |
-| Start Center | Simplified layout: recent documents, templates, create-new, no promotional panel |
-| Ribbon and menus | Reordered tabs, compact Home groups, promotional entries removed |
-| Dialogs | Shared spacing, type scale, button order, and validation states |
-| Settings | Reorganized by task instead of the engine's module tree |
-| Update screen | Full-window, non-blocking prompt that can be deferred or closed, see [updater.md](updater.md) |
-| Announcement screen | Full-window notice shown once, dismissed with **继续** |
-| About | Product name, edition, and platform |
+| 安装欢迎页 | 品牌背景、Logo、产品介绍、密码校验、**下一步确认** |
+| 启动动画 | 品牌启动动画，同时承担更新检查状态展示 |
+| 启动中心 | 精简布局：最近文档、模板、新建，无推广面板 |
+| 标签页与菜单 | 调整标签顺序、精简首页分组、移除推广入口 |
+| 对话框 | 统一间距、字号、按钮顺序与校验状态 |
+| 设置 | 按任务组织，而非按模块堆叠 |
+| 更新界面 | 全屏但不阻塞，可推迟或关闭，见[更新机制](updater.md) |
+| 公告界面 | 全屏通知，每条只展示一次，点击**继续**进入 |
+| 关于 | 产品名称、版本与平台 |
 
-## Design tokens
+## 设计基准
 
-- **Type scale**: 12 / 13 / 15 / 18 / 24 / 32 px; UI text uses the Windows system UI font, with a CJK fallback stack.
-- **Spacing**: 4 px base grid; 8, 12, 16, 24, 32.
-- **Corner radius**: 6 px for controls, 10 px for dialogs.
-- **Color**: neutral surfaces, a single accent used for primary actions and focus.
-- **Icons**: one 24 px grid, 2 px stroke, consistent optical weight; no vendor icon set reused as product identity.
+- **字号**：12 / 13 / 15 / 18 / 24 / 32 px；界面文字优先使用 Windows 系统 UI 字体，并提供中文回退。
+- **间距**：4 px 基准网格；8、12、16、24、32。
+- **圆角**：控件 6 px，对话框 10 px。
+- **颜色**：中性底色，单一强调色用于主要操作与焦点。
+- **图标**：统一 24 px 网格、2 px 描边、一致的视觉重量；不使用其他产品的图标作为产品身份。
 
-## Splash animation
+## 启动动画
 
-The splash is the first brand impression and the first update checkpoint. Implemented in `app/launcher/main.cpp`.
+启动动画是品牌的第一印象，也是第一次更新检查点。
 
-- **Duration**: 1.2–1.8 s when the app is ready; it persists while the update check runs, up to 10 s.
-- **Content**: product wordmark, edition suffix, loading indicator, version in small type.
-- **Motion**: wordmark fade-and-rise, a single accent line that resolves into the progress state. No looping decorative motion after the intro.
-- **Behavior**: not interactive; if the update check returns "up to date", the main window opens immediately after the animation completes.
-- **First launch**: one additional line of setup copy; total time capped at 2.5 s.
-- **Reduced motion**: cross-fade only, 300 ms.
-- **Failure**: if the update check cannot complete, the splash exits to the app with a non-blocking notice; the next launch retries.
-
-## Accessibility
-
-- All new surfaces are keyboard reachable, with visible focus states.
-- Contrast meets WCAG 2.1 AA for text and controls.
-- High-contrast and dark themes are part of the token set, not an afterthought.
-- Animation respects the Windows "Show animations" and reduced-motion settings.
-
-Current limitations: the launcher, installer, and uninstaller use custom-drawn GDI surfaces with fixed layouts. Enter activates the primary action and the installer password field takes focus, but there is no full Tab focus chain, no UI Automation semantics, and no high-contrast theme yet. A full accessibility review remains planned.
-
-## Deliverables before the next preview
-
-- [ ] Token sheet and component inventory
-- [ ] Dialog and settings layouts
-- [ ] High-contrast review
-- [ ] Accessibility and keyboard-navigation review
+- **时长**：应用就绪时 1.2–1.8 秒；更新检查进行时保持显示，最长 10 秒。
+- **内容**：产品标识、版本后缀、加载指示、小号版本号。
+- **动效**：标识淡入上浮，一条强调线过渡为进度状态；片头结束后不循环装饰动画。
+- **行为**：不可交互；若更新检查返回"已是最新"，动画结束后立即打开主窗口。
+- **减少动效**：仅做淡入淡出，300 毫秒。
+- **失败**：若更新检查无法完成，动画结束进入应用并显示非阻塞提示，下次启动再试。

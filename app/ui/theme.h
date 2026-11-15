@@ -1,5 +1,4 @@
 // Shared GDI+ interface palette and drawing helpers.
-// Layout and token choices are documented in docs/ui-references.md.
 
 #pragma once
 

@@ -1,64 +1,64 @@
-# Roadmap
+# 路线图
 
-Current release: **v0.4.2** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, optional update channel, and announcement channel.
+当前版本：**v0.4.2** —— 面向 Windows 10 / 11 64 位的预览版，提供专属启动器与安装器、重新设计的编辑界面、免密码更新、可选更新通道和应用内公告。
 
-Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
+里程碑在 [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) 跟踪，并通过 [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements) 公布。
 
-## Phase 0 — Foundation (done)
+## 阶段 0 —— 基础建设（完成）
 
-- [x] Public repository, licensing, and project documentation
-- [x] Product name: Chenyi Office（胡辰逸定制版）
-- [x] Contribution, security, and branding policies
-- [x] Project site, announcements channel, release process
-- [x] Update manifest workflow and update protocol
-- [x] In-app announcement feed and validation workflow
+- [x] 公开仓库、许可与项目文档
+- [x] 产品名称：Chenyi Office（胡辰逸定制版）
+- [x] 贡献、安全与品牌规范
+- [x] 项目站点、公告通道、发布流程
+- [x] 更新清单工作流与更新协议
+- [x] 应用内公告数据源与校验流程
 
-## Phase 1 — Windows client and identity (done)
+## 阶段 1 —— Windows 客户端与品牌（完成）
 
-- [x] Linux cross-build pipeline (MinGW-w64, no Windows machine)
-- [x] Pinned engine: 26.8.3 Windows x64
-- [x] Password-gated welcome page with branded artwork
-- [x] Custom splash animation
-- [x] Installer with engine payload, shortcuts, registry, and uninstaller
-- [x] Brand identity: logo, icon, installer background
-- [x] Authenticode signing (self-signed certificate; CA certificate pending)
-- [x] Authenticated updates (mandatory SHA-256 + pinned Authenticode publisher; manifest treated as an untrusted hint)
+- [x] Linux 交叉构建流程（MinGW-w64，无需 Windows 机器）
+- [x] Windows x64 版本
+- [x] 带品牌视觉的安装欢迎页，首次安装需密码
+- [x] 专属启动动画
+- [x] 安装包、快捷方式、注册表与卸载器
+- [x] 品牌标识：Logo、图标、安装背景
+- [x] 代码签名
+- [x] 更新完整性校验（SHA-256 与固定发布者签名；清单仅作为不可信提示）
 
-## Phase 2 — Interface rebuild (in progress)
+## 阶段 2 —— 界面重构（进行中）
 
-- [x] Branded engine profile (Tabbed ribbon, product name, clean first run)
-- [x] Dedicated user profile launched with `-env:UserInstallation`
-- [x] Remove tip, What's New, feedback, and getting-involved entries
-- [x] grouped tab order and compact Home groups for all four applications
-- [x] Start Center without the promotional panel
-- [x] Engine artwork uses the product's own branding
-- [ ] Dialog and settings reorganization
-- [ ] Dark theme, high contrast, and DPI review
-- [ ] Interface preview build
+- [x] 统一界面配置（三段式标签页、产品名称、干净的首次启动）
+- [x] 独立用户配置，与其他安装互不干扰
+- [x] 移除提示、新功能介绍、反馈与参与贡献等入口
+- [x] 四大应用采用分组标签顺序与精简的常用功能分组
+- [x] 启动中心移除推广面板
+- [x] 界面视觉统一为产品自有品牌
+- [ ] 对话框与设置的重新组织
+- [ ] 深色主题、高对比度与 DPI 适配评估
+- [ ] 界面预览版本
 
-## Phase 3 — Beta
+## 阶段 3 —— 公测
 
-- [ ] Localization of the interface and documentation
-- [ ] Crash reporting and feedback workflow
-- [ ] Accessibility review
-- [ ] Public beta with the optional update channel
+- [ ] 界面与文档本地化
+- [ ] 崩溃报告与反馈流程
+- [ ] 无障碍评估
+- [ ] 通过可选更新通道开展公开测试
 
-## Phase 4 — Stable release
+## 阶段 4 —— 正式版本
 
-- [ ] Version 1.0 for Windows 10/11 x64
-- [ ] Maintenance policy and release cadence
-- [ ] Release notes archive and update history
+- [ ] Windows 10 / 11 64 位 1.0 版本
+- [ ] 维护政策与发布节奏
+- [ ] 发行说明归档与更新历史
 
-## Not planned
+## 暂不计划
 
-- macOS and Linux builds
-- Mobile and web editions
-- Portable builds
+- macOS 与 Linux 版本
+- 移动端与网页版
+- 便携版
 
-## Guiding principles
+## 指导原则
 
-1. **Interface first.** Every release should make the product easier to look at and easier to operate.
-2. **Compatibility.** Documents must open, render, and round-trip without surprises.
-3. **A smaller, clearer surface.** Curated defaults beat an overwhelming feature list.
-4. **Updates are part of the product.** Users always run the latest build; the update screen is honest, fast, and unavoidable.
-5. **Craft.** Spacing, typography, icons, and wording are part of the product, not decoration.
+1. **界面优先。** 每个版本都应让产品更好看、更好用。
+2. **兼容优先。** 文档应当能正常打开、显示并保持格式。
+3. **更小、更清晰的界面。** 精炼的默认设置胜过繁杂的功能列表。
+4. **更新是产品的一部分。** 用户始终运行较新的版本；更新界面应当诚实、快速且不打断工作。
+5. **注重细节。** 间距、字体、图标和措辞都是产品的一部分，而非装饰。

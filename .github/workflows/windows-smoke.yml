@@ -105,8 +105,8 @@ jobs:
             throw "Public certificate thumbprint $publicThumb does not match signer $certThumb"
           }
 
-          # The bundled engine asset must match the pinned checksum recorded in
-          # engine/SOURCE.md. This catches a corrupted or substituted payload.
+          # The engine asset must match the pinned checksum held in the
+          # workflow configuration. This catches a corrupted or substituted payload.
           gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" `
             --pattern "ChenyiEngine-*-branded.msi" --dir smoke
           $engine = Get-ChildItem smoke -Filter 'ChenyiEngine-*-branded.msi' | Select-Object -First 1

@@ -7,7 +7,6 @@
 102 RCDATA "build/ChenyiOffice.exe"
 103 RCDATA "build/Uninstall.exe"
 104 RCDATA "LICENSE"
-105 RCDATA "NOTICE"
 150 RCDATA "app/branding/engine/intro.png"
 151 RCDATA "app/branding/engine/intro-highres.png"
 152 RCDATA "app/branding/engine/logo.svg"

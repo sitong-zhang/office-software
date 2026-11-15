@@ -1,15 +1,11 @@
-# Chenyi engine icon theme
+# 编辑图标主题
 
-The complete theme structure (3357 command icons and links.txt) is taken from the
-engine's own colibre theme so every command keeps an icon. Command icons whose names
-map onto a permissively licensed icon library use that library's SVG geometry
-verbatim; only the canvas size and ink colour are adapted. No glyph is drawn or
-invented by this project.
+完整的主题结构（3357 个命令图标与 links.txt）覆盖全部编辑命令；名称能对应到宽松许可图标库的命令，直接使用该库的 SVG 图形，仅调整画布尺寸与着色。项目不自行绘制或虚构任何图形。
 
-| Library | License | Repository |
-|---|---|---|
+| 图标库 | 许可证 | 仓库 |
+| --- | --- | --- |
 | Tabler Icons | MIT | https://github.com/tabler/tabler-icons |
 | Lucide | ISC | https://github.com/lucide-icons/lucide |
 | Material Design Icons | Apache-2.0 | https://github.com/google/material-design-icons |
 
-Pinned sources and LICENSE files live in `app/branding/third-party/`.
+固定版本来源与许可证文件保存在 `app/branding/third-party/`。

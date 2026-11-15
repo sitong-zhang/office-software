@@ -10,7 +10,7 @@ CACHE="$BUILD/cache"
 DIST="$ROOT/dist"
 ENGINE_VERSION="${ENGINE_VERSION:-26.8.3}"
 ENGINE_MSI="ChenyiEngine-${ENGINE_VERSION}-x64.msi"
-ENGINE_URL="${ENGINE_URL:-https://github.com/sitong-zhang/office-software/releases/download/v0.3.1/${ENGINE_MSI}}"
+ENGINE_URL="${ENGINE_URL:-https://github.com/sitong-zhang/office-software/releases/download/v0.4.0/${ENGINE_MSI}}"
 # Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
 # when you have independently verified a new external artifact.
 ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"

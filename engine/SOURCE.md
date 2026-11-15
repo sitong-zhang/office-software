@@ -14,7 +14,7 @@ product-facing page.
 - MSI used as the build input: `LibreOffice_26.8.3_Win_x86-64.msi`
 - Pinned SHA-256: `0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94`
 
-The MSI is mirrored as `ChenyiEngine-26.8.3-x64.msi` in the v0.3.1 GitHub
+The MSI is mirrored as `ChenyiEngine-26.8.3-x64.msi` in the v0.4.0 GitHub
 release so the build no longer downloads it from an upstream mirror. The
 mirrored file is byte-identical to the pinned upstream MSI.
 

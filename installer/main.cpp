@@ -37,7 +37,7 @@ using namespace Gdiplus;
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.2.0";
+static const wchar_t* kVersion = L"0.3.0";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -181,7 +181,7 @@ static void DrawSidebar(Graphics& g) {
 
   ui::TextLatin(g, std::wstring(L"v") + kVersion, RectF(S(26), g_height - S(62), S(120), S(20)),
                 S(11), FontStyleBold, ui::SidebarText());
-  ui::Text(g, L"MPL 2.0 · Windows x64", RectF(S(26), g_height - S(38), S(228), S(18)), S(9),
+  ui::Text(g, L"Windows 10 / 11 · x64", RectF(S(26), g_height - S(38), S(228), S(18)), S(9),
            FontStyleRegular, ui::SidebarMuted());
 }
 
@@ -259,12 +259,12 @@ static void DrawWelcome(Graphics& g) {
   }
 
   if (g_enginePreExisting && !g_updateMode) {
-    ui::Text(g, L"检测到系统已有 LibreOffice：将复用它作为内核，卸载时不会移除它。",
+    ui::Text(g, L"检测到系统已有办公内核：将直接复用，卸载时不会移除它。",
              RectF(x, S(492), width, S(18)), S(9.5), FontStyleRegular, ui::rgba(150, 96, 44));
   }
   ui::Text(g, L"安装位置：C:\\Program Files\\ChenyiOffice", RectF(x, S(522), width, S(18)),
            S(9.5), FontStyleRegular, ui::TextMuted());
-  ui::Text(g, L"基于 LibreOffice 技术构建 · Mozilla Public License 2.0",
+  ui::Text(g, L"Chenyi Office · 独立打造 · Windows 10 / 11",
            RectF(x, S(548), width, S(18)), S(9), FontStyleRegular, ui::TextSoft());
 
   DrawButton(g, RectF(g_width - S(216), S(590), S(180), S(42)),
@@ -564,6 +564,49 @@ struct PayloadFooter {
 };
 #pragma pack(pop)
 
+static void DeleteTree(const std::wstring& path) {
+  if (path.empty()) return;
+  std::wstring from = path;
+  from.push_back(L'\0');
+  from.push_back(L'\0');
+  SHFILEOPSTRUCTW op{};
+  op.wFunc = FO_DELETE;
+  op.pFrom = from.c_str();
+  op.fFlags = FOF_NO_UI | FOF_NOCONFIRMATION | FOF_SILENT;
+  SHFileOperationW(&op);
+}
+
+// The engine MSI creates its own Start menu folder and desktop shortcuts.
+// Chenyi Office provides its own entry points, so remove the extra ones after
+// installing the bundled engine.
+static void RemoveShortcutsIn(const KNOWNFOLDERID& folder, const wchar_t* pattern,
+                              bool directories) {
+  wchar_t* base = nullptr;
+  if (FAILED(SHGetKnownFolderPath(folder, 0, nullptr, &base))) return;
+  std::wstring glob = std::wstring(base) + L"\\" + pattern;
+  WIN32_FIND_DATAW data{};
+  HANDLE find = FindFirstFileW(glob.c_str(), &data);
+  if (find != INVALID_HANDLE_VALUE) {
+    do {
+      std::wstring path = std::wstring(base) + L"\\" + data.cFileName;
+      if (directories) {
+        if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) DeleteTree(path);
+      } else {
+        DeleteFileW(path.c_str());
+      }
+    } while (FindNextFileW(find, &data));
+    FindClose(find);
+  }
+  CoTaskMemFree(base);
+}
+
+static void RemoveEngineShortcuts() {
+  RemoveShortcutsIn(FOLDERID_CommonPrograms, L"LibreOffice*", true);
+  RemoveShortcutsIn(FOLDERID_Programs, L"LibreOffice*", true);
+  RemoveShortcutsIn(FOLDERID_PublicDesktop, L"LibreOffice*.lnk", false);
+  RemoveShortcutsIn(FOLDERID_Desktop, L"LibreOffice*.lnk", false);
+}
+
 static void ApplyEngineBranding(const std::wstring& programFiles) {
   std::wstring program = programFiles + L"\\LibreOffice\\program";
   std::wstring shell = program + L"\\shell";
@@ -574,6 +617,18 @@ static void ApplyEngineBranding(const std::wstring& programFiles) {
   WriteResourceFile(152, shell + L"\\logo.svg");
   WriteResourceFile(153, shell + L"\\logo-sc.svg");
   WriteResourceFile(154, shell + L"\\about.svg");
+
+  // Deep UI layout: tab order, Home groups, menus and Start Center.
+  std::wstring cfg = programFiles + L"\\LibreOffice\\share\\config\\soffice.cfg";
+  WriteResourceFile(160, cfg + L"\\modules\\swriter\\ui\\notebookbar.ui");
+  WriteResourceFile(161, cfg + L"\\modules\\swriter\\menubar\\menubar.xml");
+  WriteResourceFile(162, cfg + L"\\modules\\scalc\\ui\\notebookbar.ui");
+  WriteResourceFile(163, cfg + L"\\modules\\scalc\\menubar\\menubar.xml");
+  WriteResourceFile(164, cfg + L"\\modules\\simpress\\ui\\notebookbar.ui");
+  WriteResourceFile(165, cfg + L"\\modules\\simpress\\menubar\\menubar.xml");
+  WriteResourceFile(166, cfg + L"\\modules\\sdraw\\ui\\notebookbar.ui");
+  WriteResourceFile(167, cfg + L"\\modules\\sdraw\\menubar\\menubar.xml");
+  WriteResourceFile(168, cfg + L"\\sfx\\ui\\startcenter.ui");
 }
 
 static void Fail(const std::wstring& message) {
@@ -596,8 +651,8 @@ static std::wstring DefaultEnginePath() {
   return std::wstring(programFiles) + L"\\LibreOffice\\program\\soffice.exe";
 }
 
-// A "foreign" engine is a LibreOffice installation that existed before Chenyi
-// Office was installed. We reuse it, never brand it, and never uninstall it.
+// A "foreign" engine is an office engine that existed before Chenyi Office was
+// installed. We reuse it, never brand it, and never uninstall it.
 static bool DetectForeignEngine() {
   if (EngineAlreadyInstalled()) {
     return GetDword(HKEY_LOCAL_MACHINE, L"Software\\ChenyiOffice", L"EnginePreExisting") != 0;
@@ -647,7 +702,7 @@ static int RunSilentUpdate() {
 
 static DWORD WINAPI InstallThreadProc(LPVOID) {
   std::wstring temp = TempDirectory();
-  std::wstring msi = temp + L"\\LibreOffice.msi";
+  std::wstring msi = temp + L"\\ChenyiEngine.msi";
 
   // Extract the appended MSI payload.
   InterlockedExchange(&g_stage, 1);
@@ -745,13 +800,14 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
   bool enginePreExisting = DetectForeignEngine();
   g_enginePreExisting = enginePreExisting;
 
-  // Never run the MSI against a LibreOffice the user already had: with the
+  // Never run the MSI against an engine the user already had: with the
   // same ProductCode that becomes a repair/upgrade of their installation.
   if (!enginePreExisting) {
     wchar_t systemDir[MAX_PATH] = {0};
     GetSystemDirectoryW(systemDir, MAX_PATH);
     std::wstring msiexec = std::wstring(systemDir) + L"\\msiexec.exe";
-    std::wstring command = L"\"" + msiexec + L"\" /i \"" + msi + L"\" /qn /norestart";
+    std::wstring command = L"\"" + msiexec + L"\" /i \"" + msi +
+                           L"\" /qn /norestart ARPSYSTEMCOMPONENT=1";
     DWORD exitCode = 1;
     if (!RunAndWait(command, exitCode)) {
       Fail(L"无法启动办公内核安装程序。");
@@ -779,9 +835,12 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
     return 0;
   }
 
-  // Only brand an engine we installed ourselves; a pre-existing LibreOffice
+  // Only brand an engine we installed ourselves; a pre-existing engine
   // keeps its original splash and About artwork.
-  if (!enginePreExisting) ApplyEngineBranding(std::wstring(programFiles));
+  if (!enginePreExisting) {
+    ApplyEngineBranding(std::wstring(programFiles));
+    RemoveEngineShortcuts();
+  }
 
   // Shell integration.
   InterlockedExchange(&g_stage, 4);

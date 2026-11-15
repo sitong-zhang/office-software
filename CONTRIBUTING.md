@@ -21,7 +21,7 @@ The first supported platform is Windows 10/11 x64; changes targeting other platf
    ```
 
 2. Keep changes focused. One pull request should address one problem.
-3. Follow the coding style of the surrounding code. Inherited LibreOffice code keeps its upstream style and license headers.
+3. Follow the coding style of the surrounding code. Third-party source keeps its original style and license headers.
 4. Add or update documentation when behavior changes.
 5. Open a pull request and describe what changed, why, and how it was tested.
 
@@ -46,11 +46,11 @@ This project is licensed under the Mozilla Public License 2.0. By submitting a p
 - new files are licensed under MPL 2.0 and carry the appropriate header;
 - you did not copy code from a source that is incompatible with MPL 2.0.
 
-There is no separate contributor license agreement. Do not remove or alter upstream copyright notices or license headers.
+There is no separate contributor license agreement. Do not remove or alter third-party copyright notices or license headers.
 
 ## Branding rules
 
-Do not add LibreOffice trademarks, logos, or product names to user-facing surfaces. See [docs/branding.md](docs/branding.md) for the rules that apply to product naming, icons, splash screens, and documentation.
+Do not add third-party product names, logos, or trademarks to user-facing surfaces. See [docs/branding.md](docs/branding.md) for the rules that apply to product naming, icons, splash screens, and documentation.
 
 ## Code of conduct
 

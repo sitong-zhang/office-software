@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.2.0** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, branded Tabbed interface, passwordless updates, mandatory update gate, and announcement channel. Deep VCL-level interface work is next.
+Current release: **v0.3.0** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, mandatory update gate, and announcement channel.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -16,7 +16,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 ## Phase 1 — Windows client and identity (done)
 
 - [x] Linux cross-build pipeline (MinGW-w64, no Windows machine)
-- [x] Pinned engine: LibreOffice 26.8.3 Windows x64
+- [x] Pinned engine: 26.8.3 Windows x64
 - [x] Password-gated welcome page with branded artwork
 - [x] Custom splash animation
 - [x] Installer with engine payload, shortcuts, registry, and uninstaller
@@ -26,19 +26,18 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 
 ## Phase 2 — Interface rebuild (in progress)
 
-- [x] Branded LibreOffice profile (Tabbed notebookbar, product name, clean first run)
+- [x] Branded engine profile (Tabbed ribbon, product name, clean first run)
 - [x] Dedicated user profile launched with `-env:UserInstallation`
-- [x] Remove upstream tips, What's New, Get Involved, and Donate infobars
-- [ ] Upstream source integration and patch series
-- [ ] Design tokens, typography, and component inventory
-- [ ] Start Center redesign
+- [x] Remove tip, What's New, feedback, and getting-involved entries
+- [x] WPS-style tab order and compact Home groups for all four applications
+- [x] Start Center without the promotional panel
+- [x] Engine artwork without third-party product references
 - [ ] Dialog and settings reorganization
 - [ ] Dark theme, high contrast, and DPI review
 - [ ] Interface preview build
 
 ## Phase 3 — Beta
 
-- [ ] Engine-level rebranding (icons, splash, About, defaults)
 - [ ] Localization of the interface and documentation
 - [ ] Crash reporting and feedback workflow
 - [ ] Accessibility review
@@ -62,4 +61,4 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 2. **Compatibility.** Documents must open, render, and round-trip without surprises.
 3. **A smaller, clearer surface.** Curated defaults beat an overwhelming feature list.
 4. **Updates are part of the product.** Users always run the latest build; the update screen is honest, fast, and unavoidable.
-5. **Upstream respect.** Improvements that make sense upstream are offered back.
+5. **Craft.** Spacing, typography, icons, and wording are part of the product, not decoration.

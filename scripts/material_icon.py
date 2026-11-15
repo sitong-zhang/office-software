@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Load the upstream Material Design Icons glyph used by the product."""
+"""Load the Material Design Icons glyph used by the product."""
 
 import re
 import subprocess
@@ -36,7 +36,7 @@ def path_data():
 
 @lru_cache(maxsize=32)
 def render(size, color=(31, 92, 70), opacity=1.0):
-    """Rasterize the upstream SVG and tint it with the product palette."""
+    """Rasterize the SVG and tint it with the product palette."""
     size = int(size)
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
         raster_path = Path(handle.name)

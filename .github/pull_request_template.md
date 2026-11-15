@@ -14,6 +14,6 @@
 
 - [ ] The change is focused and contains no unrelated edits.
 - [ ] Documentation was updated where behavior changed.
-- [ ] New files carry MPL 2.0 headers and no upstream notices were removed.
-- [ ] No LibreOffice trademarks or logos were introduced into user-facing surfaces.
+- [ ] New files carry MPL 2.0 headers and no third-party notices were removed.
+- [ ] No third-party product names, trademarks, or logos were introduced into user-facing surfaces.
 - [ ] `CHANGELOG.md` was updated for user-visible changes.

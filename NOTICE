@@ -1,19 +1,14 @@
 Chenyi Office（胡辰逸定制版）
 Hu Chenyi Custom Edition
 Copyright (C) 2026 Chenyi Office contributors
+An independent desktop office product.
 
-This product is based on LibreOffice, an open source office suite
-developed by The Document Foundation and contributors, and distributed
-under the Mozilla Public License, version 2.0.
+This distribution includes components licensed under the Mozilla Public
+License, version 2.0. The Source Code Form for those components is
+available in this repository. Files retain their original copyright
+notices and license headers.
 
-Upstream project: https://www.libreoffice.org/
-Upstream source:  https://git.libreoffice.org/core
-Source license:   https://www.mozilla.org/MPL/2.0/
-
-Modifications and additions made in this repository are also released
-under the Mozilla Public License 2.0. Files originating from upstream
-retain their original copyright notices and license headers; those
-notices must not be removed or altered.
+Source license: https://www.mozilla.org/MPL/2.0/
 
 Third-party artwork
 -------------------
@@ -22,7 +17,7 @@ The application icon, installer artwork, splash mark, Start Center mark,
 and About mark use the "description" glyph from Google Material Design
 Icons:
 
-  Upstream:  https://github.com/google/material-design-icons
+  Source:    https://github.com/google/material-design-icons
   Commit:    10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7
   Copyright: Google LLC and Material Design Icons contributors
   License:   Apache License 2.0
@@ -33,22 +28,10 @@ app/branding/third-party/material-design-icons/LICENSE.
 
 Interface icons (navigation, cards, actions, window controls) use Lucide:
 
-  Upstream:  https://github.com/lucide-icons/lucide
+  Source:    https://github.com/lucide-icons/lucide
   Commit:    55782beff3a0133df79c417eb68f96e8f19e2404
   Copyright: Lucide Icons and contributors
   License:   ISC License
 
 A copy of the ISC license is shipped in
 app/branding/third-party/lucide/LICENSE.
-
-Trademarks
-----------
-
-LibreOffice and the LibreOffice logo are trademarks of The Document
-Foundation. The Document Foundation does not sponsor, endorse, or
-approve this product, and this project does not use the LibreOffice
-name or logo as its own product identity.
-
-"Chenyi Office（胡辰逸定制版）" is the product name of this edition.
-The name identifies a customized build and does not imply any
-affiliation with The Document Foundation.

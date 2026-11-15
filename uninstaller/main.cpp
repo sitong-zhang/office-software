@@ -178,7 +178,7 @@ static DWORD WINAPI UninstallThread(LPVOID) {
     CoTaskMemFree(commonPrograms);
   }
 
-  // Remove the local profile: LibreOffice profile, seen announcements and logs
+  // Remove the local profile: engine profile, seen announcements and logs
   // must not come back after a reinstall.
   InterlockedExchange(&g_stage, 3);
   bool profileDeleted = true;
@@ -247,7 +247,7 @@ static void DrawSidebar(Graphics& g) {
            RectF(S(24), S(162), S(170), S(60)), S(9.5), FontStyleRegular, ui::SidebarMuted(),
            StringAlignmentNear, StringAlignmentNear, true);
 
-  ui::Text(g, L"Mozilla Public License 2.0", RectF(S(24), g_height - S(36), S(180), S(18)),
+  ui::Text(g, L"Chenyi Office · Windows x64", RectF(S(24), g_height - S(36), S(180), S(18)),
            S(8.5), FontStyleRegular, ui::SidebarMuted());
 }
 
@@ -283,7 +283,7 @@ static void DrawScreen(Graphics& g) {
              RectF(SIDEBAR + S(40), S(188), g_width - SIDEBAR - S(80), S(70)), S(11.5),
              FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
     if (g_enginePreExisting) {
-      ui::Text(g, L"系统中原有的 LibreOffice 内核已保留。",
+      ui::Text(g, L"系统中原有的办公内核已保留。",
                RectF(SIDEBAR + S(40), S(268), g_width - SIDEBAR - S(80), S(22)), S(10),
                FontStyleRegular, ui::Green());
     }
@@ -325,7 +325,7 @@ static void DrawScreen(Graphics& g) {
   ui::FillRound(g, note, S(12), ui::SurfaceMuted());
   ui::Icon(g, UI_ICON_INFO, ui::ICON_GREEN, RectF(note.X + S(14), note.Y + S(15), S(20), S(20)));
   ui::Text(g,
-           g_enginePreExisting ? L"系统原有的 LibreOffice 会被保留，不会随本次卸载移除。"
+           g_enginePreExisting ? L"系统原有的办公内核会被保留，不会随本次卸载移除。"
                                : L"请勿关闭此窗口。完成后会提示是否还有残留文件。",
            RectF(note.X + S(44), note.Y + S(10), note.Width - S(58), S(30)), S(9.5),
            FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
@@ -434,7 +434,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
       enginePreExisting == 0
           ? L"确定要卸载 Chenyi Office（胡辰逸定制版）及其办公内核吗？"
           : L"确定要卸载 Chenyi Office（胡辰逸定制版）吗？\n\n"
-            L"系统中原有的 LibreOffice 内核会被保留。";
+            L"系统中原有的办公内核会被保留。";
   int answer = MessageBoxW(nullptr, question, kProduct,
                            MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2);
   if (answer != IDYES) return 0;
@@ -442,7 +442,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   if (IsProcessRunning(L"soffice.bin") || IsProcessRunning(L"soffice.exe") ||
       IsProcessRunning(L"ChenyiOffice.exe")) {
     MessageBoxW(nullptr,
-                L"Chenyi Office 或 LibreOffice 仍在运行。\n\n"
+                L"Chenyi Office 或其办公内核仍在运行。\n\n"
                 L"请先保存并关闭所有文档和程序，然后重新运行卸载器。",
                 kProduct, MB_ICONWARNING | MB_OK);
     return 0;

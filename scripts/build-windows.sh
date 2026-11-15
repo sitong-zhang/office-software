@@ -8,13 +8,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build"
 CACHE="$BUILD/cache"
 DIST="$ROOT/dist"
-LO_VERSION="${LO_VERSION:-26.8.3}"
-LO_MSI="LibreOffice_${LO_VERSION}_Win_x86-64.msi"
-LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${LO_VERSION}/win/x86_64/${LO_MSI}}"
-# Pinned SHA-256 of the engine MSI. Override together with LO_VERSION only when
-# you have independently verified a new upstream artifact.
-LO_MSI_SHA256="${LO_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
-VERSION="0.2.0"
+ENGINE_VERSION="${ENGINE_VERSION:-26.8.3}"
+ENGINE_MSI="LibreOffice_${ENGINE_VERSION}_Win_x86-64.msi"
+ENGINE_URL="${ENGINE_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${ENGINE_VERSION}/win/x86_64/${ENGINE_MSI}}"
+# Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
+# when you have independently verified a new external artifact.
+ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
+VERSION="0.3.0"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"
@@ -99,24 +99,24 @@ echo "[3/8] Building and signing uninstaller"
   -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32 -lshlwapi -lgdiplus -ldwmapi
 sign_file "$BUILD/Uninstall.exe"
 
-echo "[4/8] Preparing LibreOffice engine"
-if [ ! -f "$CACHE/$LO_MSI" ]; then
+echo "[4/8] Preparing office engine"
+if [ ! -f "$CACHE/$ENGINE_MSI" ]; then
   curl -L --fail --retry 5 --retry-delay 5 --retry-all-errors \
-    -o "$CACHE/$LO_MSI.part" "$LO_URL"
-  mv "$CACHE/$LO_MSI.part" "$CACHE/$LO_MSI"
+    -o "$CACHE/$ENGINE_MSI.part" "$ENGINE_URL"
+  mv "$CACHE/$ENGINE_MSI.part" "$CACHE/$ENGINE_MSI"
 fi
-if ! echo "$LO_MSI_SHA256  $CACHE/$LO_MSI" | sha256sum -c - >/dev/null 2>&1; then
-  echo "Engine MSI checksum mismatch: $CACHE/$LO_MSI" >&2
-  echo "Expected $LO_MSI_SHA256" >&2
-  echo "Delete the cached file and retry, or set LO_MSI_SHA256 to a verified value." >&2
+if ! echo "$ENGINE_MSI_SHA256  $CACHE/$ENGINE_MSI" | sha256sum -c - >/dev/null 2>&1; then
+  echo "Engine MSI checksum mismatch: $CACHE/$ENGINE_MSI" >&2
+  echo "Expected $ENGINE_MSI_SHA256" >&2
+  echo "Delete the cached file and retry, or set ENGINE_MSI_SHA256 to a verified value." >&2
   exit 1
 fi
 echo "  engine MSI checksum verified"
 
 echo "[5/8] Reading engine product code"
-PRODUCT_CODE="$(msiinfo export "$CACHE/$LO_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
+PRODUCT_CODE="$(msiinfo export "$CACHE/$ENGINE_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
 if [ -z "$PRODUCT_CODE" ]; then
-  echo "Could not read ProductCode from $LO_MSI" >&2
+  echo "Could not read ProductCode from $ENGINE_MSI" >&2
   exit 1
 fi
 printf '#define MSI_PRODUCT_CODE L"%s"\n' "$PRODUCT_CODE" > "$BUILD/product_code.h"
@@ -128,7 +128,7 @@ echo "[6/8] Building installer shell"
   -lbcrypt -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32 -lshlwapi -lgdiplus -ldwmapi
 
 echo "[7/8] Appending engine payload"
-python3 - "$BUILD/ChenyiOfficeSetup-base.exe" "$CACHE/$LO_MSI" "$OUT" <<'PY'
+python3 - "$BUILD/ChenyiOfficeSetup-base.exe" "$CACHE/$ENGINE_MSI" "$OUT" <<'PY'
 import pathlib
 import struct
 import sys

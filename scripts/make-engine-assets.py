@@ -92,7 +92,7 @@ def make_splash(width, height):
 
 
 def svg_mark(size, x, y, color):
-    # Geometry is the upstream Material Design Icons path, unchanged.
+    # Geometry is the Material Design Icons path, unchanged.
     scale = size / 24.0
     return (
         f'<g transform="translate({x},{y}) scale({scale:.6f})">'
@@ -122,9 +122,7 @@ def make_about_svg():
   <text x="500" y="500" text-anchor="middle" font-size="76" class="title">CHENYI OFFICE</text>
   <text x="500" y="560" text-anchor="middle" font-size="34" class="sub">胡辰逸定制版</text>
   <rect x="410" y="610" width="180" height="6" rx="3" fill="#58b892"/>
-  <text x="500" y="660" text-anchor="middle" font-size="22" class="fine">技术内核：LibreOffice（MPL 2.0）</text>
-  <text x="500" y="700" text-anchor="middle" font-size="22" class="fine">Built on LibreOffice technology</text>
-  <text x="500" y="738" text-anchor="middle" font-size="20" class="fine">Windows 10 / 11  ·  64-bit</text>
+  <text x="500" y="668" text-anchor="middle" font-size="22" class="fine">Windows 10 / 11  ·  64-bit</text>
 </svg>
 '''
 

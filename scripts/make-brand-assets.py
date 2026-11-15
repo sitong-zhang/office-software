@@ -52,7 +52,7 @@ def make_background(width=1800, height=1200):
             width=3,
         )
 
-    # oversized watermark: the upstream document glyph, not a drawn logo
+    # oversized watermark: the Material Design Icons document glyph, not a drawn logo
     watermark_size = 760
     watermark = material_icon.render(watermark_size, CREAM, opacity=0.06)
     watermark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))

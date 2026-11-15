@@ -43,8 +43,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.2.0";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.2.0";
+static const wchar_t* kVersion = L"0.3.0";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.3.0";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -1660,10 +1660,10 @@ static void DrawSettingsPage(Graphics& g) {
   ui::Text(g, L"Chenyi Office（胡辰逸定制版）",
            RectF(aboutCard.X + S(60), aboutCard.Y + S(16), S(420), S(22)), S(13),
            FontStyleBold, ui::Text());
-  ui::Text(g, L"基于 LibreOffice 技术构建，界面与更新由本项目维护。",
+  ui::Text(g, L"独立打造的桌面办公空间，界面、更新与公告由本项目维护。",
            RectF(aboutCard.X + S(60), aboutCard.Y + S(44), S(420), S(22)), S(10.5),
            FontStyleRegular, ui::TextMuted());
-  ui::Text(g, L"Mozilla Public License 2.0 · Apache 2.0 图标",
+  ui::Text(g, L"Apache 2.0 图标 · Material Design Icons",
            RectF(aboutCard.X + S(20), aboutCard.Y + S(82), S(420), S(20)), S(9.5),
            FontStyleRegular, ui::TextMuted());
   DrawButton(g, RectF(aboutCard.X + S(360), aboutCard.Y + S(84), S(140), S(32)), L"关于",
@@ -1966,8 +1966,7 @@ static void OnAction(int action) {
     case A_ABOUT:
       MessageBoxW(g_window,
                   L"Chenyi Office（胡辰逸定制版）\n\n"
-                  L"基于 LibreOffice 技术构建。\n"
-                  L"Mozilla Public License 2.0。\n"
+                  L"Windows 10 / 11 · 64 位\n"
                   L"产品图标来自 Google Material Design Icons（Apache 2.0）。",
                   kProductName, MB_ICONINFORMATION | MB_OK);
       return;
@@ -2175,7 +2174,7 @@ static void LaunchEngine(const std::wstring& extraArgs) {
     LogLine(L"engine missing; EnginePath and standard locations were checked");
     int answer = MessageBoxW(
         g_window,
-        L"没有找到办公套件内核。它可能已被卸载，或被系统中的 LibreOffice 升级替换。\n\n"
+        L"没有找到办公套件内核。它可能已被卸载，或被系统中的其他办公软件替换。\n\n"
         L"是否打开下载页，重新安装 Chenyi Office 内核？",
         kProductName, MB_ICONERROR | MB_YESNO);
     if (answer == IDYES) {

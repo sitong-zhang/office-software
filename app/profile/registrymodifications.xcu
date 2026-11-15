@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<!-- Product identity -->
 <item oor:path="/org.openoffice.Setup/Office"><prop oor:name="ooSetupInstCompleted" oor:op="fuse"><value>true</value></prop></item>
 <item oor:path="/org.openoffice.Setup/Product"><prop oor:name="ooName" oor:op="fuse"><value>Chenyi Office</value></prop></item>
 <item oor:path="/org.openoffice.Setup/Product"><prop oor:name="ooVendor" oor:op="fuse"><value>Chenyi Office contributors</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Product"><prop oor:name="ooSetupVersionAboutBoxSuffix" oor:op="fuse"><value></value></prop></item>
+<item oor:path="/org.openoffice.Setup/Product"><prop oor:name="ooSetupExtension" oor:op="fuse"><value></value></prop></item>
+
+<!-- First-run and promotional surfaces -->
 <item oor:path="/org.openoffice.Office.Common/Misc"><prop oor:name="FirstRun" oor:op="fuse"><value>false</value></prop></item>
 <item oor:path="/org.openoffice.Office.Common/Misc"><prop oor:name="ShowTipOfTheDay" oor:op="fuse"><value>false</value></prop></item>
 <item oor:path="/org.openoffice.Office.Common/Misc"><prop oor:name="ShowDonation" oor:op="fuse"><value>false</value></prop></item>
 <item oor:path="/org.openoffice.Office.Common/Misc"><prop oor:name="SymbolStyle" oor:op="fuse"><value>sifr</value></prop></item>
+<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="WhatsNew" oor:op="fuse"><value>false</value></prop></item>
+<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="GetInvolved" oor:op="fuse"><value>false</value></prop></item>
+<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="Donate" oor:op="fuse"><value>false</value></prop></item>
+
+<!-- No template picker on document creation / first Impress start -->
+<item oor:path="/org.openoffice.Office.Impress/NewDoc"><prop oor:name="AutoPilot" oor:op="fuse"><value>false</value></prop></item>
+<item oor:path="/org.openoffice.Office.Impress/NewDoc"><prop oor:name="Layout" oor:op="fuse"><value>false</value></prop></item>
+
+<!-- Toolbar mode: tabbed interface for all writer applications -->
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode"><prop oor:name="ActiveWriter" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode"><prop oor:name="ActiveCalc" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode"><prop oor:name="ActiveImpress" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
@@ -15,7 +29,13 @@
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode/Applications/org.openoffice.Office.UI.ToolbarMode:Application['Calc']"><prop oor:name="Active" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode/Applications/org.openoffice.Office.UI.ToolbarMode:Application['Impress']"><prop oor:name="Active" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
 <item oor:path="/org.openoffice.Office.UI.ToolbarMode/Applications/org.openoffice.Office.UI.ToolbarMode:Application['Draw']"><prop oor:name="Active" oor:op="fuse"><value>notebookbar.ui</value></prop></item>
-<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="WhatsNew" oor:op="fuse"><value>false</value></prop></item>
-<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="GetInvolved" oor:op="fuse"><value>false</value></prop></item>
-<item oor:path="/org.openoffice.Office.UI.Infobar/Enabled"><prop oor:name="Donate" oor:op="fuse"><value>false</value></prop></item>
+
+<!-- Neutral module display names in Start Center, options tree and Insert/Object -->
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.text.TextDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>文字文档</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.sheet.SpreadsheetDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>电子表格</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.presentation.PresentationDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>演示文稿</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.drawing.DrawingDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>绘图</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.formula.FormulaProperties"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>公式</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.text.GlobalDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>主控文档</value></prop></item>
+<item oor:path="/org.openoffice.Setup/Office/Factories/com.sun.star.text.WebDocument"><prop oor:name="ooSetupFactoryUIName" oor:op="fuse"><value>HTML 文档</value></prop></item>
 </oor:items>

@@ -860,16 +860,6 @@ static std::wstring FindEngine() {
   if (programFiles[0]) {
     candidates.push_back(std::wstring(programFiles) +
                          L"\\ChenyiOffice\\Engine\\program\\soffice.exe");
-    candidates.push_back(std::wstring(programFiles) + L"\\LibreOffice\\program\\soffice.exe");
-  }
-
-  candidates.push_back(L"C:\\Program Files\\LibreOffice\\program\\soffice.exe");
-
-  std::wstring uno = ReadRegistryString(HKEY_LOCAL_MACHINE, L"SOFTWARE\\LibreOffice\\UNO",
-                                        L"InstallPath");
-  if (!uno.empty()) {
-    if (!uno.empty() && uno.back() != L'\\') uno += L'\\';
-    candidates.push_back(uno + L"program\\soffice.exe");
   }
 
   for (const auto& path : candidates) {

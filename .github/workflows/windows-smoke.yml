@@ -66,3 +66,49 @@ jobs:
             throw "Silent fresh-install guard returned $($process.ExitCode), expected 2."
           }
           Write-Host 'Silent fresh-install guard returned 2 as expected.'
+
+      - name: Verify engine payload, checksum, certificate and version policy
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED_ENGINE_SHA256: 0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem smoke -Filter 'ChenyiOffice-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer asset is missing.' }
+          $manifest = Get-Content smoke/latest.json -Raw | ConvertFrom-Json
+
+          # Version policy: the tag version must not fall below the declared
+          # minimum supported version, otherwise clients reject the update.
+          $expectedVersion = "${{ inputs.tag }}".TrimStart('v')
+          if ($manifest.min_supported_version) {
+            $min = [version]($manifest.min_supported_version -replace '^v','')
+            $cur = [version]$expectedVersion
+            if ($cur -lt $min) {
+              throw "Version $cur is below min_supported_version $min"
+            }
+          }
+
+          # Every release must ship the public signing certificate, and its
+          # thumbprint must match the signer of the installer.
+          $cert = Get-ChildItem smoke -Filter '*.cer' | Select-Object -First 1
+          if (-not $cert) { throw 'Public signing certificate asset is missing.' }
+          $certThumb = (Get-AuthenticodeSignature -FilePath $installer.FullName).SignerCertificate.Thumbprint
+          $certThumb = ($certThumb -replace '\s', '').ToUpperInvariant()
+          $publicCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($cert.FullName)
+          $publicThumb = ($publicCert.Thumbprint -replace '\s', '').ToUpperInvariant()
+          if ($publicThumb -ne $certThumb) {
+            throw "Public certificate thumbprint $publicThumb does not match signer $certThumb"
+          }
+
+          # The bundled engine asset must match the pinned checksum recorded in
+          # engine/SOURCE.md. This catches a corrupted or substituted payload.
+          gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" `
+            --pattern "ChenyiEngine-*.msi" --dir smoke
+          $engine = Get-ChildItem smoke -Filter 'ChenyiEngine-*.msi' | Select-Object -First 1
+          if (-not $engine) { throw 'Engine payload asset is missing.' }
+          $engineHash = (Get-FileHash $engine.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($engineHash -ne $env:PINNED_ENGINE_SHA256.ToLowerInvariant()) {
+            throw "Engine payload SHA-256 mismatch: $engineHash"
+          }
+          Write-Host 'Payload, checksum, certificate and version assertions passed.'

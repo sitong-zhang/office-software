@@ -28,7 +28,7 @@ sudo apt-get install mingw-w64 msitools python3-pil curl osslsigncode openssl li
 Environment overrides:
 
 - `ENGINE_VERSION` — office engine version (default `26.8.3`)
-- `ENGINE_URL` — direct MSI URL (defaults to the Tsinghua mirror)
+- `ENGINE_URL` — direct MSI URL (defaults to the project's own release asset)
 - `ENGINE_MSI_SHA256` — pinned engine checksum; must be updated together with `ENGINE_VERSION`
 - `SIGN_PFX` / `SIGN_CERT` — signing key and public certificate paths
 - `SIGN_PFX_PASS` — signing password; alternatively a git-ignored `build/signing/password.txt`

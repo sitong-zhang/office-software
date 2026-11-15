@@ -1,27 +1,24 @@
-# Engine source and modifications
+# Bundled office engine: source and license
 
-Chenyi Office ships a Windows x64 engine based on the LibreOffice 26.8.3
-source release. This file closes the MPL 2.0 source-availability requirement
-for the modified engine resources. It is a legal/provenance record, not a
-product-facing page.
+Chenyi Office bundles a Windows x64 office engine (version 26.8.3). This file
+records the engine's license and source-availability information. It is a
+legal/provenance record, not a product-facing page.
 
-## Upstream
+## Engine package
 
-- Project: LibreOffice
-- Version: 26.8.3
-- Upstream source: https://git.libreoffice.org/core
-- Upstream release notes: https://www.libreoffice.org/download/release-notes/
-- MSI used as the build input: `LibreOffice_26.8.3_Win_x86-64.msi`
+- Engine version: 26.8.3
+- Build input: `ChenyiEngine-26.8.3-x64.msi` (attached to the v0.4.0 release)
 - Pinned SHA-256: `0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94`
+- License: Mozilla Public License 2.0
 
-The MSI is mirrored as `ChenyiEngine-26.8.3-x64.msi` in the v0.4.0 GitHub
-release so the build no longer downloads it from an upstream mirror. The
-mirrored file is byte-identical to the pinned upstream MSI.
+The engine MSI is attached to this project's release so builds do not depend
+on any third-party mirror. The attached file is verified against the pinned
+SHA-256 before use.
 
-## Files modified by this project
+## Customized engine resources
 
-The installer copies these generated files into the engine tree after the MSI
-completes (bundled engine only; a pre-existing engine is never modified):
+The installer copies these generated resources into the engine tree after the
+MSI completes (bundled engine only; a pre-existing engine is never altered):
 
 - `share/config/soffice.cfg/modules/swriter/ui/notebookbar.ui`
 - `share/config/soffice.cfg/modules/swriter/menubar/menubar.xml`
@@ -31,6 +28,7 @@ completes (bundled engine only; a pre-existing engine is never modified):
 - `share/config/soffice.cfg/modules/simpress/menubar/menubar.xml`
 - `share/config/soffice.cfg/modules/sdraw/ui/notebookbar.ui`
 - `share/config/soffice.cfg/modules/sdraw/menubar/menubar.xml`
+- `share/config/soffice.cfg/modules/smath/menubar/menubar.xml`
 - `share/config/soffice.cfg/sfx/ui/startcenter.ui`
 - `share/config/soffice.cfg/cui/ui/aboutdialog.ui`
 - `program/intro.png`, `program/intro-highres.png`
@@ -43,11 +41,11 @@ artwork is produced by `scripts/make-engine-assets.py`.
 
 ## Source Code Form
 
-The Source Code Form for the modified engine resources is:
+The Source Code Form for the customized engine resources consists of:
 
-1. the upstream LibreOffice source at the version above, plus
+1. the engine source at the pinned version and license above, and
 2. the generated files under `app/engine-ui/` and the generators under
    `scripts/`.
 
-Both are available in this public repository. Files retain their original
-MPL 2.0 headers and notices.
+The generators and generated resources are available in this public
+repository. Files retain their original MPL 2.0 headers and notices.

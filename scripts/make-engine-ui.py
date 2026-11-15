@@ -9,9 +9,9 @@ itself. A pre-existing engine is never touched.
 Layout changes:
   * Grouped tab order for Writer, Calc, Impress, Draw and Math.
   * An "Editing" group (Find & Replace / Select All) at the end of Home.
-  * Getting-involved, donation, feedback and About entries removed
+  * Getting-involved, promotional, feedback and About entries removed
     from the notebookbar Help menu and the classic menu bar.
-  * The Start Center donation panel and button removed.
+  * The Start Center promotional panel and button removed.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = ROOT / "app" / "engine-ui"
 
 # Math (smath) is included so its menubar receives the same
-# donation/About stripping as the other modules. Math ships a classic
+# menu-pruning treatment as the other modules. Math ships a classic
 # menubar and may or may not carry a notebookbar; build_notebookbar()
 # skips modules without one, and reorder_tabs() preserves source order
 # when a module has no TAB_ORDER entry.
@@ -56,9 +56,8 @@ TAB_ORDER = {
     ],
 }
 
-# Menu entries that expose promotion, donation, feedback or the engine's own
-# About dialog. ShowLicense is kept because the licence must remain
-# reachable.
+# Menu entries that expose promotional, feedback or About content.
+# ShowLicense is kept because the licence must remain reachable.
 REMOVED_ACTIONS = {
     ".uno:GetInvolved",
     ".uno:Donation",
@@ -329,10 +328,10 @@ def add_editing_group(root: ET.Element, module: str) -> bool:
 
 
 def strip_requirements(root: ET.Element) -> None:
-    """Drop the builder requirement tag that names the engine project.
+    """Drop the UI builder requirement tag.
 
     The UI builder only needs the GTK feature level to parse the file; the
-    layout itself works without the named requirement.
+    layout itself works without that requirement tag.
     """
     for node in list(root):
         if node.tag == "requires" and node.get("lib") == "LibreOffice":
@@ -511,7 +510,7 @@ def build_start_center(source: Path, target: Path) -> int:
             hidden += 1
 
     # Keep the widgets in the tree (the Start Center controller looks them up
-    # by name) but hide the donation button and the donation panel.
+    # by name) but hide the promotional button and panel.
     hide_object("donate")
     hide_object("gdDonation")
 

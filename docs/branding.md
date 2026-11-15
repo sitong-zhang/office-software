@@ -9,7 +9,7 @@ These rules apply to the application, installers, the project site, and all docu
 - **Short name in UI chrome:** Chenyi Office
 - The full name, including the parenthesized edition suffix, is used on the splash, About dialog, installer, Start Center, and all user-facing download pages.
 - Do not use another product's name, logo, or splash screens as product identity.
-- User-facing surfaces describe Chenyi Office as an independent product; they do not name the engine vendor or describe the product as a derivative or rebuild of another application.
+- User-facing surfaces describe Chenyi Office as an independent product with its own name, artwork, and interface.
 
 ## Icon source
 

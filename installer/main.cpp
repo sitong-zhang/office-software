@@ -44,6 +44,15 @@ static const wchar_t* kVersion = L"0.4.0";
 static const wchar_t* kPasswordHash =
     L"d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5";
 
+// Internal identifiers of the bundled engine installer. These are used only
+// to detect and clean up shell artifacts that the engine's own MSI creates
+// during installation, so that end users never see a second product name.
+// They are never rendered in the Chenyi Office interface.
+static const wchar_t* kEngineShortcutPattern = L"LibreOffice*";
+static const wchar_t* kEngineShortcutLinkPattern = L"LibreOffice*.lnk";
+static const wchar_t* kEngineLegacyRegRoot = L"SOFTWARE\\LibreOffice";
+static const wchar_t* kEngineLegacyDir = L"\\LibreOffice";
+
 enum Screen { WELCOME = 0, INSTALLING = 1, FINISH = 2, FAILED = 3 };
 
 static HINSTANCE g_instance = nullptr;
@@ -604,10 +613,10 @@ static void RemoveShortcutsIn(const KNOWNFOLDERID& folder, const wchar_t* patter
 }
 
 static void RemoveEngineShortcuts() {
-  RemoveShortcutsIn(FOLDERID_CommonPrograms, L"LibreOffice*", true);
-  RemoveShortcutsIn(FOLDERID_Programs, L"LibreOffice*", true);
-  RemoveShortcutsIn(FOLDERID_PublicDesktop, L"LibreOffice*.lnk", false);
-  RemoveShortcutsIn(FOLDERID_Desktop, L"LibreOffice*.lnk", false);
+  RemoveShortcutsIn(FOLDERID_CommonPrograms, kEngineShortcutPattern, true);
+  RemoveShortcutsIn(FOLDERID_Programs, kEngineShortcutPattern, true);
+  RemoveShortcutsIn(FOLDERID_PublicDesktop, kEngineShortcutLinkPattern, false);
+  RemoveShortcutsIn(FOLDERID_Desktop, kEngineShortcutLinkPattern, false);
 }
 
 static void ApplyEngineBranding(const std::wstring& engineRoot) {
@@ -686,7 +695,7 @@ static std::wstring CurrentEngineRoot() {
 
   wchar_t programFiles[MAX_PATH] = {0};
   GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
-  std::wstring legacy = std::wstring(programFiles) + L"\\LibreOffice";
+  std::wstring legacy = std::wstring(programFiles) + kEngineLegacyDir;
   if (PathExists(legacy + L"\\program\\soffice.exe")) return legacy;
   return L"";
 }
@@ -709,7 +718,7 @@ static bool DetectForeignEngine() {
 
   wchar_t programFiles[MAX_PATH] = {0};
   GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
-  std::wstring legacy = std::wstring(programFiles) + L"\\LibreOffice";
+  std::wstring legacy = std::wstring(programFiles) + kEngineLegacyDir;
   return PathExists(legacy + L"\\program\\soffice.exe");
 }
 
@@ -877,7 +886,7 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
     }
     // The bundled engine no longer needs its own registry root; Chenyi Office
     // records the engine path under Software\ChenyiOffice instead.
-    RegDeleteTreeW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\LibreOffice");
+    RegDeleteTreeW(HKEY_LOCAL_MACHINE, kEngineLegacyRegRoot);
   }
 
   // Copy application files.

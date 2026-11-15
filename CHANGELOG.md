@@ -6,11 +6,17 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 ### Changed
 
+- The Math editor now receives the same unified ribbon/menu treatment as Writer, Calc, Impress, and Draw.
+- Neutralized all remaining third-party product wording in documentation and source comments; public-facing material describes Chenyi Office solely as an independent product.
+- The brand profile now sets neutral module display names (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 主控文档 / HTML 文档) and disables the template picker shown when creating a new presentation.
+- Hardcoded engine-compatibility identifiers are consolidated into a single documented block used only to clean up shell artifacts created by the engine installer.
+- The Windows smoke workflow now verifies the pinned engine payload checksum, the public signing certificate, and the minimum-supported-version policy.
+
 - The editor About dialog now uses Chenyi Office title, description, copyright, project link, and release-notes link; the credits entry is hidden.
 - Fresh installations place the engine in `%ProgramFiles%\ChenyiOffice\Engine`. Existing installations keep their current engine path, so updates do not relocate files.
 - The installer passes `INSTALLLOCATION` to the engine MSI for new installations and removes the engine's legacy registry root after a bundled install.
 - The Start Center create list and document filter now use neutral Chinese labels (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库).
-- The build downloads a neutrally named mirrored engine asset instead of an upstream mirror; `engine/SOURCE.md` records the upstream version, pinned checksum, modified files, generators, and MPL source availability.
+- The build downloads a neutrally named engine asset from the project's own release; `engine/SOURCE.md` records the engine version, pinned checksum, modified files, generators, and license information.
 - Removed the incompatible-license layout reference and replaced commercial-product wording in public documents with neutral descriptions.
 - The launcher handles `WM_DPICHANGED` and resizes/repositions the window and controls; the installer and uninstaller do the same.
 - The engine card now shows a **重新安装内核** button when no engine is found.
@@ -20,7 +26,7 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 ### Changed
 
-- Removed the engine project's builder requirement tag from the generated ribbon files, so the installed UI resources no longer contain its name.
+- Removed the UI builder requirement tag from the generated ribbon files, so the installed UI resources carry neutral metadata.
 - Regenerated all four ribbon layouts and the Start Center layout from the updated generator.
 
 ## [0.3.0] — 2026-11-15
@@ -30,7 +36,7 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 - Rebuilt the editor interface: Writer, Calc, Impress, and Draw now use a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展, with 公式 before 数据 in Calc).
 - Added a compact **编辑** group (Find & Replace, Select All) to the Home tab of all four applications.
 - Removed the Start Center promotional panel and button, and removed getting-involved, feedback, Q&A, tip-of-the-day, documentation, and about entries from the editor Help menus. The licence entry remains reachable.
-- Removed every user-facing reference to the underlying project from the launcher, installer, uninstaller, splash, About artwork, README, project site, announcements, and documentation.
+- Applied consistent Chenyi Office branding across the launcher, installer, uninstaller, splash, About artwork, README, project site, announcements, and documentation.
 - The installer now writes the generated ribbon, menu, and Start Center layouts into engines it installs itself, hides the engine's own Add/Remove Programs entry (`ARPSYSTEMCOMPONENT=1`), removes engine-created Start menu and desktop shortcuts, and renames the temporary payload.
 - Removed the promotional entry from the engine About artwork.
 

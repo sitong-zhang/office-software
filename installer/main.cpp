@@ -37,7 +37,7 @@ using namespace Gdiplus;
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.4.1";
+static const wchar_t* kVersion = L"0.4.2";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -594,6 +594,25 @@ static void ApplyEngineBranding(const std::wstring& engineRoot) {
   WriteResourceFile(168, cfg + L"\\sfx\\ui\\startcenter.ui");
   WriteResourceFile(169, cfg + L"\\cui\\ui\\aboutdialog.ui");
   WriteResourceFile(170, cfg + L"\\modules\\smath\\menubar\\menubar.xml");
+  WriteResourceFile(180, cfg + L"\\modules\\swriter\\ui\\notebookbar_compact.ui");
+  WriteResourceFile(181, cfg + L"\\modules\\swriter\\ui\\notebookbar_groupedbar_full.ui");
+  WriteResourceFile(182, cfg + L"\\modules\\swriter\\ui\\notebookbar_groupedbar_compact.ui");
+  WriteResourceFile(183, cfg + L"\\modules\\swriter\\ui\\notebookbar_single.ui");
+  WriteResourceFile(184, cfg + L"\\modules\\swriter\\ui\\notebookbar_groups.ui");
+  WriteResourceFile(185, cfg + L"\\modules\\scalc\\ui\\notebookbar_compact.ui");
+  WriteResourceFile(186, cfg + L"\\modules\\scalc\\ui\\notebookbar_groupedbar_full.ui");
+  WriteResourceFile(187, cfg + L"\\modules\\scalc\\ui\\notebookbar_groupedbar_compact.ui");
+  WriteResourceFile(188, cfg + L"\\modules\\scalc\\ui\\notebookbar_groups.ui");
+  WriteResourceFile(189, cfg + L"\\modules\\simpress\\ui\\notebookbar_compact.ui");
+  WriteResourceFile(190, cfg + L"\\modules\\simpress\\ui\\notebookbar_groupedbar_full.ui");
+  WriteResourceFile(191, cfg + L"\\modules\\simpress\\ui\\notebookbar_groupedbar_compact.ui");
+  WriteResourceFile(192, cfg + L"\\modules\\simpress\\ui\\notebookbar_single.ui");
+  WriteResourceFile(193, cfg + L"\\modules\\simpress\\ui\\notebookbar_groups.ui");
+  WriteResourceFile(194, cfg + L"\\modules\\sdraw\\ui\\notebookbar_compact.ui");
+  WriteResourceFile(195, cfg + L"\\modules\\sdraw\\ui\\notebookbar_groupedbar_compact.ui");
+  WriteResourceFile(196, cfg + L"\\modules\\sdraw\\ui\\notebookbar_single.ui");
+  WriteResourceFile(197, engineRoot + L"\\share\\config\\images_chenyi_svg.zip");
+  WriteResourceFile(198, engineRoot + L"\\share\\config\\images_chenyi.zip");
 
   // The engine launcher resolves its kernel and bootstrap configuration from
   // its own file name, so a branded launcher needs matching .bin and .ini

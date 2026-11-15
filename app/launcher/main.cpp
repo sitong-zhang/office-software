@@ -43,8 +43,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.4.1";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.1";
+static const wchar_t* kVersion = L"0.4.2";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.2";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -898,14 +898,24 @@ static volatile LONG g_checkState = 0;  // 0 pending, 1 ready, 2 failed
 static volatile LONG g_downloadState = 0;  // 0 none, 1 running, 2 verified, 3 failed
 static volatile LONG g_downloadPercent = 0;
 static std::wstring g_downloadError;
+static std::wstring g_errorPhase;
 static std::wstring g_installerPath;
 static CRITICAL_SECTION g_dataLock;
 static std::wstring g_status = L"正在检查更新…";
 
-static void SetDownloadError(const std::wstring& text) {
+static void SetDownloadError(const std::wstring& text,
+                             const std::wstring& phase = L"下载") {
   EnterCriticalSection(&g_dataLock);
   g_downloadError = text;
+  g_errorPhase = phase;
   LeaveCriticalSection(&g_dataLock);
+}
+
+static std::wstring GetErrorPhase() {
+  EnterCriticalSection(&g_dataLock);
+  std::wstring text = g_errorPhase;
+  LeaveCriticalSection(&g_dataLock);
+  return text;
 }
 
 static std::wstring GetDownloadError() {
@@ -1108,7 +1118,7 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
                         },
                         err);
   if (!ok) {
-    SetDownloadError(err.empty() ? L"下载失败" : err);
+    SetDownloadError(err.empty() ? L"下载失败" : err, L"下载");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
@@ -1116,7 +1126,7 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
   std::wstring digest;
   if (!Sha256File(path, digest)) {
     DeleteFileW(path.c_str());
-    SetDownloadError(L"无法校验安装包");
+    SetDownloadError(L"无法校验安装包", L"校验");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
@@ -1124,14 +1134,14 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
   if (g_update.sha256.size() != 64 ||
       _wcsicmp(digest.c_str(), g_update.sha256.c_str()) != 0) {
     DeleteFileW(path.c_str());
-    SetDownloadError(L"安装包校验失败，已删除下载文件");
+    SetDownloadError(L"安装包校验失败，已删除下载文件", L"校验");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
 
   if (!VerifyInstallerSignature(path)) {
     DeleteFileW(path.c_str());
-    SetDownloadError(L"安装包发布者签名无效，已拒绝更新");
+    SetDownloadError(L"安装包发布者签名无效，已拒绝更新", L"签名校验");
     InterlockedExchange(&g_downloadState, 3);
     return 0;
   }
@@ -1188,6 +1198,7 @@ enum Action {
   A_MINIMIZE,
   A_CLOSE,
   A_OPEN_PROFILE,
+  A_OPEN_LOG,
   A_ABOUT,
   A_OPEN_RELEASES,
   A_CLEAR_RECENT,
@@ -1735,7 +1746,14 @@ static void DrawAnnouncement(Graphics& g) {
 
   const Announcement& announcement = g_announcements[g_announcementIndex];
   float cardWidth = std::min((float)S(760), (float)g_width - S(112));
-  float cardHeight = std::min((float)S(540), (float)g_height - S(112));
+  // Measure the body first so the card fits its content instead of
+  // leaving a large empty area below short announcements.
+  RectF measureArea(0, 0, cardWidth - S(72), S(4000));
+  RectF measured = ui::MeasureText(g, announcement.body, measureArea, S(12.5),
+                                   FontStyleRegular, true);
+  float bodyH = std::min((float)S(300), std::max((float)S(56), measured.Height + S(8)));
+  float cardHeight = std::min((float)(S(250) + bodyH),
+                              (float)g_height - S(112));
   RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
   ui::SoftShadow(g, card, S(20));
   ui::FillRound(g, card, S(20), ui::Paper());
@@ -1751,9 +1769,6 @@ static void DrawAnnouncement(Graphics& g) {
            FontStyleBold, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
 
   RectF bodyArea(card.X + S(36), card.Y + S(150), card.Width - S(72), card.Height - S(242));
-  RectF measured = ui::MeasureText(g, announcement.body,
-                                   RectF(0, 0, bodyArea.Width, S(2000)), S(12.5),
-                                   FontStyleRegular, true);
   g_scrollMax = std::max(0, (int)measured.Height - (int)bodyArea.Height);
   if (g_scroll < 0) g_scroll = 0;
   if (g_scroll > g_scrollMax) g_scroll = g_scrollMax;
@@ -1888,20 +1903,37 @@ static void DrawError(Graphics& g) {
 
   ui::FillRound(g, RectF(card.X + S(32), card.Y + S(32), S(56), S(56)), S(16), ui::DangerSoft());
   ui::Icon(g, UI_ICON_INFO, ui::ICON_MUTED, RectF(card.X + S(46), card.Y + S(46), S(28), S(28)));
-  ui::Text(g, L"更新失败", RectF(card.X + S(104), card.Y + S(34), S(300), S(18)), S(10),
+  std::wstring detail = GetDownloadError();
+  std::wstring phase = GetErrorPhase();
+  // Pull an HTTP/Win32 code out of the diagnostic text when present.
+  std::wstring code = L"—";
+  size_t hp = detail.find(L"HTTP ");
+  if (hp != std::wstring::npos) {
+    size_t b = hp + 5, e = b;
+    while (e < detail.size() && detail[e] >= L'0' && detail[e] <= L'9') ++e;
+    if (e > b) code = detail.substr(b, e - b);
+  }
+  ui::Text(g, L"更新失败 · " + phase,
+           RectF(card.X + S(104), card.Y + S(34), S(360), S(18)), S(10),
            FontStyleBold, ui::Danger());
   ui::Text(g, L"更新未能完成", RectF(card.X + S(104), card.Y + S(54), S(400), S(32)), S(22),
            FontStyleBold, ui::Text());
-  ui::Text(g, GetDownloadError(), RectF(card.X + S(32), card.Y + S(112), card.Width - S(64), S(150)),
-           S(11.5), FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
-  ui::Text(g, g_update.url, RectF(card.X + S(32), card.Y + S(272), card.Width - S(64), S(44)),
+  wchar_t codeText[96];
+  swprintf(codeText, 96, L"失败阶段：%ls      错误码：%ls", phase.c_str(), code.c_str());
+  ui::Text(g, codeText, RectF(card.X + S(32), card.Y + S(104), card.Width - S(64), S(22)),
+           S(10.5), FontStyleBold, ui::TextMuted());
+  ui::Text(g, detail, RectF(card.X + S(32), card.Y + S(132), card.Width - S(64), S(120)),
+           S(11), FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
+  ui::Text(g, g_update.url, RectF(card.X + S(32), card.Y + S(258), card.Width - S(64), S(40)),
            S(9.5), FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear,
            true);
-  DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(136), S(40)), L"重试",
+  DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(120), S(40)), L"重试",
              UI_ICON_REFRESH, true, A_RETRY);
-  DrawButton(g, RectF(card.X + S(184), card.Y + card.Height - S(64), S(168), S(40)),
+  DrawButton(g, RectF(card.X + S(160), card.Y + card.Height - S(64), S(150), S(40)),
+             L"打开日志", UI_ICON_FOLDER_OPEN, false, A_OPEN_LOG);
+  DrawButton(g, RectF(card.X + S(318), card.Y + card.Height - S(64), S(150), S(40)),
              L"打开下载页", UI_ICON_EXTERNAL_LINK, false, A_OPEN_RELEASES);
-  DrawButton(g, RectF(card.X + card.Width - S(172), card.Y + card.Height - S(64), S(136), S(40)),
+  DrawButton(g, RectF(card.X + card.Width - S(150), card.Y + card.Height - S(64), S(118), S(40)),
              L"稍后提醒", 0, false, A_SKIP_UPDATE);
 }
 
@@ -1995,6 +2027,14 @@ static void OnAction(int action) {
     case A_OPEN_PROFILE:
       ShellExecuteW(nullptr, L"open", StateDirectory().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
       return;
+    case A_OPEN_LOG: {
+      std::wstring log = StateDirectory() + L"\\launcher.log";
+      if (GetFileAttributesW(log.c_str()) != INVALID_FILE_ATTRIBUTES)
+        ShellExecuteW(nullptr, L"open", log.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+      else
+        MessageBoxW(g_window, L"暂无诊断日志。", kProductName, MB_ICONINFORMATION | MB_OK);
+      return;
+    }
     case A_ABOUT:
       MessageBoxW(g_window,
                   L"Chenyi Office（胡辰逸定制版）\n\n"
@@ -2121,8 +2161,40 @@ static void CollectProfileItems(const std::string& xml, std::set<std::string>& k
   }
 }
 
+// A few template keys must win over a stale value left by an earlier
+// build: the toolbar-mode file name and the icon theme name. Every
+// other existing value is kept so upgrades never wipe user choices.
+static bool IsAuthoritativeProfileItem(const std::string& path,
+                                       const std::string& name) {
+  if (path.find("org.openoffice.Office.UI.ToolbarMode") != std::string::npos)
+    return true;
+  if (path == "/org.openoffice.Office.Common/Misc" && name == "SymbolStyle")
+    return true;
+  return false;
+}
+
+// Drop an existing <item> with the same path+name so an authoritative
+// replacement is unambiguous instead of being overridden by a earlier one.
+static void DropProfileItem(std::string& xml, const std::string& path,
+                            const std::string& name) {
+  size_t pos = 0;
+  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
+    size_t end = xml.find("</item>", pos);
+    if (end == std::string::npos) break;
+    end += 7;
+    std::string block = xml.substr(pos, end - pos);
+    if (XmlAttribute(block, "oor:path") == path &&
+        XmlAttribute(block, "oor:name") == name) {
+      xml.erase(pos, end - pos);
+    } else {
+      pos = end;
+    }
+  }
+}
+
 // Add brand defaults that the user's profile does not have yet. Existing
-// values are kept, so upgrades never wipe user toolbar/icon/option changes.
+// values are kept, so upgrades never wipe user toolbar/icon/option changes,
+// except for authoritative keys that correct a known stale value.
 static std::string MergeProfile(const std::string& existing, const std::string& tmpl) {
   std::set<std::string> existingKeys;
   CollectProfileItems(existing, existingKeys, nullptr);
@@ -2132,17 +2204,23 @@ static std::string MergeProfile(const std::string& existing, const std::string& 
   CollectProfileItems(tmpl, templateKeys, &templateBlocks);
 
   std::string additions;
+  std::vector<std::pair<std::string, std::string>> overrides;
   for (const auto& block : templateBlocks) {
     std::string path = XmlAttribute(block, "oor:path");
     std::string name = XmlAttribute(block, "oor:name");
     if (path.empty() || name.empty()) continue;
-    if (existingKeys.count(ProfileKey(path, name))) continue;
+    bool authoritative = IsAuthoritativeProfileItem(path, name);
+    if (existingKeys.count(ProfileKey(path, name))) {
+      if (!authoritative) continue;
+      overrides.push_back({path, name});
+    }
     additions += block;
     additions += "\n";
   }
   if (additions.empty()) return existing;
 
   std::string merged = existing;
+  for (const auto& kv : overrides) DropProfileItem(merged, kv.first, kv.second);
   size_t close = merged.rfind("</oor:items>");
   if (close == std::string::npos) {
     merged += "\n" + additions;
@@ -2276,7 +2354,7 @@ static void RunInstallerAndRestart() {
   info.nShow = SW_SHOWNORMAL;
 
   if (!ShellExecuteExW(&info)) {
-    SetDownloadError(L"无法启动安装程序，请允许管理员权限后重试。");
+    SetDownloadError(L"无法启动安装程序，请允许管理员权限后重试。", L"安装");
     g_screen = 4;
     InvalidateRect(g_window, nullptr, FALSE);
     return;
@@ -2293,10 +2371,10 @@ static void RunInstallerAndRestart() {
       if (code == 2) {
         SetDownloadError(
             L"静默更新已取消：没有检测到已安装的 Chenyi Office。\n\n"
-            L"请手动运行下载的安装包，并输入首次安装密码。\n诊断日志：" + log);
+            L"请手动运行下载的安装包，并输入首次安装密码。\n诊断日志：" + log, L"安装");
       } else {
         SetDownloadError(L"更新安装失败。\n\n诊断日志：" + log +
-                         L"\n\n请重试，或打开下载页手动安装。");
+                         L"\n\n请重试，或打开下载页手动安装。", L"安装");
       }
       g_screen = 4;
       InvalidateRect(g_window, nullptr, FALSE);

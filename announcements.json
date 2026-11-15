@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T21:30:00+08:00",
+  "updated_at": "2026-11-16T01:10:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-16-v0-4-2",
+      "title": "v0.4.2 已发布：界面深度改造",
+      "body": "Chenyi Office（胡辰逸定制版）v0.4.2 已发布。\n\n编辑界面现在会按配置直接进入选项卡模式；此前版本把模式名写成了文件名，导致新建文档仍落在标准工具栏。本次修正了模式名，并在升级时自动纠正已有配置。\n\n「视图 → 用户界面」入口已恢复，界面模式可随时切换，不再装完即锁死；「关于」对话框重新可从菜单打开；绘图模块的经典菜单栏不再与选项卡叠加。全部布局变体随安装包交付，并启用统一的图标主题。\n\n启动中心已全面中文化，隐藏了未安装的应用入口与推广内容；更新失败页新增失败阶段、错误码与诊断日志入口。\n\n下载校验、发布者签名校验与更新策略保持不变。",
+      "severity": "important",
+      "published_at": "2026-11-16T01:10:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-4-1",
       "title": "v0.4.1 已发布：更新改为可选",

@@ -615,6 +615,7 @@
     <menu:menupopup>
       <menu:menuitem menu:id=".uno:NewWindow" />
       <menu:menuitem menu:id=".uno:CloseWin" />
+      <menu:menuseparator />
     </menu:menupopup>
   </menu:menu>
   <menu:menu menu:id=".uno:HelpMenu">
@@ -623,9 +624,12 @@
       <menu:menuitem menu:id=".uno:ExtendedHelp" />
       <menu:menuitem menu:id=".uno:CommandPopup" menu:style="text" />
       <menu:menuseparator />
+      <menu:menuseparator />
       <menu:menuitem menu:id=".uno:SafeMode" menu:style="text" />
       <menu:menuseparator />
+      <menu:menuseparator />
       <menu:menuitem menu:id=".uno:ShowLicense" menu:style="text" />
+      <menu:menuitem menu:id=".uno:About" />
     </menu:menupopup>
   </menu:menu>
 </menu:menubar>

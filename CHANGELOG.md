@@ -2,6 +2,22 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] — 2026-11-16
+
+### Fixed
+
+- The editor now starts in the tabbed notebookbar layout as configured. Earlier builds wrote a file name where the engine expects a toolbar-mode name, so new documents fell back to the standard toolbar. The active mode is now a valid mode name and is corrected on upgrade even for existing profiles.
+- View → User Interface is reachable again in every module, so the interface mode can be switched at any time and is no longer locked after installation.
+- The About dialog is reachable from the menus again; it is no longer an unused resource.
+- The Draw interface no longer stacks the classic menu bar over the tabbed controls.
+
+### Changed
+
+- All published notebookbar layout variants are installed, not only the default one.
+- A coordinated icon theme is applied across editor commands, sourced from permissively licensed icon libraries with attribution recorded in the repository.
+- The Start Center is fully localized, the unused database entry and upstream illustration are hidden, and no promotional strings remain.
+- The update-failure screen now shows the failure stage, an error code and a button that opens the diagnostic log. Announcement cards size to their content.
+
 ## [0.4.1] — 2026-11-15
 
 ### Changed
@@ -232,6 +248,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.4.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.2
 [0.4.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.1
 [0.4.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.1

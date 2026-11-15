@@ -14,14 +14,14 @@
       <object class="GtkMenuItem" id="clear_all">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="label" translatable="yes" context="startcenter|clear_all">Clear Recent Documents</property>
+        <property name="label" translatable="no" context="startcenter|clear_all">清空最近文档</property>
       </object>
     </child>
     <child>
       <object class="GtkMenuItem" id="clear_unavailable">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="label" translatable="yes" context="startcenter|clear_unavailable">Clear Unavailable Files</property>
+        <property name="label" translatable="no" context="startcenter|clear_unavailable">清除不可用文件</property>
       </object>
     </child>
   </object>
@@ -112,7 +112,7 @@
                     <property name="spacing">3</property>
                     <child>
                       <object class="GtkButton" id="open_all">
-                        <property name="label" translatable="yes" context="startcenter|open_all">_Open File</property>
+                        <property name="label" translatable="no" context="startcenter|open_all">打开文件</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -133,7 +133,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="open_remote">
-                        <property name="label" translatable="yes" context="startcenter|open_remote">Remote File_s</property>
+                        <property name="label" translatable="no" context="startcenter|open_remote">远程文件</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -166,7 +166,7 @@
                     </child>
                     <child>
                       <object class="GtkToggleButton" id="open_recent">
-                        <property name="label" translatable="yes" context="startcenter|open_recent">_Recent Documents</property>
+                        <property name="label" translatable="no" context="startcenter|open_recent">最近文档</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -186,7 +186,7 @@
                     </child>
                     <child>
                       <object class="GtkToggleButton" id="templates_all">
-                        <property name="label" translatable="yes" context="startcenter|templates_all">T_emplates</property>
+                        <property name="label" translatable="no" context="startcenter|templates_all">模板</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -223,7 +223,7 @@
                         <property name="can-focus">False</property>
                         <property name="margin-start">12</property>
                         <property name="margin-bottom">6</property>
-                        <property name="label" translatable="yes" context="startcenter|create_label">Create:</property>
+                        <property name="label" translatable="no" context="startcenter|create_label">新建：</property>
                         <property name="xalign">0</property>
                       </object>
                       <packing>
@@ -335,7 +335,7 @@
                     <child>
                       <object class="GtkButton" id="database_all">
                         <property name="label" translatable="no" context="startcenter|database_all">数据库</property>
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
                         <property name="margin-start">6</property>
@@ -345,6 +345,7 @@
                         <property name="use-underline">True</property>
                         <property name="xalign">0</property>
                         <property name="always-show-image">True</property>
+                        <property name="no-show-all">True</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -356,7 +357,7 @@
                       <object class="GtkLabel" id="althelplabel">
                         <property name="can-focus">False</property>
                         <property name="no-show-all">True</property>
-                        <property name="label" translatable="yes" context="startcenter|althelplabel">He_lp</property>
+                        <property name="label" translatable="no" context="startcenter|althelplabel">帮助</property>
                         <property name="use-underline">True</property>
                       </object>
                       <packing>
@@ -374,12 +375,13 @@
                 </child>
                 <child>
                   <object class="GtkDrawingArea" id="daBrand">
-                    <property name="visible">True</property>
+                    <property name="visible">False</property>
                     <property name="can-focus">False</property>
                     <property name="valign">center</property>
                     <property name="margin-start">12</property>
                     <property name="margin-end">12</property>
                     <property name="margin-bottom">12</property>
+                    <property name="no-show-all">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -411,7 +413,7 @@
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="help">
-                        <property name="label" translatable="yes" context="stock">_Help</property>
+                        <property name="label" translatable="no" context="stock">帮助</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -426,7 +428,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="extensions">
-                        <property name="label" translatable="yes" context="startcenter|extensions">E_xtensions</property>
+                        <property name="label" translatable="no" context="startcenter|extensions">扩展</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -463,7 +465,7 @@
             <child type="label">
               <object class="GtkLabel" id="label1">
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes" context="startcenter|label1">Application</property>
+                <property name="label" translatable="no" context="startcenter|label1">应用程序</property>
               </object>
             </child>
           </object>
@@ -483,7 +485,7 @@
             <child>
               <object class="GtkLabel" id="all_recent_label">
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes" context="startcenter|all_recent_label">Recent Files List</property>
+                <property name="label" translatable="no" context="startcenter|all_recent_label">最近文件列表</property>
                 <property name="use-underline">True</property>
                 <property name="mnemonic-widget">all_recent</property>
               </object>
@@ -496,7 +498,7 @@
             <child>
               <object class="GtkLabel" id="local_view_label">
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes" context="startcenter|local_view_label">Templates List</property>
+                <property name="label" translatable="no" context="startcenter|local_view_label">模板列表</property>
                 <property name="use-underline">True</property>
                 <property name="mnemonic-widget">local_view</property>
               </object>
@@ -520,7 +522,7 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="halign">start</property>
-                    <property name="label" translatable="yes" context="startcenter|filter_label">Filter:</property>
+                    <property name="label" translatable="no" context="startcenter|filter_label">筛选：</property>
                     <accessibility>
                       <relation type="label-for" target="cbFilter" />
                     </accessibility>

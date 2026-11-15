@@ -147,5 +147,5 @@ jobs:
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
           echo "=== published release ==="
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --json tagName,isDraft,isLatest,assets \
-            --jq '"tag=\(.tagName) draft=\(.isDraft) latest=\(.isLatest)", (.assets[] | "\(.name)  \(.size) bytes")'
+            --json tagName,isDraft,isPrerelease,publishedAt,assets \
+            --jq '"tag=\(.tagName) draft=\(.isDraft) prerelease=\(.isPrerelease)", (.assets[] | "\(.name)  \(.size) bytes")'

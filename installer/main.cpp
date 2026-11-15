@@ -32,7 +32,7 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.6";
+static const wchar_t* kVersion = L"0.1.7";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -225,7 +225,7 @@ static void DrawInstalling(HDC dc) {
     }
     wchar_t pct[16];
     swprintf(pct, 16, L"%d%%", percent);
-    RECT pctRect{S(596), S(232), S(700), S(268)};
+    RECT pctRect{S(468), S(212), S(580), S(242)};
     DrawTextLine(dc, pct, pctRect, 13, FW_SEMIBOLD, RGB(31, 92, 70), L"Consolas",
                  DT_LEFT | DT_SINGLELINE);
   } else {
@@ -250,13 +250,7 @@ static void DrawInstalling(HDC dc) {
 static void DrawFinish(HDC dc) {
   DrawBrand(dc);
 
-  RECT circle{S(56), S(118), S(104), S(166)};
-  FillColor(dc, circle, RGB(31, 92, 70));
-  RECT checkRect{S(62), S(130), S(98), S(160)};
-  DrawTextLine(dc, L"✓", checkRect, 20, FW_BOLD, RGB(244, 241, 232), L"Segoe UI",
-               DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-
-  RECT title{S(120), S(120), S(820), S(164)};
+  RECT title{S(56), S(120), S(820), S(164)};
   DrawTextLine(dc, L"安装完成", title, 30, FW_SEMIBOLD, RGB(23, 23, 15),
                L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
 

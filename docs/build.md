@@ -11,11 +11,12 @@ The Windows installer is produced entirely on Linux. No Windows machine or MSVC 
 | `python3` + Pillow | Generates the logo, icon, and welcome background |
 | `curl` | Downloads the pinned LibreOffice MSI |
 | `osslsigncode` + `openssl` | Signs binaries and exports the public certificate |
+| `librsvg2-bin` (`rsvg-convert`) | Rasterizes the upstream Material Design Icons SVG |
 
 On Ubuntu:
 
 ```bash
-sudo apt-get install mingw-w64 msitools python3-pil curl osslsigncode openssl
+sudo apt-get install mingw-w64 msitools python3-pil curl osslsigncode openssl librsvg2-bin
 ```
 
 ## Run
@@ -41,7 +42,7 @@ Environment overrides:
 4. **Engine** — downloads `LibreOffice_<version>_Win_x86-64.msi` into `build/cache/` and verifies the pinned SHA-256 before use.
 5. **Installer shell** — Win32 app with the password-gated welcome page (first install only), installation progress, and finish screen. The launcher, uninstaller, license, notice, splash images, and logo/About marks are embedded as resources. After the MSI completes, the installer writes the brand artwork into an engine it installed itself.
 6. **Payload** — the MSI is appended to the installer with a 24-byte footer (`CHNYSET1`, offset, size). The installer extracts it to `%TEMP%` at install time.
-7. **Output** — `dist/ChenyiOffice-0.1.6-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
+7. **Output** — `dist/ChenyiOffice-0.1.7-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
 
 ## Runtime layout
 
@@ -62,8 +63,8 @@ If `%ProgramFiles%\LibreOffice\program\soffice.exe` exists and Chenyi Office was
 
 After building:
 
-1. Create a draft GitHub Release tagged `v0.1.6`.
-2. Upload `dist/ChenyiOffice-0.1.6-x64.exe`, its checksum, and the public certificate.
+1. Create a draft GitHub Release tagged `v0.1.7`.
+2. Upload `dist/ChenyiOffice-0.1.7-x64.exe`, its checksum, and the public certificate.
 3. Publish the release. `.github/workflows/update-manifest.yml` generates and attaches `latest.json`.
 
 The installer filename must contain `x64` so the manifest workflow can identify it.

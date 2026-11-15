@@ -15,6 +15,22 @@ under the Mozilla Public License 2.0. Files originating from upstream
 retain their original copyright notices and license headers; those
 notices must not be removed or altered.
 
+Third-party artwork
+-------------------
+
+The application icon, installer artwork, splash mark, Start Center mark,
+and About mark use the "description" glyph from Google Material Design
+Icons:
+
+  Upstream:  https://github.com/google/material-design-icons
+  Commit:    10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7
+  Copyright: Google LLC and Material Design Icons contributors
+  License:   Apache License 2.0
+
+The icon path geometry is used unchanged. This project only rasterizes it
+and applies the product fill color. A copy of the license is shipped in
+app/branding/third-party/material-design-icons/LICENSE.
+
 Trademarks
 ----------
 

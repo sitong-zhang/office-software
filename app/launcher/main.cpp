@@ -37,8 +37,8 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.6";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.6";
+static const wchar_t* kVersion = L"0.1.7";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.7";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the

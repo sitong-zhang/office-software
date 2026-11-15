@@ -1,22 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="348" height="72" viewBox="0 0 920 190" preserveAspectRatio="xMidYMid">
   <style>
     .word { font-family: "Segoe UI Semibold", "Microsoft YaHei", Arial, sans-serif; font-weight: 600; fill: #10201a; }
-    .sub { font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #1f5c46; }
   </style>
-  <g transform="translate(0,0.0)">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2e7d5b"/>
-      <stop offset="1" stop-color="#1f5c46"/>
-    </linearGradient>
-  </defs>
-  <rect width="190" height="190" rx="41" fill="url(#g)"/>
-  <path d="M 136 55 A 49 49 0 1 0 136 134"
-        fill="none" stroke="#f4f1e8" stroke-width="24" stroke-linecap="round"/>
-  <rect x="57" y="150" width="76" height="9"
-        rx="3" fill="#58b892"/>
-</g>
-  <text x="224" y="98.8" font-size="58.0" class="word">CHENYI OFFICE</text>
-  <text x="226" y="142.5" font-size="24.0" class="sub">胡辰逸定制版</text>
-  <rect x="226" y="155.79999999999998" width="276.0" height="5" rx="2.5" fill="#58b892"/>
+  <g transform="translate(0,0.0) scale(7.916667)"><path fill="#10201a" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></g>
+  <text x="224" y="110.19999999999999" font-size="58.0" class="word">CHENYI OFFICE</text>
 </svg>

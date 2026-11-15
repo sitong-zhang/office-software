@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T08:40:00+08:00",
+  "updated_at": "2026-11-15T09:20:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-15-v0-1-7",
+      "title": "v0.1.7 已发布：全部图标改用开源仓库素材",
+      "body": "Chenyi Office（胡辰逸定制版）v0.1.7 已发布。\n\n这一版把应用图标、安装器图标、卸载器图标、启动图、启动中心标和关于页标全部换成 Google Material Design Icons 仓库的 description 图标。该仓库 5.4 万星标，Apache 2.0 许可；图标路径原样使用，只做了栅格化和品牌配色，不再自己画任何图标形状。\n\n同时修了启动中心品牌标的低对比度和重影，关于页增加「技术内核：LibreOffice（MPL 2.0）」说明，安装进度百分比也移出了右侧插画区域。\n\n图标来源、提交号和许可证已写入 NOTICE 与 docs/branding.md。首次安装仍需密码，更新不需要。",
+      "severity": "important",
+      "published_at": "2026-11-15T09:10:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-1-6",
       "title": "v0.1.6 已发布：升级不再清空你的界面设置",

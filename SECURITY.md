@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Windows 10/11 x64 builds are published on the Releases page. The latest release receives security fixes; older releases are blocked or asked to upgrade through the mandatory update channel. The current release is **0.1.6**.
+Windows 10/11 x64 builds are published on the Releases page. The latest release receives security fixes; older releases are blocked or asked to upgrade through the mandatory update channel. The current release is **0.1.7**.
 
 The launcher is a mandatory-update client: it accepts an update only from an installer signed by the pinned Chenyi Office certificate, with a matching SHA-256. The install password is a distribution gate for the first installation and is not used for updates; it is not a security boundary.
 

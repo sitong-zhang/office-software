@@ -13,6 +13,8 @@ dist/
 *.o
 *.obj
 installer/welcome.png
+__pycache__/
+*.pyc
 
 # Uploaded review material
 .uploads/

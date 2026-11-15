@@ -2,7 +2,7 @@
 
 The product is rebuilt around its interface. The goal is not a new coat of paint on the upstream shell, but a consistent, quieter workspace that a first-time user can operate without instruction.
 
-## Implemented in v0.1.6
+## Implemented in v0.1.7
 
 - **Tabbed notebookbar** is the default UI for Writer, Calc, Impress, and Draw, replacing the classic menu-plus-toolbars layout.
 - **Sifr icon theme** replaces the default colorful icon set.

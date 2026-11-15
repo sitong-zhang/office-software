@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Generate the Chenyi Office logo, icon, and installer welcome background."""
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw
 from pathlib import Path
+
+import material_icon
 
 ROOT = Path(__file__).resolve().parent.parent
 BRAND = ROOT / "app" / "branding"
@@ -11,86 +13,14 @@ BRAND.mkdir(parents=True, exist_ok=True)
 
 INK = (16, 32, 26)
 GREEN = (31, 92, 70)
-GREEN_LIGHT = (46, 125, 91)
 ACCENT = (88, 184, 146)
 CREAM = (244, 241, 232)
 PAPER = (247, 245, 239)
-MUTED = (95, 95, 82)
-
-FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-
-
-def vertical_gradient(size, top, bottom):
-    w, h = size
-    base = Image.new("RGB", (w, h), top)
-    draw = ImageDraw.Draw(base)
-    for y in range(h):
-        t = y / max(1, h - 1)
-        color = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
-        draw.line([(0, y), (w, y)], fill=color)
-    return base
 
 
 def make_logo(size=1024):
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    # soft shadow
-    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    margin = int(size * 0.08)
-    sd.rounded_rectangle(
-        (margin + 8, margin + 14, size - margin + 8, size - margin + 14),
-        radius=int(size * 0.22),
-        fill=(16, 32, 26, 60),
-    )
-    shadow = shadow.filter(ImageFilter.GaussianBlur(int(size * 0.02)))
-    img.alpha_composite(shadow)
-
-    panel = vertical_gradient((size, size), GREEN_LIGHT, GREEN).convert("RGBA")
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).rounded_rectangle(
-        (margin, margin, size - margin, size - margin),
-        radius=int(size * 0.22),
-        fill=255,
-    )
-    img.paste(panel, (0, 0), mask)
-
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(FONT_BOLD, int(size * 0.56))
-    text = "C"
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text(
-        ((size - tw) / 2 - bbox[0], (size - th) / 2 - bbox[1] - size * 0.02),
-        text,
-        font=font,
-        fill=CREAM,
-    )
-
-    # document fold accent
-    fold = int(size * 0.13)
-    x = size - margin - fold - int(size * 0.07)
-    y = margin + int(size * 0.11)
-    draw.rounded_rectangle(
-        (x, y, x + fold, y + fold), radius=int(size * 0.02), fill=CREAM
-    )
-    draw.polygon(
-        [(x + fold * 0.55, y), (x + fold, y), (x + fold, y + fold * 0.45)],
-        fill=ACCENT,
-    )
-
-    # baseline accent
-    draw.rounded_rectangle(
-        (
-            int(size * 0.30),
-            int(size * 0.76),
-            int(size * 0.70),
-            int(size * 0.795),
-        ),
-        radius=int(size * 0.02),
-        fill=ACCENT,
-    )
-    return img
+    # Geometry comes from Material Design Icons; only the fill color changes.
+    return material_icon.render(size, GREEN)
 
 
 def make_background(width=1800, height=1200):
@@ -122,16 +52,19 @@ def make_background(width=1800, height=1200):
             width=3,
         )
 
-    # oversized watermark C
-    font = ImageFont.truetype(FONT_BOLD, 760)
-    bbox = draw.textbbox((0, 0), "C", font=font)
-    draw.text(
-        (panel_x + (width - panel_x) / 2 - (bbox[2] - bbox[0]) / 2 - bbox[0],
-         560 - (bbox[3] - bbox[1]) / 2 - bbox[1]),
-        "C",
-        font=font,
-        fill=(244, 241, 232, 12),
+    # oversized watermark: the upstream document glyph, not a drawn logo
+    watermark_size = 760
+    watermark = material_icon.render(watermark_size, CREAM, opacity=0.06)
+    watermark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    watermark_layer.alpha_composite(
+        watermark,
+        (
+            int(panel_x + (width - panel_x - watermark_size) / 2),
+            int(560 - watermark_size / 2),
+        ),
     )
+    img = Image.alpha_composite(img.convert("RGBA"), watermark_layer).convert("RGB")
+    draw = ImageDraw.Draw(img, "RGBA")
 
     # document cards, drawn rotated and placed on the dark panel
     def card(size, bg, angle, lines, center, grid=False):
@@ -206,6 +139,8 @@ def make_background(width=1800, height=1200):
 def main():
     logo = make_logo()
     logo.resize((512, 512), Image.LANCZOS).save(BRAND / "logo.png")
+    (ROOT / "docs" / "assets").mkdir(parents=True, exist_ok=True)
+    logo.resize((256, 256), Image.LANCZOS).save(ROOT / "docs" / "assets" / "logo.png")
     for target in (
         ROOT / "app" / "launcher" / "icon.ico",
         ROOT / "installer" / "icon.ico",
@@ -220,14 +155,6 @@ def main():
     background.resize((900, 600), Image.LANCZOS).save(INSTALLER / "welcome.png")
     background.resize((900, 600), Image.LANCZOS).convert("RGB").save(
         INSTALLER / "welcome.bmp"
-    )
-
-    # icons used by the installer and uninstaller resources
-    logo.save(INSTALLER / "icon.ico", sizes=[(256, 256), (64, 64), (48, 48), (32, 32), (16, 16)])
-    (ROOT / "uninstaller").mkdir(parents=True, exist_ok=True)
-    logo.save(
-        ROOT / "uninstaller" / "icon.ico",
-        sizes=[(256, 256), (64, 64), (48, 48), (32, 32), (16, 16)],
     )
 
     print("assets written")

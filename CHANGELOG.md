@@ -2,6 +2,22 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] — 2026-11-15
+
+### Changed
+
+- Replaced every hand-drawn brand mark with the `description` glyph from **Google Material Design Icons** (54,299 stars, Apache 2.0, pinned commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`).
+- The application icon, installer/uninstaller icons, splash mark, Start Center mark, About mark, installer welcome background, and project-site logo now use that upstream glyph. Only rasterization and fill color are local changes; the path geometry is untouched.
+- Added `app/branding/third-party/material-design-icons/` with the original SVG, Apache 2.0 license, and a `SOURCE.md` provenance record. `NOTICE`, `docs/branding.md`, and the build requirements were updated accordingly.
+- Simplified the Start Center mark to the upstream glyph plus "CHENYI OFFICE" on dark ink, removing the low-contrast subtitle and duplicate text that caused ghosting.
+- Added the engine attribution line "技术内核：LibreOffice（MPL 2.0）" to the About artwork.
+- Removed the hand-drawn square "✓" badge from the installer finish page; the page now uses the product icon in the top brand row instead.
+- Moved the install percentage above the progress bar so it no longer overlaps the welcome illustration.
+
+### Build
+
+- `librsvg2-bin` (`rsvg-convert`) is now required to rasterize the upstream SVG. CI installs it.
+
 ## [0.1.6] — 2026-11-15
 
 ### Fixed
@@ -143,6 +159,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.1.7]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.7
 [0.1.6]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.6
 [0.1.5]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.5
 [0.1.4]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.4

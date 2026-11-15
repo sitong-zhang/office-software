@@ -1,25 +1,25 @@
 # Chenyi Office（胡辰逸定制版）
 
-**A Windows 64-bit office suite with a bespoke launcher, a rebuilt editor ribbon, mandatory updates, and in-app announcements.**
+**A Windows 64-bit office suite with a bespoke launcher, a rebuilt editor ribbon, optional updates, and in-app announcements.**
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.4.0-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.4.1-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.4.0 — Windows preview with a rebuilt editor interface.** The installer bundles the office engine when none is present; if a compatible engine is already installed, it reuses that engine (its version may differ). Writer, Calc, Impress, and Draw now start with a grouped tab order, a new **编辑** group with Find & Replace and Select All, and the **Sifr** icon theme. The Start Center and Help menus no longer contain feedback or promotional entries. The product name is **Chenyi Office**; the splash and Start Center / About marks are custom. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature.
+**v0.4.1 — Windows preview with a rebuilt editor interface.** The installer bundles the office engine when none is present; if a compatible engine is already installed, it reuses that engine (its version may differ). Writer, Calc, Impress, and Draw now start with a grouped tab order, a new **编辑** group with Find & Replace and Select All, and the **Sifr** icon theme. The Start Center and Help menus no longer contain feedback or promotional entries. The product name is **Chenyi Office**; the splash and Start Center / About marks are custom. Updates are optional: the current build stays usable until you choose to install, and the downloaded installer is accepted only when it carries the pinned Chenyi Office Authenticode signature.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.4.0-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.4.1-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
-- **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
+- **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start and offers it without interrupting your work.
 
 ## What the launcher does
 
 1. Shows the branded splash animation.
-2. Reads `latest.json` from the latest GitHub Release. If a newer version exists, a blocking update screen downloads, verifies the SHA-256 and the pinned publisher signature, installs silently with `/S`, and restarts — with no exit or skip action.
+2. Reads `latest.json` from the latest GitHub Release. If a newer version exists, a non-blocking update prompt offers an immediate update and a reminder; the current build stays usable. A chosen update is downloaded, verified against its SHA-256 and the pinned publisher signature, installed silently with `/S`, and then relaunches.
 3. Reads `announcements.json` from the repository and shows unseen notices once, dismissed with **继续**.
 4. Prepares a dedicated engine profile with the Chenyi Office interface settings and starts the editor.
 
@@ -42,7 +42,7 @@ If a compatible engine is already installed, the installer reuses it, leaves its
 ## Product direction
 
 - **Interface rebuild** — one visual language across the launcher, Start Center, editor ribbon, dialogs, and settings. See [docs/ui.md](docs/ui.md).
-- **Mandatory updates** — the only update path; no "remind me later". See [docs/updater.md](docs/updater.md).
+- **Optional updates** — a new version is offered, never forced; the current build keeps working until you choose to update. See [docs/updater.md](docs/updater.md).
 - **In-app announcements** — delivered at launch, independent of releases. See [docs/announcements.md](docs/announcements.md).
 - **Windows 64-bit only**; macOS and Linux builds are not planned.
 
@@ -65,7 +65,7 @@ If a compatible engine is already installed, the installer reuses it, leaves its
 ├── app/
 │   ├── branding/         # Logo and icon sources
 │   ├── engine-ui/        # Generated editor ribbon, menu and Start Center layouts
-│   └── launcher/         # Splash, update gate, announcements, engine start
+│   └── launcher/         # Splash, optional update prompt, announcements, engine start
 ├── installer/            # Password-gated welcome page and Windows installer
 ├── uninstaller/          # Uninstall entry
 ├── docs/                 # Project site, architecture, UI, updater, announcements, roadmap
@@ -85,7 +85,7 @@ Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`, `osslsignc
 SIGN_PFX_PASS=... ./scripts/build-windows.sh
 ```
 
-The script generates brand assets and the editor layout, compiles and signs the launcher and uninstaller, verifies the pinned engine MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.4.0-x64.exe` plus its SHA-256 and the public signing certificate.
+The script generates brand assets and the editor layout, compiles and signs the launcher and uninstaller, verifies the pinned branded engine MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.4.1-x64.exe` plus its SHA-256 and the public signing certificate.
 
 See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 

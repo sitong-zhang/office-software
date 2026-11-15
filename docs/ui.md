@@ -45,7 +45,7 @@ The following require rebuilding the engine with the platform toolchain:
 | Ribbon and menus | Reordered tabs, compact Home groups, promotional entries removed |
 | Dialogs | Shared spacing, type scale, button order, and validation states |
 | Settings | Reorganized by task instead of the engine's module tree |
-| Update screen | Full-window blocking state, see [updater.md](updater.md) |
+| Update screen | Full-window, non-blocking prompt that can be deferred or closed, see [updater.md](updater.md) |
 | Announcement screen | Full-window notice shown once, dismissed with **继续** |
 | About | Product name, edition, and platform |
 

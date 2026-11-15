@@ -10,7 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/):
 - `MINOR` — new features and user-visible improvements
 - `PATCH` — bug fixes and security updates
 
-Tags use a `v` prefix (`v0.4.0`). Pre-releases use suffixes (`0.4.0-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
+Tags use a `v` prefix (`v0.4.1`). Pre-releases use suffixes (`0.4.1-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
 
 ## Checklist
 
@@ -21,22 +21,22 @@ Tags use a `v` prefix (`v0.4.0`). Pre-releases use suffixes (`0.4.0-beta.1`). On
    - the welcome page rejects a wrong password and accepts the install password;
    - the engine installs and shortcuts launch the product;
    - the splash appears, the app starts, and announcements display once;
-   - a newer test release correctly triggers the blocking update screen;
+   - a newer test release correctly triggers the optional update prompt, and deferring it leaves the app usable;
    - the SHA-256 of the installer matches the checksum file.
 5. **Sign** — the build signs the launcher, uninstaller, and installer with the configured certificate (self-signed by default; see [signing.md](signing.md)). Verify with `osslsigncode verify` and note the publisher identity in the release.
 6. **Tag** — create an annotated tag and push it:
 
    ```bash
-   git tag -a v0.4.0 -m "Chenyi Office（胡辰逸定制版） 0.4.0"
-   git push origin v0.4.0
+   git tag -a v0.4.1 -m "Chenyi Office（胡辰逸定制版） 0.4.1"
+   git push origin v0.4.1
    ```
 
 7. **Publish** — create a GitHub Release from the tag:
-   - title: `Chenyi Office（胡辰逸定制版） 0.4.0`
+   - title: `Chenyi Office（胡辰逸定制版） 0.4.1`
    - notes: highlights, changes, known issues
-   - assets: `ChenyiOffice-0.4.0-x64.exe`, its `.sha256`, and `ChenyiOffice-code-signing.cer`
+   - assets: `ChenyiOffice-0.4.1-x64.exe`, its `.sha256`, `ChenyiOffice-code-signing.cer`, and the pinned branded engine MSI
    - do not mark it as a pre-release.
-8. **Manifest** — confirm `.github/workflows/update-manifest.yml` attached `latest.json` with the right version, hash, size, and installer URL. From this point the previous version is blocked on its next launch.
+8. **Manifest** — confirm `.github/workflows/update-manifest.yml` attached `latest.json` with the right version, hash, size, and installer URL. From this point older clients are offered the update on their next launch.
 9. **Announce** — update `announcements.json` with a new unique id so installed clients show the release notice, and post in [Discussions → Announcements](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 10. **Site** — update the latest-release block on the [project site](https://sitong-zhang.github.io/office-software/).
 11. **Distribute the install password** through the private channel you use; never publish it in the repository.
@@ -68,4 +68,4 @@ Download `ChenyiOffice-<version>-x64.exe`, verify the SHA-256, and enter the ins
 
 ## Rollback
 
-The updater never installs a lower version. Publish a fixed build with a higher version number and let the mandatory update flow deliver it.
+The updater never installs a lower version. Publish a fixed build with a higher version number through the normal release flow.

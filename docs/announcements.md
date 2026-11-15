@@ -55,7 +55,7 @@ The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale c
 ## Client behavior
 
 1. Startup begins with the update check (see [updater.md](updater.md)).
-2. If a mandatory update is pending, the update screen takes precedence and announcements are not shown.
+2. The announcement feed is fetched even when an update is available, so deferring an update does not hide release notices.
 3. Otherwise the client fetches the announcement feed with a 10 s timeout and 2 attempts.
 4. Entries are filtered by publication time, expiry, client version range, and the local "seen" set.
 5. If at least one entry remains, a full-window announcement screen lists them in publication order. The only action is **继续**; there is no skip link.
@@ -83,7 +83,7 @@ The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale c
 ## Content rules
 
 - No credentials, personal data, or links outside this repository's releases and documentation.
-- `important` is reserved for mandatory updates, security notices, and service-impacting changes.
+- `important` is reserved for release notices, security notices, and service-impacting changes.
 - Expired entries may be removed after 90 days; keep at least the most recent entry.
 - Announcements are not a substitute for release notes: version-specific details belong in the release.
 
@@ -92,5 +92,5 @@ The `t` parameter is a cache-buster; without it, the raw CDN may serve a stale c
 - [ ] A new entry appears once on the next launch and not again.
 - [ ] **继续** opens the application.
 - [ ] Multiple new entries appear on a single screen in publication order.
-- [ ] A mandatory update suppresses announcements until the update is installed.
+- [ ] Announcements remain visible when an update is deferred.
 - [ ] Malformed or unreachable feed never blocks startup.

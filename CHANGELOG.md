@@ -2,6 +2,18 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-11-15
+
+### Changed
+
+- Updates are now optional. When a newer version is available, the launcher offers an immediate-update action and a reminder choice, and the update screen can be closed; the current version remains fully usable until you choose to update.
+- The update manifest no longer marks releases as mandatory. This is the last release delivered through the previous blocking flow; from the next version onward, no update will interrupt your work.
+- Download, SHA-256 verification, publisher signature pinning, host allow-listing and downgrade protection are unchanged.
+
+### Notes
+
+- The bundled engine payload now ships with its own product identity; see `engine/SOURCE.md` for the pinned checksum.
+
 ## [0.4.0] — 2026-11-15
 
 ### Changed
@@ -220,6 +232,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.4.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.1
 [0.4.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.0

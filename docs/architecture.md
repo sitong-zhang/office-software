@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the shipped v0.4.0 implementation.
+This document describes the shipped v0.4.1 implementation.
 
 ## Current implementation
 
@@ -13,7 +13,7 @@ Installer (password gate for first install)
       └─ office engine 26.8.3    (fresh installs: %ProgramFiles%\ChenyiOffice\Engine)
 Launcher
    ├─ splash animation
-   ├─ update check (latest.json) → blocking update installer
+   ├─ update check (latest.json) → optional update prompt
    ├─ announcement check (announcements.json) → continue screen
    └─ starts soffice.exe
 ```
@@ -34,7 +34,7 @@ The install gate is a distribution control, not encryption. Anyone with the inst
 ### Launcher
 
 - Native Win32, static runtime, no external dependencies.
-- Splash window; manifest fetch with timeout; blocking update screen with a single **Download and install** action and no exit path.
+- Splash window; manifest fetch with timeout; non-blocking update prompt with an immediate-update action, a reminder action, and a close button.
 - Download verification: size, mandatory SHA-256 from the manifest, then Authenticode verification against a pinned publisher certificate (multiple thumbprints are accepted for rotation; expired pinned certificates are tolerated). Redirects are followed manually, one hop at a time, and every hop must be HTTPS on port 443 at `github.com`, `*.githubusercontent.com`, or `cdn.jsdelivr.net`.
 - Announcements: `announcements.json` with raw GitHub as primary and jsDelivr as fallback; seen ids stored in `%LOCALAPPDATA%\ChenyiOffice\state.ini`.
 - Engine discovery through `HKLM\Software\ChenyiOffice\EnginePath`, then the standard engine paths.
@@ -55,7 +55,7 @@ These are asset-and-configuration changes; document rendering and editing comman
 
 ### Engine
 
-When no engine is present, the installer deploys the pinned office engine 26.8.3 Windows x64 MSI to `%ProgramFiles%\ChenyiOffice\Engine`. If a compatible engine already exists, it is reused instead and its version may differ. Existing Chenyi Office installations keep their engine path across updates; only fresh installations use the new location. The MSI's own Add/Remove Programs entry is hidden, and engine-created shortcuts are removed so the product appears under a single identity.
+When no engine is present, the installer deploys the pinned, branded office engine 26.8.3 Windows x64 MSI to `%ProgramFiles%\ChenyiOffice\Engine`. If a compatible engine already exists, it is reused instead and its version may differ. Existing Chenyi Office installations keep their engine path across updates; only fresh installations use the new location. The MSI's own Add/Remove Programs entry is hidden, and engine-created shortcuts are removed so the product appears under a single identity.
 
 ## Interface layout pipeline
 
@@ -67,7 +67,7 @@ Deep widget-level changes to individual dialogs would require rebuilding the eng
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.4.0-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.4.1-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 
@@ -78,7 +78,7 @@ See [build.md](build.md) for the pipeline and commands.
 1. A release is published with the x64 installer attached.
 2. `.github/workflows/update-manifest.yml` computes SHA-256 and size, writes `latest.json`, and attaches it to the release.
 3. The launcher fetches `releases/latest/download/latest.json` at startup.
-4. A newer version triggers the blocking update screen.
+4. A newer version triggers the optional update prompt.
 
 Protocol details: [updater.md](updater.md).
 
@@ -89,7 +89,7 @@ Protocol details: [updater.md](updater.md).
 - `.github/workflows/validate-announcements.yml` validates the announcement feed on change.
 - `.github/workflows/windows-smoke.yml` verifies a published installer on Windows: manifest hash and size, Authenticode signer, and the silent fresh-install guard.
 
-Planned additions: a full install → forced update → restart loop on Windows 10/11 hardware, and license/branding checks.
+Planned additions: a full install → optional update → restart loop on Windows 10/11 hardware, and license/branding checks.
 
 ## Update and announcement channels
 

@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify
         required: true
-        default: v0.4.0
+        default: v0.4.1
         type: string
 
 permissions:
@@ -55,6 +55,9 @@ jobs:
           if ($manifest.version -ne $expectedVersion) {
             throw "Manifest version $($manifest.version) does not match tag $expectedVersion"
           }
+          if ($manifest.mandatory) {
+            throw 'Update manifest must not mark releases as mandatory.'
+          }
 
           if (Test-Path "$env:ProgramFiles\ChenyiOffice\ChenyiOffice.exe") {
             throw 'Chenyi Office is already installed; the smoke runner must be clean.'
@@ -71,7 +74,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          PINNED_ENGINE_SHA256: 0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94
+          PINNED_ENGINE_SHA256: 223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6
         run: |
           $ErrorActionPreference = 'Stop'
           $installer = Get-ChildItem smoke -Filter 'ChenyiOffice-*-x64.exe' | Select-Object -First 1
@@ -104,8 +107,8 @@ jobs:
           # The bundled engine asset must match the pinned checksum recorded in
           # engine/SOURCE.md. This catches a corrupted or substituted payload.
           gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" `
-            --pattern "ChenyiEngine-*.msi" --dir smoke
-          $engine = Get-ChildItem smoke -Filter 'ChenyiEngine-*.msi' | Select-Object -First 1
+            --pattern "ChenyiEngine-*-branded.msi" --dir smoke
+          $engine = Get-ChildItem smoke -Filter 'ChenyiEngine-*-branded.msi' | Select-Object -First 1
           if (-not $engine) { throw 'Engine payload asset is missing.' }
           $engineHash = (Get-FileHash $engine.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($engineHash -ne $env:PINNED_ENGINE_SHA256.ToLowerInvariant()) {

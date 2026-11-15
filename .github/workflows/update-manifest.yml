@@ -38,8 +38,10 @@ jobs:
           $release = gh release view $tag --repo $repo --json tagName,url,publishedAt,assets | ConvertFrom-Json
           $version = $release.tagName -replace '^v', ''
 
+          # Never pick the bundled engine MSI: only the installer EXE is an
+          # update payload. The MSI is a large build input attached alongside it.
           $installer = $release.assets |
-            Where-Object { $_.name -match '(?i)x64.*\.(exe|msi)$' } |
+            Where-Object { $_.name -match '^ChenyiOffice-.*-x64\.exe$' } |
             Select-Object -First 1
 
           if (-not $installer) {
@@ -58,7 +60,7 @@ jobs:
 
           $manifest = [ordered]@{
             version               = $version
-            mandatory             = $true
+            mandatory             = $false
             min_supported_version = $min
             published_at          = $release.publishedAt
             release_notes_url     = $release.url

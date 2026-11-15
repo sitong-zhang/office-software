@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chenyi Office（胡辰逸定制版）— 面向界面的 Windows 办公套件</title>
-<meta name="description" content="Chenyi Office（胡辰逸定制版），面向 Windows 10/11 64 位重新设计界面，提供专属启动动画、全新界面与强制更新机制。">
+<meta name="description" content="Chenyi Office（胡辰逸定制版），面向 Windows 10/11 64 位重新设计界面，提供专属启动动画、全新界面与不打断工作的可选更新机制。">
 <link rel="icon" href="assets/logo.png">
 <style>
   :root {
@@ -274,11 +274,11 @@
 
 <main>
   <div class="wrap hero">
-    <div class="status"><span class="dot"></span>v0.4.0 · Windows 10 / 11 64 位</div>
+    <div class="status"><span class="dot"></span>v0.4.1 · Windows 10 / 11 64 位</div>
     <h1>把办公界面，<em>重新做一遍。</em></h1>
     <p class="lede">
       Chenyi Office（胡辰逸定制版）为 Windows 10 / 11 64 位重新设计：
-      统一的界面语言、三段式标签页、专属启动动画，以及发布即生效的强制更新机制。
+      统一的界面语言、三段式标签页、专属启动动画，以及不打断工作的可选更新机制。
     </p>
     <div class="actions">
       <a class="btn primary" href="https://github.com/sitong-zhang/office-software/releases/latest">下载 Windows 安装包</a>
@@ -311,8 +311,8 @@
         </article>
         <article class="card">
           <span class="num">03</span>
-          <h3>强制更新</h3>
-          <p>每次启动读取仓库发布的最新版本清单。检测到新版本后，更新页面不可关闭、不可跳过，必须完成安装。</p>
+          <h3>可选更新</h3>
+          <p>每次启动读取仓库发布的最新版本清单。检测到新版本后，可以立即更新，也可以稍后提醒或关闭；在此期间当前版本继续正常使用。</p>
           <a class="doc-link" href="https://github.com/sitong-zhang/office-software/blob/main/docs/updater.md">更新协议 →</a>
         </article>
       </div>
@@ -336,7 +336,7 @@
         </div>
         <div class="step">
           <span class="phase">Phase 1</span>
-          <div><h3>Windows 客户端与品牌</h3><p>Windows x64 安装包、启动器、密码欢迎页、品牌资产、强制更新与公告通道。</p></div>
+          <div><h3>Windows 客户端与品牌</h3><p>Windows x64 安装包、启动器、密码欢迎页、品牌资产、可选更新与公告通道。</p></div>
           <span class="tag now">已完成</span>
         </div>
         <div class="step">
@@ -366,7 +366,7 @@
         <a class="link-card" href="https://github.com/sitong-zhang/office-software/releases">
           <span class="k">Releases</span>
           <h3>下载</h3>
-          <p>Windows 10 / 11 64 位安装包与发行说明。v0.4.0 已发布：全新界面，首次安装需要密码，更新不再需要。</p>
+          <p>Windows 10 / 11 64 位安装包与发行说明。v0.4.1 已发布：全新界面，首次安装需要密码，更新不再需要。</p>
         </a>
         <a class="link-card" href="https://github.com/sitong-zhang/office-software/discussions/categories/announcements">
           <span class="k">Announcements</span>
@@ -381,8 +381,8 @@
       </div>
       <div class="policy">
         <strong>更新策略：</strong>每次启动都会检查仓库中的最新版本清单
-        <code>latest.json</code>。一旦发布新版本，旧版本会在下次启动时被强制更新页面拦截，
-        没有“稍后提醒”或跳过入口，更新页也不提供退出按钮。请保持网络连接以完成更新。
+        <code>latest.json</code>。发现新版本时，更新页面提供「立即更新」与「稍后提醒」，也可以直接关闭；
+        当前版本在更新前始终可以正常使用，下次启动会再次提示。
         启动时还会读取仓库中的 <code>announcements.json</code>：有新公告会先展示，点击“继续”后进入应用。
         首次安装需要密码，密码由发布者单独提供，不在此页面公开；后续更新自动安装，不再询问密码。
       </div>

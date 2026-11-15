@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.4.0** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, mandatory update gate, and announcement channel.
+Current release: **v0.4.1** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, optional update channel, and announcement channel.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -10,7 +10,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [x] Product name: Chenyi Office（胡辰逸定制版）
 - [x] Contribution, security, and branding policies
 - [x] Project site, announcements channel, release process
-- [x] Update manifest workflow and mandatory update specification
+- [x] Update manifest workflow and update protocol
 - [x] In-app announcement feed and validation workflow
 
 ## Phase 1 — Windows client and identity (done)
@@ -41,7 +41,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [ ] Localization of the interface and documentation
 - [ ] Crash reporting and feedback workflow
 - [ ] Accessibility review
-- [ ] Public beta with the mandatory update channel
+- [ ] Public beta with the optional update channel
 
 ## Phase 4 — Stable release
 

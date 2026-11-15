@@ -1,5 +1,5 @@
 // Chenyi Office（胡辰逸定制版） launcher
-// Splash, mandatory update gate, in-app announcements, engine start.
+// Splash, optional update prompt, in-app announcements, engine start.
 
 #ifndef UNICODE
 #define UNICODE
@@ -43,8 +43,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.4.0";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.0";
+static const wchar_t* kVersion = L"0.4.1";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.1";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -709,7 +709,7 @@ static bool VerifyInstallerSignature(const std::wstring& path) {
   // The publisher certificate is self-signed and therefore not in the Windows
   // trust store. The pinned thumbprint above is the identity check. Expired
   // certificates are also accepted: with a pinned self-signed identity,
-  // expiry would otherwise deadlock the mandatory update screen forever.
+  // expiry would otherwise stall the update prompt forever.
   return status == ERROR_SUCCESS || status == CERT_E_UNTRUSTEDROOT ||
          status == CERT_E_EXPIRED;
 }
@@ -879,7 +879,9 @@ struct UpdateInfo {
   std::wstring url;
   std::wstring sha256;
   uint64_t size = 0;
-  bool mandatory = true;
+  // Retained for manifest compatibility. Updates are always optional;
+  // this flag never blocks the user from continuing on the current build.
+  bool mandatory = false;
 };
 
 struct Announcement {
@@ -1026,6 +1028,7 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
   bool manifestOk = HttpGet(Utf8ToWide(kManifestUrl), body, err);
   if (!manifestOk) LogLine(L"manifest fetch failed: " + err);
 
+  bool updateAvailable = false;
   if (manifestOk) {
     json::Value root;
     std::string parseError;
@@ -1050,29 +1053,30 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
                        sha.size() == 64 && size > 0 && manifestConsistent;
           if (valid) {
             g_update.version = Utf8ToWide(remote);
-            g_update.mandatory = true;
+            g_update.mandatory = root.Bool("mandatory", false);
             g_update.url = Utf8ToWide(url);
             g_update.sha256 = Utf8ToWide(sha);
             g_update.size = size;
+            updateAvailable = true;
             SetStatus(L"发现新版本");
-            InterlockedExchange(&g_checkState, 1);
-            return 0;
           }
-          LogLine(L"manifest update rejected: missing url, sha256, or size");
+          LogLine(valid ? L"update available (optional)" : L"manifest update rejected: missing url, sha256, or size");
         } else {
           LogLine(L"manifest update rejected: installer object missing");
         }
-      } else {
-        SetStatus(L"已是最新版本");
       }
     }
   }
 
+  // Announcements are always fetched, including when an update is available,
+  // so a user who defers the update still receives the release notice.
   if (manifestOk) {
     LoadAnnouncements(LoadSeen());
   }
 
-  SetStatus(manifestOk ? L"已是最新版本" : L"无法检查更新");
+  if (!updateAvailable) {
+    SetStatus(manifestOk ? L"已是最新版本" : L"无法检查更新");
+  }
   InterlockedExchange(&g_checkState, manifestOk ? 1 : 2);
   return 0;
 }
@@ -1180,6 +1184,7 @@ enum Action {
   A_VIEW_ANNOUNCE,
   A_CONTINUE,
   A_RETRY,
+  A_SKIP_UPDATE,
   A_MINIMIZE,
   A_CLOSE,
   A_OPEN_PROFILE,
@@ -1786,7 +1791,9 @@ static void DrawUpdate(Graphics& g) {
   RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
   ui::SoftShadow(g, card, S(20));
   ui::FillRound(g, card, S(20), ui::Paper());
-  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+  DrawWindowButton(g, RectF(g_width - S(86), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+                   true);
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_SKIP_UPDATE,
                    true);
 
   ui::FillRoundGradient(g, RectF(card.X, card.Y, card.Width, S(160)), S(20), ui::GreenLight(),
@@ -1794,7 +1801,7 @@ static void DrawUpdate(Graphics& g) {
   ui::FillRound(g, RectF(card.X, card.Y + S(120), card.Width, S(40)), 0, ui::Green());
   ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_CREAM,
            RectF(card.X + S(32), card.Y + S(30), S(44), S(44)));
-  ui::Text(g, L"强制更新", RectF(card.X + S(92), card.Y + S(28), S(300), S(20)), S(10),
+  ui::Text(g, L"可用更新", RectF(card.X + S(92), card.Y + S(28), S(300), S(20)), S(10),
            FontStyleBold, ui::rgba(220, 240, 230));
   ui::Text(g, L"发现新版本", RectF(card.X + S(92), card.Y + S(48), S(400), S(36)), S(24),
            FontStyleBold, ui::SidebarText());
@@ -1807,7 +1814,7 @@ static void DrawUpdate(Graphics& g) {
            FormatBytes(g_update.size).c_str());
   ui::Text(g, meta, RectF(card.X + S(32), card.Y + S(184), card.Width - S(64), S(22)), S(10.5),
            FontStyleRegular, ui::TextMuted());
-  ui::Text(g, L"此更新为强制更新。完成安装前，旧版本无法继续使用；更新页面不提供退出或跳过。",
+  ui::Text(g, L"有新版本可用。你可以立即更新，也可以稍后提醒；在此期间当前版本可继续正常使用。",
            RectF(card.X + S(32), card.Y + S(220), card.Width - S(64), S(48)), S(11.5),
            FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
 
@@ -1819,9 +1826,9 @@ static void DrawUpdate(Graphics& g) {
            FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
 
   DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(180), S(40)),
-             L"下载并安装", UI_ICON_DOWNLOAD, true, A_DOWNLOAD);
-  ui::Text(g, L"此页面不可跳过", RectF(card.X + S(228), card.Y + card.Height - S(52), S(240), S(20)),
-           S(9.5), FontStyleRegular, ui::TextSoft());
+             L"立即更新", UI_ICON_DOWNLOAD, true, A_DOWNLOAD);
+  DrawButton(g, RectF(card.X + S(228), card.Y + card.Height - S(64), S(180), S(40)),
+             L"稍后提醒", 0, false, A_SKIP_UPDATE);
 }
 
 static void DrawDownloading(Graphics& g) {
@@ -1834,15 +1841,16 @@ static void DrawDownloading(Graphics& g) {
   RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
   ui::SoftShadow(g, card, S(20));
   ui::FillRound(g, card, S(20), ui::Paper());
-  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+  DrawWindowButton(g, RectF(g_width - S(86), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
                    true);
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_CLOSE, true);
 
   int percent = (int)InterlockedCompareExchange(&g_downloadPercent, 0, 0);
   ui::FillRound(g, RectF(card.X + S(32), card.Y + S(32), S(56), S(56)), S(16),
                 ui::rgba(232, 244, 238));
   ui::Icon(g, UI_ICON_DOWNLOAD, ui::ICON_GREEN,
            RectF(card.X + S(46), card.Y + S(46), S(28), S(28)));
-  ui::Text(g, L"强制更新", RectF(card.X + S(104), card.Y + S(34), S(300), S(18)), S(10),
+  ui::Text(g, L"软件更新", RectF(card.X + S(104), card.Y + S(34), S(300), S(18)), S(10),
            FontStyleBold, ui::Green());
   ui::Text(g, L"正在下载更新", RectF(card.X + S(104), card.Y + S(54), S(400), S(32)), S(22),
            FontStyleBold, ui::Text());
@@ -1856,7 +1864,7 @@ static void DrawDownloading(Graphics& g) {
     ui::FillRound(g, RectF(track.X, track.Y, track.Width * percent / 100.0f, track.Height), S(5),
                   ui::Green());
   }
-  ui::Text(g, L"下载期间请保持网络连接。完成前无法关闭或跳过更新。",
+  ui::Text(g, L"下载期间请保持网络连接；你随时可以关闭窗口，稍后再更新。",
            RectF(card.X + S(32), card.Y + S(228), card.Width - S(64), S(44)), S(11),
            FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
   ui::Text(g, L"完成后会自动校验安装包并启动安装程序。",
@@ -1874,8 +1882,9 @@ static void DrawError(Graphics& g) {
   RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
   ui::SoftShadow(g, card, S(20));
   ui::FillRound(g, card, S(20), ui::Paper());
-  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+  DrawWindowButton(g, RectF(g_width - S(86), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
                    true);
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_CLOSE, true);
 
   ui::FillRound(g, RectF(card.X + S(32), card.Y + S(32), S(56), S(56)), S(16), ui::DangerSoft());
   ui::Icon(g, UI_ICON_INFO, ui::ICON_MUTED, RectF(card.X + S(46), card.Y + S(46), S(28), S(28)));
@@ -1892,6 +1901,8 @@ static void DrawError(Graphics& g) {
              UI_ICON_REFRESH, true, A_RETRY);
   DrawButton(g, RectF(card.X + S(184), card.Y + card.Height - S(64), S(168), S(40)),
              L"打开下载页", UI_ICON_EXTERNAL_LINK, false, A_OPEN_RELEASES);
+  DrawButton(g, RectF(card.X + card.Width - S(172), card.Y + card.Height - S(64), S(136), S(40)),
+             L"稍后提醒", 0, false, A_SKIP_UPDATE);
 }
 
 static void OnAction(int action) {
@@ -1957,13 +1968,27 @@ static void OnAction(int action) {
     case A_RETRY:
       if (!g_update.url.empty()) StartDownload();
       return;
+    case A_SKIP_UPDATE:
+      // Deferring an update leaves the current build fully usable. Unseen
+      // release notices are still delivered before the home screen.
+      if (!g_announcements.empty()) {
+        g_screen = 1;
+        g_announcementIndex = 0;
+        g_scroll = 0;
+      } else {
+        g_screen = 5;
+        g_homeSection = 0;
+      }
+      LogLine(L"update deferred by user");
+      break;
     case A_MINIMIZE:
       ShowWindow(g_window, SW_MINIMIZE);
       return;
     case A_CLOSE:
       if (g_screen == 1) {
         FinishAnnouncements();
-      } else if (g_screen == 5 || g_screen == 0) {
+      } else {
+        // Updates are optional: closing the window never blocks the user.
         PostQuitMessage(0);
       }
       return;
@@ -2419,6 +2444,14 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         } else if (g_screen == 5) {
           OnAction(A_OPEN_FILE);
         }
+      } else if (wParam == VK_ESCAPE) {
+        if (g_screen == 1) {
+          OnAction(A_CONTINUE);
+        } else if (g_screen == 2 || g_screen == 4) {
+          OnAction(A_SKIP_UPDATE);
+        } else {
+          OnAction(A_CLOSE);
+        }
       }
       return 0;
 
@@ -2433,16 +2466,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
 
     case WM_CLOSE:
-      // The splash and home can be closed; the announcement gate behaves like
-      // "continue". Mandatory updates, downloads and failures cannot be closed.
+      // Updates are optional: every screen may be closed. Doing so simply
+      // defers a pending update to the next launch.
       if (g_screen == 1) {
         FinishAnnouncements();
         return 0;
       }
-      if (g_screen == 0 || g_screen == 5) {
-        PostQuitMessage(0);
-        return 0;
-      }
+      PostQuitMessage(0);
       return 0;
 
     case WM_DESTROY:

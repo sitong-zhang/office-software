@@ -7,13 +7,15 @@ legal/provenance record, not a product-facing page.
 ## Engine package
 
 - Engine version: 26.8.3
-- Build input: `ChenyiEngine-26.8.3-x64.msi` (attached to the v0.4.0 release)
-- Pinned SHA-256: `0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94`
+- Build input: `ChenyiEngine-26.8.3-x64-branded.msi` (attached to the v0.4.0 release)
+- Pinned SHA-256: `223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6`
 - License: Mozilla Public License 2.0
 
 The engine MSI is attached to this project's release so builds do not depend
-on any third-party mirror. The attached file is verified against the pinned
-SHA-256 before use.
+on any third-party mirror. The attached payload carries the product's own
+identity: its installer tables, setup UI, feature names, shortcuts and bundled
+resources all use Chenyi Office branding. The attached file is verified against
+the pinned SHA-256 before use.
 
 ## Customized engine resources
 

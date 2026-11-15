@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the shipped v0.1.7 implementation and the planned path to source-level interface work.
+This document describes the shipped v0.2.0 implementation and the planned path to source-level interface work.
 
 ## Current implementation
 
@@ -63,7 +63,7 @@ The Windows engine build itself requires MSVC or a supported MinGW cross-build e
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.1.7-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.2.0-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 

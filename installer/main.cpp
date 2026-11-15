@@ -17,6 +17,11 @@
 #include <shellapi.h>
 #include <objidl.h>
 
+#include "app/ui/icons.h"
+#include "app/ui/theme.h"
+
+using namespace Gdiplus;
+
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
@@ -32,7 +37,7 @@
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.7";
+static const wchar_t* kVersion = L"0.2.0";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -48,8 +53,10 @@ static WNDPROC g_editProc = nullptr;
 static HBITMAP g_background = nullptr;
 static HICON g_icon = nullptr;
 static int g_dpi = 96;
-static int g_width = 900;
-static int g_height = 600;
+static int g_width = 980;
+static int g_height = 680;
+static ULONG_PTR g_gdiplusToken = 0;
+static int g_hover = 0;
 static Screen g_screen = WELCOME;
 static bool g_passwordError = false;
 static bool g_enginePreExisting = false;
@@ -63,143 +70,216 @@ static volatile LONG g_extractPercent = 0;
 static volatile LONG g_marquee = 0;
 
 #define S(x) MulDiv((x), g_dpi, 96)
+#define SIDEBAR S(280)
+#define TITLEBAR S(56)
+
+enum InstallerAction {
+  IA_NONE = 0,
+  IA_START,
+  IA_RETRY,
+  IA_OPEN,
+  IA_EXIT,
+  IA_MINIMIZE,
+  IA_CLOSE,
+};
+
+struct InstallerHit {
+  RectF rect;
+  int id;
+};
+
+static std::vector<InstallerHit> g_hits;
+
+static void AddHit(const RectF& rect, int id) {
+  if (rect.Width > 0 && rect.Height > 0) g_hits.push_back({rect, id});
+}
+
+static int HitTest(POINT point) {
+  for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
+    if (ui::Hit(it->rect, point)) return it->id;
+  }
+  return IA_NONE;
+}
 
 // ---------------------------------------------------------------------------
 // Drawing helpers
 // ---------------------------------------------------------------------------
 
-static void FillColor(HDC dc, const RECT& r, COLORREF color) {
-  HBRUSH brush = CreateSolidBrush(color);
-  FillRect(dc, &r, brush);
-  DeleteObject(brush);
+static void DrawButton(Graphics& g, const RectF& rect, const std::wstring& label, int icon,
+                       bool primary, int action) {
+  bool hover = g_hover == action;
+  if (primary) {
+    ui::FillRound(g, rect, S(10), hover ? ui::GreenLight() : ui::Green());
+  } else {
+    ui::FillRound(g, rect, S(10), hover ? ui::SurfaceMuted() : ui::Surface());
+    ui::StrokeRound(g, rect, S(10), ui::Border(), 1.0f);
+  }
+  float iconSize = S(17);
+  float textX = rect.X + S(16);
+  if (icon) {
+    ui::Icon(g, icon, primary ? ui::ICON_CREAM : ui::ICON_GREEN,
+             RectF(rect.X + S(14), rect.Y + (rect.Height - iconSize) / 2, iconSize, iconSize));
+    textX += iconSize + S(8);
+  }
+  ui::Text(g, label, RectF(textX, rect.Y, rect.Width - (textX - rect.X) - S(12), rect.Height),
+           S(13), FontStyleBold, primary ? ui::Surface() : ui::Text(), StringAlignmentNear,
+           StringAlignmentCenter);
+  AddHit(rect, action);
 }
 
-static void DrawTextLine(HDC dc, const std::wstring& text, RECT rect, int size, int weight,
-                         COLORREF color, const wchar_t* face, UINT flags) {
-  HFONT font = CreateFontW(-S(size), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                           OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                           DEFAULT_PITCH | FF_DONTCARE, face);
-  HGDIOBJ old = SelectObject(dc, font);
-  SetTextColor(dc, color);
-  SetBkMode(dc, TRANSPARENT);
-  DrawTextW(dc, text.c_str(), (int)text.size(), &rect, flags);
-  SelectObject(dc, old);
-  DeleteObject(font);
+static void DrawWindowButton(Graphics& g, const RectF& rect, int icon, int action, bool dark) {
+  bool hover = g_hover == action;
+  if (hover) {
+    ui::FillRound(g, rect, S(8), dark ? ui::rgba(255, 255, 255, 24) : ui::rgba(16, 32, 26, 12));
+  }
+  ui::Icon(g, icon, dark ? ui::ICON_CREAM : ui::ICON_MUTED,
+           RectF(rect.X + S(6), rect.Y + S(6), S(16), S(16)));
+  AddHit(rect, action);
 }
 
-static RECT ButtonRect() {
-  RECT r;
-  r.right = S(840);
-  r.left = S(640);
-  r.bottom = S(562);
-  r.top = S(516);
-  return r;
+static void DrawStep(Graphics& g, int y, int icon, const std::wstring& label, bool active,
+                     bool done) {
+  RectF dot(S(28), (float)y, S(32), S(32));
+  ui::FillRound(g, dot, S(10), active ? ui::SidebarActive()
+                                      : (done ? ui::rgba(88, 184, 146, 40)
+                                              : ui::rgba(255, 255, 255, 10)));
+  ui::Icon(g, done ? UI_ICON_CHECK_CIRCLE : icon,
+           active || done ? ui::ICON_CREAM : ui::ICON_SOFT,
+           RectF(dot.X + S(8), dot.Y + S(8), S(16), S(16)));
+  ui::Text(g, label, RectF(S(74), y, S(180), S(32)), S(12),
+           active ? FontStyleBold : FontStyleRegular,
+           active || done ? ui::SidebarText() : ui::SidebarMuted(), StringAlignmentNear,
+           StringAlignmentCenter);
 }
 
-static bool ButtonVisible() {
-  return g_screen != INSTALLING;
+static void DrawSidebar(Graphics& g) {
+  RectF side(0, 0, SIDEBAR, g_height);
+  LinearGradientBrush background(side, ui::rgba(22, 50, 39), ui::rgba(10, 24, 19),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, side);
+
+  ui::Image(g, 111, RectF(S(26), S(24), S(42), S(42)));
+  ui::TextLatin(g, L"Chenyi Office", RectF(S(80), S(22), S(170), S(24)), S(15),
+                FontStyleBold, ui::SidebarText());
+  ui::Text(g, L"胡辰逸定制版", RectF(S(80), S(48), S(170), S(18)), S(10),
+           FontStyleRegular, ui::SidebarMuted());
+  ui::FillRound(g, RectF(S(26), S(88), S(228), 1), 0, ui::rgba(255, 255, 255, 18));
+
+  int y = S(140);
+  DrawStep(g, y, UI_ICON_SHIELD_CHECK, L"欢迎", g_screen == WELCOME, g_screen != WELCOME);
+  y += S(58);
+  DrawStep(g, y, UI_ICON_DOWNLOAD, L"安装", g_screen == INSTALLING,
+           g_screen == FINISH);
+  y += S(58);
+  DrawStep(g, y, UI_ICON_CHECK_CIRCLE, L"完成", g_screen == FINISH, false);
+
+  ui::Text(g, L"安装向导", RectF(S(26), S(400), S(220), S(20)), S(9.5), FontStyleBold,
+           ui::rgba(136, 196, 168));
+  ui::Text(g, L"大约需要几分钟。安装期间请保持窗口打开。",
+           RectF(S(26), S(426), S(220), S(44)), S(9.5), FontStyleRegular, ui::SidebarMuted(),
+           StringAlignmentNear, StringAlignmentNear, true);
+
+  ui::TextLatin(g, std::wstring(L"v") + kVersion, RectF(S(26), g_height - S(62), S(120), S(20)),
+                S(11), FontStyleBold, ui::SidebarText());
+  ui::Text(g, L"MPL 2.0 · Windows x64", RectF(S(26), g_height - S(38), S(228), S(18)), S(9),
+           FontStyleRegular, ui::SidebarMuted());
 }
 
-static void DrawButton(HDC dc, const wchar_t* label) {
-  RECT r = ButtonRect();
-  FillColor(dc, r, RGB(244, 241, 232));
-  DrawTextLine(dc, label, r, 15, FW_SEMIBOLD, RGB(16, 32, 26), L"Microsoft YaHei UI",
-               DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
+  ui::Text(g, title, RectF(SIDEBAR + S(36), S(12), S(480), S(32)), S(17), FontStyleBold,
+           ui::Text());
+  ui::Text(g, L"Chenyi Office · 胡辰逸定制版", RectF(SIDEBAR + S(36), S(34), S(480), S(16)),
+           S(10), FontStyleRegular, ui::TextMuted());
+  ui::FillRound(g, RectF(SIDEBAR, TITLEBAR - 1, g_width - SIDEBAR, 1), 0, ui::Border());
+  DrawWindowButton(g, RectF(g_width - S(86), S(14), S(28), S(28)), UI_ICON_MINIMIZE, IA_MINIMIZE,
+                   false);
+  if (allowClose) {
+    DrawWindowButton(g, RectF(g_width - S(52), S(14), S(28), S(28)), UI_ICON_CLOSE, IA_CLOSE,
+                     false);
+  }
 }
 
-static void DrawBrand(HDC dc) {
-  if (g_icon)
-    DrawIconEx(dc, S(56), S(38), g_icon, S(52), S(52), 0, nullptr, DI_NORMAL);
-  RECT word{S(120), S(42), S(420), S(66)};
-  DrawTextLine(dc, L"CHENYI OFFICE", word, 14, FW_SEMIBOLD, RGB(23, 23, 15), L"Segoe UI",
-               DT_LEFT | DT_SINGLELINE);
-  RECT edition{S(120), S(68), S(420), S(90)};
-  DrawTextLine(dc, L"胡辰逸定制版", edition, 11, FW_NORMAL, RGB(31, 92, 70),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-}
-
-static void DrawWelcome(HDC dc) {
-  DrawBrand(dc);
-
-  RECT eyebrow{S(56), S(112), S(600), S(136)};
-  DrawTextLine(dc, L"欢迎使用", eyebrow, 15, FW_NORMAL, RGB(95, 95, 82), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
-
-  RECT title{S(56), S(138), S(600), S(192)};
-  DrawTextLine(dc, L"Chenyi Office", title, 40, FW_SEMIBOLD, RGB(23, 23, 15), L"Segoe UI",
-               DT_LEFT | DT_SINGLELINE);
-
-  RECT edition{S(56), S(194), S(600), S(222)};
-  DrawTextLine(dc, L"胡辰逸定制版 · Windows 10 / 11 64 位", edition, 16, FW_NORMAL,
-               RGB(31, 92, 70), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT intro{S(56), S(240), S(580), S(300)};
-  DrawTextLine(dc,
-               L"一套以界面为先的办公套件：重新设计的启动中心与工作区、专属开屏动画、"
-               L"应用内公告，以及发布即生效的强制更新。文档、表格、演示与 PDF 都在同一个安静的工作空间里完成。",
-               intro, 14, FW_NORMAL, RGB(70, 70, 60), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
+static void DrawWelcome(Graphics& g) {
+  DrawTitleBar(g, L"安装 Chenyi Office", true);
+  float x = S(320), width = S(600);
+  ui::Text(g, L"WINDOWS 10 / 11 · 64 位", RectF(x, S(88), width, S(18)), S(9.5),
+           FontStyleBold, ui::Green());
+  ui::Text(g, L"安装 Chenyi Office", RectF(x, S(110), width, S(42)), S(28), FontStyleBold,
+           ui::Text());
+  ui::Text(g,
+           L"一套以界面为先的办公套件：文档、表格、演示与绘图都在同一个安静的工作空间里完成。",
+           RectF(x, S(156), width, S(42)), S(11.5), FontStyleRegular, ui::TextMuted(),
+           StringAlignmentNear, StringAlignmentNear, true);
 
   struct Feature {
+    int icon;
     const wchar_t* title;
     const wchar_t* text;
   };
-  Feature features[3] = {
-      {L"界面重构", L"统一视觉语言，减少干扰，文档优先。"},
-      {L"开屏动画", L"启动同时检查新版本与公告。"},
-      {L"强制更新", L"发布新版本后，始终运行最新版。"},
+  Feature features[] = {
+      {UI_ICON_SHIELD_CHECK, L"安全更新", L"安装包校验与发布者签名验证。"},
+      {UI_ICON_FILE_TEXT, L"完整办公套件", L"Writer、Calc、Impress 与 Draw。"},
+      {UI_ICON_SPARKLES, L"品牌工作区", L"Tabbed 标签页、Sifr 图标与专属开屏。"},
   };
-  int y = 316;
-  for (const auto& f : features) {
-    RECT dot{S(58), S(y + 9), S(64), S(y + 15)};
-    FillColor(dc, dot, RGB(88, 184, 146));
-    RECT line{S(76), S(y), S(580), S(y + 28)};
-    DrawTextLine(dc, std::wstring(f.title) + L" — " + f.text, line, 13, FW_NORMAL,
-                 RGB(70, 70, 60), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-    y += 34;
+  float y = S(216);
+  for (const auto& feature : features) {
+    RectF tile(x, y, S(38), S(38));
+    ui::FillRound(g, tile, S(11), ui::SurfaceMuted());
+    ui::Icon(g, feature.icon, ui::ICON_GREEN, RectF(tile.X + S(8), tile.Y + S(8), S(22), S(22)));
+    ui::Text(g, feature.title, RectF(x + S(52), y - S(2), width - S(52), S(20)), S(12),
+             FontStyleBold, ui::Text());
+    ui::Text(g, feature.text, RectF(x + S(52), y + S(18), width - S(52), S(18)), S(10),
+             FontStyleRegular, ui::TextMuted());
+    y += S(48);
   }
 
   if (g_updateMode) {
-    RECT updateHint{S(56), S(430), S(600), S(486)};
-    DrawTextLine(dc, L"检测到已安装的 Chenyi Office，本次为覆盖更新：无需密码，"
-                     L"直接点击右下角即可开始。",
-                 updateHint, 13, FW_NORMAL, RGB(31, 92, 70), L"Microsoft YaHei UI",
-                 DT_LEFT | DT_WORDBREAK);
+    RectF note(x, S(378), width, S(76));
+    ui::FillRound(g, note, S(12), ui::rgba(232, 244, 238));
+    ui::Icon(g, UI_ICON_REFRESH, ui::ICON_GREEN,
+             RectF(note.X + S(16), note.Y + S(24), S(24), S(24)));
+    ui::Text(g, L"检测到已安装版本，本次为覆盖更新。", RectF(note.X + S(52), note.Y + S(14),
+                                                        note.Width - S(68), S(22)),
+             S(12), FontStyleBold, ui::Green());
+    ui::Text(g, L"无需密码，直接点击右下角开始。", RectF(note.X + S(52), note.Y + S(38),
+                                                     note.Width - S(68), S(20)),
+             S(10), FontStyleRegular, ui::TextMuted());
   } else {
-    RECT label{S(56), S(430), S(400), S(452)};
-    DrawTextLine(dc, L"安装密码", label, 13, FW_SEMIBOLD, RGB(23, 23, 15),
-                 L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-    RECT hint{S(56), S(504), S(580), S(530)};
+    ui::Text(g, L"安装密码", RectF(x, S(378), S(300), S(20)), S(11.5), FontStyleBold,
+             ui::Text());
+    ui::Text(g, L"请输入发布者提供的安装密码。", RectF(x + S(78), S(380), S(360), S(18)), S(9.5),
+             FontStyleRegular, ui::TextMuted());
     if (g_passwordError) {
-      DrawTextLine(dc, L"密码错误，无法继续安装。请重新输入。", hint, 12, FW_NORMAL,
-                   RGB(184, 72, 58), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
+      ui::Text(g, L"密码错误，请重新输入。", RectF(x, S(456), width, S(18)), S(9.5),
+               FontStyleRegular, ui::Danger());
     } else {
-      DrawTextLine(dc, L"请输入安装密码后点击右下角继续。", hint, 12, FW_NORMAL,
-                   RGB(110, 110, 96), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
+      ui::Text(g, L"密码只用于首次安装，后续更新不再询问。", RectF(x, S(456), width, S(18)),
+               S(9.5), FontStyleRegular, ui::TextMuted());
     }
   }
 
   if (g_enginePreExisting && !g_updateMode) {
-    RECT engineHint{S(56), S(532), S(600), S(554)};
-    DrawTextLine(dc, L"检测到系统已有 LibreOffice：将复用它作为内核，卸载时不会移除它。",
-                 engineHint, 10, FW_NORMAL, RGB(150, 96, 44), L"Microsoft YaHei UI",
-                 DT_LEFT | DT_SINGLELINE);
+    ui::Text(g, L"检测到系统已有 LibreOffice：将复用它作为内核，卸载时不会移除它。",
+             RectF(x, S(492), width, S(18)), S(9.5), FontStyleRegular, ui::rgba(150, 96, 44));
   }
+  ui::Text(g, L"安装位置：C:\\Program Files\\ChenyiOffice", RectF(x, S(522), width, S(18)),
+           S(9.5), FontStyleRegular, ui::TextMuted());
+  ui::Text(g, L"基于 LibreOffice 技术构建 · Mozilla Public License 2.0",
+           RectF(x, S(548), width, S(18)), S(9), FontStyleRegular, ui::TextSoft());
 
-  RECT footer{S(56), S(560), S(600), S(584)};
-  DrawTextLine(dc, L"基于 LibreOffice 技术构建 · Mozilla Public License 2.0", footer, 10,
-               FW_NORMAL, RGB(120, 120, 106), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  DrawButton(dc, g_updateMode ? L"立即更新" : L"下一步确认");
+  DrawButton(g, RectF(g_width - S(216), S(590), S(180), S(42)),
+             g_updateMode ? L"立即更新" : L"开始安装", UI_ICON_DOWNLOAD, true, IA_START);
 }
 
-static void DrawInstalling(HDC dc) {
-  DrawBrand(dc);
-
-  RECT title{S(56), S(120), S(820), S(168)};
-  DrawTextLine(dc, L"正在安装 Chenyi Office", title, 30, FW_SEMIBOLD, RGB(23, 23, 15),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
+static void DrawInstalling(Graphics& g) {
+  DrawTitleBar(g, L"正在安装 Chenyi Office", false);
+  float x = S(320), width = S(600);
+  ui::Text(g, L"WINDOWS 10 / 11 · 64 位", RectF(x, S(88), width, S(18)), S(9.5),
+           FontStyleBold, ui::Green());
+  ui::Text(g, L"正在安装 Chenyi Office", RectF(x, S(110), width, S(42)), S(26), FontStyleBold,
+           ui::Text());
+  ui::Text(g, L"安装期间请保持窗口打开，完成后可以立即进入办公套件。",
+           RectF(x, S(154), width, S(22)), S(11), FontStyleRegular, ui::TextMuted());
 
   const wchar_t* stage = L"正在准备…";
   switch (InterlockedCompareExchange(&g_stage, 0, 0)) {
@@ -210,80 +290,95 @@ static void DrawInstalling(HDC dc) {
     case 5: stage = L"正在完成安装…"; break;
     default: break;
   }
-  RECT stageText{S(56), S(184), S(820), S(212)};
-  DrawTextLine(dc, stage, stageText, 15, FW_NORMAL, RGB(70, 70, 60), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
-
+  int stageValue = (int)InterlockedCompareExchange(&g_stage, 0, 0);
   int percent = (int)InterlockedCompareExchange(&g_extractPercent, 0, 0);
-  RECT track{S(56), S(246), S(580), S(254)};
-  FillColor(dc, track, RGB(220, 215, 201));
-  if (InterlockedCompareExchange(&g_stage, 0, 0) == 1) {
-    int width = (track.right - track.left) * percent / 100;
-    if (width > 0) {
-      RECT fill{track.left, track.top, track.left + width, track.bottom};
-      FillColor(dc, fill, RGB(31, 92, 70));
-    }
-    wchar_t pct[16];
-    swprintf(pct, 16, L"%d%%", percent);
-    RECT pctRect{S(468), S(212), S(580), S(242)};
-    DrawTextLine(dc, pct, pctRect, 13, FW_SEMIBOLD, RGB(31, 92, 70), L"Consolas",
-                 DT_LEFT | DT_SINGLELINE);
-  } else {
-    int offset = (int)InterlockedCompareExchange(&g_marquee, 0, 0);
-    int width = S(120);
-    int start = S(56) + (offset % (S(464) + width));
-    int left = std::max((int)S(56), start - width);
-    int right = std::min((int)S(580), start);
-    if (right > left) {
-      RECT fill{left, track.top, right, track.bottom};
-      FillColor(dc, fill, RGB(31, 92, 70));
-    }
+
+  float progress = stageValue >= 5 ? 100.0f : (stageValue >= 2 ? 30.0f : percent * 0.3f);
+  wchar_t pct[16];
+  swprintf(pct, 16, L"%d%%", (int)progress);
+  ui::TextLatin(g, pct, RectF(x, S(196), width, S(64)), S(44), FontStyleBold, ui::Green());
+  ui::Text(g, stage, RectF(x + S(150), S(218), width - S(150), S(24)), S(11.5),
+           FontStyleRegular, ui::TextMuted());
+
+  RectF track(x, S(272), width, S(10));
+  ui::FillRound(g, track, S(5), ui::SurfaceMuted());
+  if (progress > 0) {
+    ui::FillRound(g, RectF(track.X, track.Y, track.Width * progress / 100.0f, track.Height), S(5),
+                  ui::Green());
   }
 
-  RECT note{S(56), S(300), S(580), S(380)};
-  DrawTextLine(dc,
-               L"安装过程中请勿关闭窗口。办公内核体积较大，首次安装通常需要几分钟。",
-               note, 12, FW_NORMAL, RGB(110, 110, 96), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
+  const wchar_t* labels[] = {L"解压办公内核", L"安装办公内核", L"写入程序文件",
+                             L"创建快捷方式", L"完成安装"};
+  float y = S(320);
+  for (int i = 0; i < 5; ++i) {
+    bool done = stageValue > i + 1;
+    bool active = stageValue == i + 1;
+    RectF row(x, y, width, S(36));
+    ui::FillRound(g, row, S(10), active ? ui::rgba(232, 244, 238) : ui::rgba(0, 0, 0, 0));
+    ui::Icon(g, done ? UI_ICON_CHECK_CIRCLE : UI_ICON_CLOCK,
+             done ? ui::ICON_GREEN : (active ? ui::ICON_GREEN : ui::ICON_SOFT),
+             RectF(x + S(12), y + S(10), S(16), S(16)));
+    ui::Text(g, labels[i], RectF(x + S(38), y, width - S(38), S(36)), S(11),
+             active ? FontStyleBold : FontStyleRegular,
+             active ? ui::Text() : ui::TextMuted(), StringAlignmentNear, StringAlignmentCenter);
+    y += S(40);
+  }
+
+  RectF note(x, S(548), width, S(54));
+  ui::FillRound(g, note, S(12), ui::SurfaceMuted());
+  ui::Icon(g, UI_ICON_INFO, ui::ICON_GREEN, RectF(note.X + S(14), note.Y + S(17), S(20), S(20)));
+  ui::Text(g, L"办公内核体积较大，首次安装通常需要几分钟。请勿关闭窗口。",
+           RectF(note.X + S(44), note.Y + S(12), note.Width - S(58), S(30)), S(10),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
 }
 
-static void DrawFinish(HDC dc) {
-  DrawBrand(dc);
+static void DrawFinish(Graphics& g) {
+  DrawTitleBar(g, L"安装完成", true);
+  float x = S(320), width = S(600);
+  ui::FillRound(g, RectF(x, S(96), S(64), S(64)), S(18), ui::rgba(232, 244, 238));
+  ui::Icon(g, UI_ICON_CHECK_CIRCLE, ui::ICON_GREEN, RectF(x + S(16), S(112), S(32), S(32)));
+  ui::Text(g, L"安装完成", RectF(x + S(84), S(104), width - S(84), S(40)), S(26),
+           FontStyleBold, ui::Text());
+  ui::Text(g, L"Chenyi Office（胡辰逸定制版）已安装到本机。",
+           RectF(x, S(184), width, S(22)), S(12), FontStyleBold, ui::Text());
+  ui::Text(g,
+           L"首次启动会执行开屏动画、检查最新版本并读取应用内公告，完成后进入办公套件。",
+           RectF(x, S(214), width, S(44)), S(11), FontStyleRegular, ui::TextMuted(),
+           StringAlignmentNear, StringAlignmentNear, true);
+  ui::Text(g, L"安装位置", RectF(x, S(280), width, S(18)), S(10), FontStyleBold, ui::Text());
+  ui::Text(g, g_installDir, RectF(x, S(302), width, S(20)), S(9.5), FontStyleRegular,
+           ui::TextMuted());
 
-  RECT title{S(56), S(120), S(820), S(164)};
-  DrawTextLine(dc, L"安装完成", title, 30, FW_SEMIBOLD, RGB(23, 23, 15),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT body{S(56), S(200), S(580), S(290)};
-  DrawTextLine(dc,
-               L"Chenyi Office（胡辰逸定制版）已安装到本机。首次启动会执行开屏动画、"
-               L"检查最新版本并读取应用内公告，完成后进入办公套件。",
-               body, 14, FW_NORMAL, RGB(70, 70, 60), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
-
-  RECT footer{S(56), S(560), S(600), S(584)};
-  DrawTextLine(dc, L"安装位置：" + g_installDir, footer, 10, FW_NORMAL, RGB(120, 120, 106),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-  DrawButton(dc, L"打开应用");
+  DrawButton(g, RectF(g_width - S(396), S(590), S(160), S(42)), L"打开应用", UI_ICON_ARROW_RIGHT,
+             true, IA_OPEN);
+  DrawButton(g, RectF(g_width - S(216), S(590), S(180), S(42)), L"退出", UI_ICON_CLOSE, false,
+             IA_EXIT);
 }
 
-static void DrawFailed(HDC dc) {
-  DrawBrand(dc);
+static void DrawFailed(Graphics& g) {
+  DrawTitleBar(g, L"安装失败", true);
+  float x = S(320), width = S(600);
+  ui::FillRound(g, RectF(x, S(96), S(64), S(64)), S(18), ui::DangerSoft());
+  ui::Icon(g, UI_ICON_INFO, ui::ICON_MUTED, RectF(x + S(16), S(112), S(32), S(32)));
+  ui::Text(g, L"安装失败", RectF(x + S(84), S(104), width - S(84), S(40)), S(26),
+           FontStyleBold, ui::Danger());
+  ui::Text(g, g_error, RectF(x, S(188), width, S(140)), S(11.5), FontStyleRegular, ui::Text(),
+           StringAlignmentNear, StringAlignmentNear, true);
+  ui::Text(g, L"可以修正问题后重试；已安装的部分会被重新配置。",
+           RectF(x, S(344), width, S(22)), S(10), FontStyleRegular, ui::TextMuted());
+  DrawButton(g, RectF(g_width - S(216), S(590), S(180), S(42)), L"重试", UI_ICON_REFRESH, true,
+             IA_RETRY);
+}
 
-  RECT title{S(56), S(120), S(820), S(168)};
-  DrawTextLine(dc, L"安装失败", title, 30, FW_SEMIBOLD, RGB(150, 56, 44),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT msg{S(56), S(186), S(600), S(320)};
-  DrawTextLine(dc, g_error, msg, 14, FW_NORMAL, RGB(70, 70, 60), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
-
-  RECT hint{S(56), S(340), S(600), S(400)};
-  DrawTextLine(dc, L"可以修正问题后重试；已安装的部分会被重新配置。", hint, 12, FW_NORMAL,
-               RGB(110, 110, 96), L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
-
-  DrawButton(dc, L"重试");
+static void DrawScreen(Graphics& g) {
+  g.Clear(ui::Paper());
+  DrawSidebar(g);
+  switch (g_screen) {
+    case WELCOME: DrawWelcome(g); break;
+    case INSTALLING: DrawInstalling(g); break;
+    case FINISH: DrawFinish(g); break;
+    case FAILED: DrawFailed(g); break;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -810,34 +905,16 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
-      HDC mem = CreateCompatibleDC(dc);
-      HBITMAP bitmap = CreateCompatibleBitmap(dc, g_width, g_height);
-      HGDIOBJ old = SelectObject(mem, bitmap);
+      g_hits.clear();
 
-      FillColor(mem, RECT{0, 0, g_width, g_height}, RGB(247, 245, 239));
+      Bitmap buffer(g_width, g_height, PixelFormat32bppPARGB);
+      Graphics g(&buffer);
+      g.SetSmoothingMode(SmoothingModeAntiAlias);
+      g.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+      DrawScreen(g);
 
-      if (g_background) {
-        HDC bgDc = CreateCompatibleDC(mem);
-        HGDIOBJ oldBg = SelectObject(bgDc, g_background);
-        BITMAP bm{};
-        GetObjectW(g_background, sizeof(bm), &bm);
-        SetStretchBltMode(mem, HALFTONE);
-        StretchBlt(mem, 0, 0, g_width, g_height, bgDc, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
-        SelectObject(bgDc, oldBg);
-        DeleteDC(bgDc);
-      }
-
-      switch (g_screen) {
-        case WELCOME: DrawWelcome(mem); break;
-        case INSTALLING: DrawInstalling(mem); break;
-        case FINISH: DrawFinish(mem); break;
-        case FAILED: DrawFailed(mem); break;
-      }
-
-      BitBlt(dc, 0, 0, g_width, g_height, mem, 0, 0, SRCCOPY);
-      SelectObject(mem, old);
-      DeleteObject(bitmap);
-      DeleteDC(mem);
+      Graphics target(dc);
+      target.DrawImage(&buffer, 0, 0, g_width, g_height);
       EndPaint(hwnd, &ps);
       return 0;
     }
@@ -845,16 +922,26 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_ERASEBKGND:
       return 1;
 
+    case WM_CTLCOLOREDIT: {
+      HDC dc = (HDC)wParam;
+      SetTextColor(dc, RGB(23, 32, 27));
+      SetBkColor(dc, RGB(255, 255, 255));
+      static HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
+      return (LRESULT)brush;
+    }
+
     case WM_TIMER: {
       if (g_screen == INSTALLING) {
         LONG state = InterlockedCompareExchange(&g_state, 0, 0);
         if (state == 2) {
           g_screen = FINISH;
+          if (g_edit) ShowWindow(g_edit, SW_HIDE);
           InvalidateRect(hwnd, nullptr, FALSE);
           return 0;
         }
         if (state == 3) {
           g_screen = FAILED;
+          if (g_edit) ShowWindow(g_edit, SW_HIDE);
           InvalidateRect(hwnd, nullptr, FALSE);
           return 0;
         }
@@ -865,16 +952,60 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
     }
 
+    case WM_MOUSEMOVE: {
+      POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      int hover = HitTest(point);
+      if (hover != g_hover) {
+        g_hover = hover;
+        InvalidateRect(hwnd, nullptr, FALSE);
+      }
+      TRACKMOUSEEVENT track{};
+      track.cbSize = sizeof(track);
+      track.dwFlags = TME_LEAVE;
+      track.hwndTrack = hwnd;
+      TrackMouseEvent(&track);
+      return 0;
+    }
+
+    case WM_MOUSELEAVE:
+      if (g_hover != 0) {
+        g_hover = 0;
+        InvalidateRect(hwnd, nullptr, FALSE);
+      }
+      return 0;
+
     case WM_LBUTTONDOWN: {
-      if (!ButtonVisible()) return 0;
-      POINT p{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-      RECT button = ButtonRect();
-      if (PtInRect(&button, p)) HandleButton();
+      POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      int action = HitTest(point);
+      switch (action) {
+        case IA_START:
+        case IA_RETRY:
+          HandleButton();
+          return 0;
+        case IA_OPEN:
+          HandleButton();
+          return 0;
+        case IA_EXIT:
+          PostQuitMessage(0);
+          return 0;
+        case IA_MINIMIZE:
+          ShowWindow(hwnd, SW_MINIMIZE);
+          return 0;
+        case IA_CLOSE:
+          if (g_screen != INSTALLING) PostQuitMessage(0);
+          return 0;
+        default:
+          break;
+      }
+      if (point.y < TITLEBAR) {
+        ReleaseCapture();
+        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+      }
       return 0;
     }
 
     case WM_KEYDOWN:
-      if (wParam == VK_RETURN && ButtonVisible()) HandleButton();
+      if (wParam == VK_RETURN && g_screen != INSTALLING) HandleButton();
       return 0;
 
     case WM_CLOSE:
@@ -898,8 +1029,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
   g_dpi = screen ? GetDeviceCaps(screen, LOGPIXELSX) : 96;
   if (screen) ReleaseDC(nullptr, screen);
   if (g_dpi <= 0) g_dpi = 96;
-  g_width = S(900);
-  g_height = S(600);
+  g_width = S(980);
+  g_height = S(680);
 
   // Silent mode is the update path used by the launcher: no UI, no password.
   // Parse exact arguments so a path such as "C:\Setup\app.exe" cannot trigger
@@ -919,13 +1050,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
   }
   if (silent) return RunSilentUpdate();
 
+  ui::InitGdiplus(g_gdiplusToken);
+
   // Re-running the installer over an existing installation is an update, not a
   // fresh install, so the distribution password is not requested.
   g_updateMode = EngineAlreadyInstalled();
   g_enginePreExisting = DetectForeignEngine();
 
-  g_background = (HBITMAP)LoadImageW(instance, MAKEINTRESOURCEW(101), IMAGE_BITMAP, 0, 0,
-                                     LR_CREATEDIBSECTION);
   g_icon = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(1), IMAGE_ICON, S(64), S(64),
                              LR_DEFAULTCOLOR);
 
@@ -941,15 +1072,19 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
   int y = (GetSystemMetrics(SM_CYSCREEN) - g_height) / 2;
   g_window = CreateWindowExW(0, wc.lpszClassName, kProduct, WS_POPUP, x, y, g_width, g_height,
                              nullptr, nullptr, instance, nullptr);
-  if (!g_window) return 1;
+  if (!g_window) {
+    ui::ShutdownGdiplus(g_gdiplusToken);
+    return 1;
+  }
+  ui::ApplyWindowChrome(g_window, g_width, g_height, S(18), false);
 
   if (!g_updateMode) {
     g_edit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                              WS_CHILD | WS_VISIBLE | ES_PASSWORD | ES_AUTOHSCROLL | ES_LEFT,
-                             S(56), S(454), S(280), S(40), g_window, (HMENU)1001, instance,
+                             S(320), S(406), S(300), S(42), g_window, (HMENU)1001, instance,
                              nullptr);
     HFONT editFont =
-        CreateFontW(-S(18), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                     OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                     DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     SendMessageW(g_edit, WM_SETFONT, (WPARAM)editFont, TRUE);
@@ -967,5 +1102,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
+  ui::ShutdownGdiplus(g_gdiplusToken);
   return 0;
 }

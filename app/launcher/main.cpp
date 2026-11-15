@@ -13,12 +13,18 @@
 #include <windowsx.h>
 #include <winhttp.h>
 #include <bcrypt.h>
+#include <commdlg.h>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shlwapi.h>
 #include <wincrypt.h>
 #include <wintrust.h>
 #include <softpub.h>
+
+#include "app/ui/icons.h"
+#include "app/ui/theme.h"
+
+using namespace Gdiplus;
 
 #include <algorithm>
 #include <cstdint>
@@ -37,8 +43,8 @@
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.1.7";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.1.7";
+static const wchar_t* kVersion = L"0.2.0";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.2.0";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -1142,220 +1148,840 @@ static DWORD WINAPI DownloadThreadProc(LPVOID) {
 static HINSTANCE g_instance = nullptr;
 static HWND g_window = nullptr;
 static int g_dpi = 96;
-static int g_width = 860;
-static int g_height = 540;
+static int g_width = 1080;
+static int g_height = 700;
 static ULONGLONG g_startTick = 0;
-static int g_screen = 0;  // 0 splash, 1 announcement, 2 update, 3 downloading, 4 error
+static ULONG_PTR g_gdiplusToken = 0;
+static int g_screen = 0;  // 0 splash, 1 announcement, 2 update, 3 downloading, 4 error, 5 home
+static int g_homeSection = 0;  // 0 dashboard, 1 new, 2 recent, 3 settings
 static size_t g_announcementIndex = 0;
 static int g_scroll = 0;
 static int g_scrollMax = 0;
+static int g_hover = 0;
+static std::vector<std::wstring> g_recent;
 
 #define S(x) MulDiv((x), g_dpi, 96)
+#define SIDEBAR S(232)
+#define TITLEBAR S(56)
 
-static void FillColor(HDC dc, const RECT& r, COLORREF color) {
-  HBRUSH brush = CreateSolidBrush(color);
-  FillRect(dc, &r, brush);
-  DeleteObject(brush);
+enum Action {
+  A_NONE = 0,
+  A_NAV_HOME,
+  A_NAV_NEW,
+  A_NAV_OPEN,
+  A_NAV_RECENT,
+  A_NAV_ANNOUNCE,
+  A_NAV_SETTINGS,
+  A_CREATE_WRITER,
+  A_CREATE_CALC,
+  A_CREATE_IMPRESS,
+  A_CREATE_DRAW,
+  A_OPEN_FILE,
+  A_CHECK_UPDATE,
+  A_DOWNLOAD,
+  A_VIEW_ANNOUNCE,
+  A_CONTINUE,
+  A_RETRY,
+  A_MINIMIZE,
+  A_CLOSE,
+  A_OPEN_PROFILE,
+  A_ABOUT,
+  A_OPEN_RELEASES,
+  A_CLEAR_RECENT,
+  A_RECENT_BASE = 100,
+};
+
+struct HitTarget {
+  RectF rect;
+  int id;
+};
+
+static std::vector<HitTarget> g_hits;
+
+static void AddHit(const RectF& rect, int id) {
+  if (rect.Width > 0 && rect.Height > 0) g_hits.push_back({rect, id});
 }
 
-static void DrawTextLine(HDC dc, const std::wstring& text, RECT rect, int size, int weight,
-                         COLORREF color, const wchar_t* face, UINT flags) {
-  HFONT font = CreateFontW(-S(size), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                           OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                           DEFAULT_PITCH | FF_DONTCARE, face);
-  HGDIOBJ old = SelectObject(dc, font);
-  SetTextColor(dc, color);
-  SetBkMode(dc, TRANSPARENT);
-  DrawTextW(dc, text.c_str(), (int)text.size(), &rect, flags);
-  SelectObject(dc, old);
-  DeleteObject(font);
+static int HitTest(POINT point) {
+  for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
+    if (ui::Hit(it->rect, point)) return it->id;
+  }
+  return A_NONE;
 }
 
-static RECT ButtonRect() {
-  RECT r;
-  r.right = g_width - S(56);
-  r.left = r.right - S(190);
-  r.bottom = g_height - S(56);
-  r.top = r.bottom - S(46);
-  return r;
+static void LaunchEngine(const std::wstring& extraArgs = L"");
+static void StartDownload();
+static void FinishAnnouncements();
+static void RefreshRecent();
+
+static std::wstring BaseName(const std::wstring& path) {
+  size_t slash = path.find_last_of(L"\\/");
+  return slash == std::wstring::npos ? path : path.substr(slash + 1);
 }
 
-static void DrawButton(HDC dc, const wchar_t* label, bool busy) {
-  RECT r = ButtonRect();
-  FillColor(dc, r, busy ? RGB(38, 62, 52) : RGB(244, 241, 232));
-  DrawTextLine(dc, label, r, 15, FW_SEMIBOLD, busy ? RGB(150, 170, 158) : RGB(16, 32, 26),
-               L"Microsoft YaHei UI", DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+static std::vector<std::wstring> LoadRecent() {
+  std::vector<std::wstring> items;
+  FILE* file = _wfopen((StateDirectory() + L"\\recent.ini").c_str(), L"rb");
+  if (!file) return items;
+  char line[1024];
+  while (fgets(line, sizeof(line), file) && items.size() < 6) {
+    std::string text(line);
+    while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
+    if (!text.empty()) items.push_back(Utf8ToWide(text));
+  }
+  fclose(file);
+  return items;
 }
 
-static void DrawProgress(HDC dc, int percent) {
-  int left = S(56), right = g_width - S(56);
-  int top = g_height - S(130);
-  RECT track{left, top, right, top + S(8)};
-  FillColor(dc, track, RGB(38, 62, 52));
-  int width = (right - left) * percent / 100;
-  if (width > 0) {
-    RECT fill{left, top, left + width, top + S(8)};
-    FillColor(dc, fill, RGB(88, 184, 146));
+static void AddRecent(const std::wstring& path) {
+  std::vector<std::wstring> items = LoadRecent();
+  items.erase(std::remove_if(items.begin(), items.end(), [&](const std::wstring& item) {
+                return _wcsicmp(item.c_str(), path.c_str()) == 0;
+              }),
+              items.end());
+  items.insert(items.begin(), path);
+  if (items.size() > 6) items.resize(6);
+  FILE* file = _wfopen((StateDirectory() + L"\\recent.ini").c_str(), L"wb");
+  if (!file) return;
+  for (const auto& item : items) {
+    std::string text = WideToUtf8(item);
+    fwrite(text.data(), 1, text.size(), file);
+    fwrite("\n", 1, 1, file);
+  }
+  fclose(file);
+  RefreshRecent();
+}
+
+static void RefreshRecent() {
+  g_recent = LoadRecent();
+}
+
+static void OpenFileDialog() {
+  wchar_t path[MAX_PATH] = {0};
+  OPENFILENAMEW dialog{};
+  dialog.lStructSize = sizeof(dialog);
+  dialog.hwndOwner = g_window;
+  dialog.lpstrFile = path;
+  dialog.nMaxFile = MAX_PATH;
+  dialog.lpstrFilter =
+      L"Office documents\0*.odt;*.ods;*.odp;*.odg;*.docx;*.xlsx;*.pptx;*.pdf\0"
+      L"All files\0*.*\0\0";
+  dialog.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+  if (!GetOpenFileNameW(&dialog)) return;
+  AddRecent(path);
+  LaunchEngine(L"\"" + std::wstring(path) + L"\"");
+}
+
+static void StartUpdateCheck() {
+  g_update = UpdateInfo{};
+  g_announcements.clear();
+  g_announcementIndex = 0;
+  SetStatus(L"正在检查更新…");
+  InterlockedExchange(&g_checkState, 0);
+  g_screen = 0;
+  g_startTick = GetTickCount64();
+  CreateThread(nullptr, 0, CheckThreadProc, nullptr, 0, nullptr);
+  InvalidateRect(g_window, nullptr, FALSE);
+}
+
+static void ShowAnnouncements() {
+  if (g_announcements.empty()) {
+    MessageBoxW(g_window, L"当前没有新公告。", kProductName, MB_ICONINFORMATION | MB_OK);
+    return;
+  }
+  g_screen = 1;
+  g_announcementIndex = 0;
+  g_scroll = 0;
+  InvalidateRect(g_window, nullptr, FALSE);
+}
+
+static void DrawButton(Graphics& g, const RectF& rect, const std::wstring& label, int icon,
+                       bool primary, int action, bool dark = false) {
+  bool hover = g_hover == action;
+  if (primary) {
+    ui::FillRound(g, rect, S(10), hover ? ui::GreenLight() : ui::Green());
+  } else {
+    ui::FillRound(g, rect, S(10), hover ? ui::SurfaceMuted() : ui::Surface());
+    ui::StrokeRound(g, rect, S(10), ui::Border(), 1.0f);
+  }
+  float iconSize = S(17);
+  float textX = rect.X + S(16);
+  if (icon) {
+    ui::Icon(g, icon, primary || dark ? ui::ICON_CREAM : ui::ICON_GREEN,
+             RectF(rect.X + S(14), rect.Y + (rect.Height - iconSize) / 2, iconSize, iconSize));
+    textX += iconSize + S(8);
+  }
+  ui::Text(g, label, RectF(textX, rect.Y, rect.Width - (textX - rect.X) - S(12), rect.Height),
+           S(13), FontStyleBold, primary ? ui::Surface() : ui::Text(), StringAlignmentNear,
+           StringAlignmentCenter);
+  AddHit(rect, action);
+}
+
+static void DrawWindowButton(Graphics& g, const RectF& rect, int icon, int action, bool dark) {
+  bool hover = g_hover == action;
+  if (hover) {
+    ui::FillRound(g, rect, S(8), dark ? ui::rgba(255, 255, 255, 24) : ui::rgba(16, 32, 26, 12));
+  }
+  ui::Icon(g, icon, dark ? ui::ICON_CREAM : ui::ICON_MUTED,
+           RectF(rect.X + S(6), rect.Y + S(6), S(16), S(16)));
+  AddHit(rect, action);
+}
+
+static void DrawNavItem(Graphics& g, int y, int icon, const std::wstring& label, int action,
+                        bool active) {
+  RectF rect(S(16), (float)y, S(200), S(44));
+  bool hover = g_hover == action;
+  if (active) {
+    ui::FillRound(g, rect, S(12), ui::SidebarActive());
+    ui::FillRound(g, RectF(S(17), y + S(14), S(3), S(16)), S(2), ui::Accent());
+  } else if (hover) {
+    ui::FillRound(g, rect, S(12), ui::rgba(255, 255, 255, 14));
+  }
+  ui::Icon(g, icon, active ? ui::ICON_CREAM : ui::ICON_SOFT,
+           RectF(S(30), y + S(13), S(18), S(18)));
+  ui::Text(g, label, RectF(S(60), y, S(140), S(44)), S(13),
+           active ? FontStyleBold : FontStyleRegular,
+           active ? ui::SidebarText() : ui::SidebarMuted(), StringAlignmentNear,
+           StringAlignmentCenter);
+  AddHit(rect, action);
+}
+
+static void DrawSidebar(Graphics& g) {
+  RectF side(0, 0, SIDEBAR, g_height);
+  LinearGradientBrush background(side, ui::rgba(22, 50, 39), ui::rgba(10, 24, 19),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, side);
+
+  ui::Image(g, 111, RectF(S(24), S(24), S(38), S(38)));
+  ui::TextLatin(g, L"Chenyi Office", RectF(S(74), S(22), S(140), S(24)), S(15),
+                FontStyleBold, ui::SidebarText());
+  ui::Text(g, L"胡辰逸定制版", RectF(S(74), S(47), S(140), S(18)), S(10),
+           FontStyleRegular, ui::SidebarMuted());
+  ui::FillRound(g, RectF(S(24), S(86), S(184), 1), 0, ui::rgba(255, 255, 255, 18));
+
+  int y = S(104);
+  DrawNavItem(g, y, UI_ICON_HOUSE, L"首页", A_NAV_HOME, g_homeSection == 0 && g_screen == 5);
+  y += S(48);
+  DrawNavItem(g, y, UI_ICON_FILE_PLUS, L"新建", A_NAV_NEW, g_homeSection == 1 && g_screen == 5);
+  y += S(48);
+  DrawNavItem(g, y, UI_ICON_FOLDER_OPEN, L"打开", A_NAV_OPEN, false);
+  y += S(48);
+  DrawNavItem(g, y, UI_ICON_CLOCK, L"最近", A_NAV_RECENT, g_homeSection == 2 && g_screen == 5);
+  y += S(48);
+  DrawNavItem(g, y, UI_ICON_MEGAPHONE, L"公告", A_NAV_ANNOUNCE, false);
+  y += S(48);
+  DrawNavItem(g, y, UI_ICON_SETTINGS, L"设置", A_NAV_SETTINGS, g_homeSection == 3 && g_screen == 5);
+
+  RectF statusCard(S(16), g_height - S(96), S(200), S(72));
+  ui::FillRound(g, statusCard, S(12), ui::rgba(255, 255, 255, 8));
+  ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_SOFT, RectF(S(30), g_height - S(80), S(18), S(18)));
+  ui::TextLatin(g, std::wstring(L"v") + kVersion, RectF(S(58), g_height - S(82), S(120), S(20)),
+                S(12), FontStyleBold, ui::SidebarText());
+  std::wstring status = g_update.version.empty() ? GetStatus() : L"发现新版本";
+  ui::Text(g, status, RectF(S(30), g_height - S(54), S(170), S(18)), S(9.5),
+           FontStyleRegular, g_update.version.empty() ? ui::SidebarMuted() : ui::Accent(),
+           StringAlignmentNear, StringAlignmentNear, false);
+}
+
+static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
+  ui::Text(g, title, RectF(SIDEBAR + S(36), S(12), S(480), S(32)), S(17), FontStyleBold,
+           ui::Text());
+  ui::Text(g, L"Chenyi Office · 胡辰逸定制版", RectF(SIDEBAR + S(36), S(34), S(480), S(16)),
+           S(10), FontStyleRegular, ui::TextMuted());
+  ui::FillRound(g, RectF(SIDEBAR, TITLEBAR - 1, g_width - SIDEBAR, 1), 0, ui::Border());
+
+  DrawWindowButton(g, RectF(g_width - S(86), S(14), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+                   false);
+  if (allowClose) {
+    DrawWindowButton(g, RectF(g_width - S(52), S(14), S(28), S(28)), UI_ICON_CLOSE, A_CLOSE,
+                     false);
   }
 }
 
-static void DrawSplash(HDC dc) {
-  ULONGLONG elapsed = GetTickCount64() - g_startTick;
-  int pad = S(56);
-
-  RECT label{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, L"OFFICE SUITE · WINDOWS", label, 11, FW_NORMAL, RGB(110, 142, 127),
-               L"Consolas", DT_LEFT | DT_SINGLELINE);
-
-  int lineTop = S(168);
-  int lineWidth = (int)(S(240) * std::min(1.0, (double)elapsed / 900.0));
-  RECT accent{pad, lineTop, pad + lineWidth, lineTop + S(3)};
-  FillColor(dc, accent, RGB(88, 184, 146));
-
-  RECT word{pad, S(196), g_width - pad, S(268)};
-  DrawTextLine(dc, L"CHENYI OFFICE", word, 44, FW_SEMIBOLD, RGB(244, 241, 232),
-               L"Segoe UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT edition{pad, S(272), g_width - pad, S(304)};
-  DrawTextLine(dc, L"胡辰逸定制版", edition, 17, FW_NORMAL, RGB(136, 196, 168),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT tagline{pad, S(330), g_width - pad, S(360)};
-  DrawTextLine(dc, L"为 Windows 10 / 11 64 位重新设计的办公套件", tagline, 14, FW_NORMAL,
-               RGB(150, 170, 158), L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT status{pad, g_height - S(74), g_width - S(220), g_height - S(46)};
-  DrawTextLine(dc, GetStatus(), status, 12, FW_NORMAL, RGB(150, 170, 158), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-  RECT version{g_width - S(220), g_height - S(74), g_width - pad, g_height - S(46)};
-  DrawTextLine(dc, std::wstring(L"v") + kVersion, version, 12, FW_NORMAL, RGB(110, 142, 127),
-               L"Consolas", DT_RIGHT | DT_SINGLELINE);
+static void DrawQuickCard(Graphics& g, const RectF& rect, int icon, const std::wstring& title,
+                          const std::wstring& subtitle, int action) {
+  bool hover = g_hover == action;
+  ui::SoftShadow(g, rect, S(14));
+  ui::FillRound(g, rect, S(14), ui::Surface());
+  ui::StrokeRound(g, rect, S(14), hover ? ui::Accent() : ui::Border(), hover ? 1.5f : 1.0f);
+  RectF tile(rect.X + S(18), rect.Y + S(18), S(42), S(42));
+  ui::FillRound(g, tile, S(12), hover ? ui::rgba(232, 244, 238) : ui::SurfaceMuted());
+  ui::Icon(g, icon, ui::ICON_GREEN, RectF(tile.X + S(9), tile.Y + S(9), S(24), S(24)));
+  ui::Text(g, title, RectF(rect.X + S(74), rect.Y + S(18), rect.Width - S(90), S(24)), S(14),
+           FontStyleBold, ui::Text());
+  ui::Text(g, subtitle, RectF(rect.X + S(74), rect.Y + S(44), rect.Width - S(90), S(36)),
+           S(10.5), FontStyleRegular, ui::TextMuted(), StringAlignmentNear,
+           StringAlignmentNear, true);
+  ui::Icon(g, UI_ICON_CHEVRON_RIGHT, ui::ICON_MUTED,
+           RectF(rect.X + rect.Width - S(30), rect.Y + rect.Height - S(30), S(14), S(14)));
+  AddHit(rect, action);
 }
 
-static void DrawAnnouncement(HDC dc) {
-  int pad = S(56);
-  const Announcement& a = g_announcements[g_announcementIndex];
+static void DrawVersionCard(Graphics& g, const RectF& rect) {
+  ui::SoftShadow(g, rect, S(16));
+  ui::FillRound(g, rect, S(16), ui::Surface());
+  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Text(g, L"版本与更新", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(60), S(22)),
+           S(13), FontStyleBold, ui::Text());
+  ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_GREEN,
+           RectF(rect.X + rect.Width - S(38), rect.Y + S(16), S(20), S(20)));
+  ui::TextLatin(g, std::wstring(L"v") + kVersion,
+                RectF(rect.X + S(18), rect.Y + S(46), rect.Width - S(36), S(34)), S(24),
+                FontStyleBold, ui::Text());
+  std::wstring status = g_update.version.empty() ? GetStatus() : L"有新版本可用";
+  ui::Text(g, status, RectF(rect.X + S(18), rect.Y + S(80), rect.Width - S(36), S(34)),
+           S(10.5), FontStyleRegular,
+           g_update.version.empty() ? ui::TextMuted() : ui::Green(), StringAlignmentNear,
+           StringAlignmentNear, true);
+  if (g_update.version.empty()) {
+    DrawButton(g, RectF(rect.X + S(18), rect.Y + rect.Height - S(48), rect.Width - S(36), S(34)),
+               L"检查更新", UI_ICON_REFRESH, false, A_CHECK_UPDATE);
+  } else {
+    DrawButton(g, RectF(rect.X + S(18), rect.Y + rect.Height - S(48), rect.Width - S(36), S(34)),
+               L"立即更新", UI_ICON_DOWNLOAD, true, A_DOWNLOAD);
+  }
+}
 
-  RECT label{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, L"公告", label, 11, FW_NORMAL, RGB(88, 184, 146), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
+static void DrawAnnouncementCard(Graphics& g, const RectF& rect) {
+  ui::SoftShadow(g, rect, S(16));
+  ui::FillRound(g, rect, S(16), ui::Surface());
+  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Text(g, L"最新公告", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(36), S(22)),
+           S(13), FontStyleBold, ui::Text());
+  if (g_announcements.empty()) {
+    ui::Text(g, L"暂无公告", RectF(rect.X + S(18), rect.Y + S(52), rect.Width - S(36), S(22)),
+             S(11), FontStyleRegular, ui::TextMuted());
+    return;
+  }
+  const Announcement& latest = g_announcements.back();
+  ui::Text(g, latest.title, RectF(rect.X + S(18), rect.Y + S(48), rect.Width - S(36), S(40)),
+           S(12), FontStyleBold, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
+  std::wstring body = latest.body;
+  if (body.size() > 120) body = body.substr(0, 120) + L"…";
+  ui::Text(g, body, RectF(rect.X + S(18), rect.Y + S(90), rect.Width - S(36), S(56)), S(10),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
+  DrawButton(g, RectF(rect.X + S(18), rect.Y + rect.Height - S(48), rect.Width - S(36), S(34)),
+             L"查看公告", UI_ICON_MEGAPHONE, false, A_VIEW_ANNOUNCE);
+}
 
-  wchar_t counter[32];
-  swprintf(counter, 32, L"%d / %d", (int)g_announcementIndex + 1, (int)g_announcements.size());
-  RECT count{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, counter, count, 11, FW_NORMAL, RGB(110, 142, 127), L"Consolas",
-               DT_RIGHT | DT_SINGLELINE);
+static void DrawEngineCard(Graphics& g, const RectF& rect) {
+  ui::SoftShadow(g, rect, S(16));
+  ui::FillRound(g, rect, S(16), ui::Surface());
+  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Text(g, L"办公内核", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(36), S(22)),
+           S(13), FontStyleBold, ui::Text());
+  std::wstring engine = FindEngine();
+  ui::Text(g, engine.empty() ? L"未找到" : L"已就绪",
+           RectF(rect.X + S(18), rect.Y + S(46), rect.Width - S(36), S(22)), S(12),
+           FontStyleBold, engine.empty() ? ui::Danger() : ui::Green());
+  ui::Text(g, engine.empty() ? L"请重新安装内核" : BaseName(engine),
+           RectF(rect.X + S(18), rect.Y + S(72), rect.Width - S(36), S(20)), S(9.5),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, false);
+  if (engine.empty()) AddHit(rect, A_OPEN_RELEASES);
+}
 
-  RECT title{pad, S(84), g_width - pad, S(136)};
-  DrawTextLine(dc, a.title, title, 26, FW_SEMIBOLD, RGB(244, 241, 232), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK | DT_END_ELLIPSIS);
+static void DrawDashboard(Graphics& g) {
+  float left = S(272), top = S(80), leftWidth = S(520);
+  RectF hero(left, top, leftWidth, S(160));
+  ui::FillRoundGradient(g, hero, S(18), ui::GreenLight(), ui::Ink());
+  ui::Text(g, L"下午好，胡辰逸", RectF(left + S(24), top + S(20), leftWidth - S(48), S(34)),
+           S(24), FontStyleBold, ui::SidebarText());
+  ui::Text(g, L"把文档、表格、演示和绘图放在一个安静的工作空间里。",
+           RectF(left + S(24), top + S(62), leftWidth - S(48), S(40)), S(11.5),
+           FontStyleRegular, ui::SidebarMuted(), StringAlignmentNear, StringAlignmentNear, true);
+  RectF openButton(left + S(24), top + S(108), S(148), S(36));
+  ui::FillRound(g, openButton, S(10), g_hover == A_OPEN_FILE ? ui::SurfaceMuted() : ui::Surface());
+  ui::Icon(g, UI_ICON_FOLDER_OPEN, ui::ICON_DARK,
+           RectF(openButton.X + S(14), openButton.Y + S(10), S(16), S(16)));
+  ui::Text(g, L"打开文件", RectF(openButton.X + S(38), openButton.Y, S(100), S(36)), S(12),
+           FontStyleBold, ui::Text(), StringAlignmentNear, StringAlignmentCenter);
+  AddHit(openButton, A_OPEN_FILE);
 
-  RECT bodyArea{pad, S(152), g_width - pad, g_height - S(130)};
-  RECT measure = bodyArea;
-  DrawTextLine(dc, a.body, measure, 15, FW_NORMAL, RGB(210, 216, 208), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK | DT_CALCRECT);
-  int bodyHeight = measure.bottom - measure.top;
-  int visible = bodyArea.bottom - bodyArea.top;
-  g_scrollMax = std::max(0, bodyHeight - visible);
+  ui::Text(g, L"新建", RectF(left, top + S(180), S(160), S(24)), S(16), FontStyleBold,
+           ui::Text());
+  ui::Text(g, L"快速开始", RectF(left + S(64), top + S(184), S(200), S(18)), S(10),
+           FontStyleRegular, ui::TextMuted());
+
+  float cardWidth = S(250), cardHeight = S(112), gap = S(20);
+  DrawQuickCard(g, RectF(left, top + S(214), cardWidth, cardHeight), UI_ICON_FILE_TEXT,
+                L"Writer 文档", L"排版、写作与长文档", A_CREATE_WRITER);
+  DrawQuickCard(g, RectF(left + cardWidth + gap, top + S(214), cardWidth, cardHeight),
+                UI_ICON_TABLE, L"Calc 表格", L"数据、公式与图表", A_CREATE_CALC);
+  DrawQuickCard(g, RectF(left, top + S(214) + cardHeight + gap, cardWidth, cardHeight),
+                UI_ICON_PRESENTATION, L"Impress 演示", L"幻灯片与放映", A_CREATE_IMPRESS);
+  DrawQuickCard(g, RectF(left + cardWidth + gap, top + S(214) + cardHeight + gap, cardWidth,
+                         cardHeight),
+                UI_ICON_SHAPES, L"Draw 绘图", L"图形、流程图与海报", A_CREATE_DRAW);
+
+  float recentTop = top + S(474);
+  ui::Text(g, L"最近使用", RectF(left, recentTop, S(200), S(24)), S(16), FontStyleBold,
+           ui::Text());
+  RectF recentCard(left, recentTop + S(30), leftWidth, S(84));
+  ui::SoftShadow(g, recentCard, S(14));
+  ui::FillRound(g, recentCard, S(14), ui::Surface());
+  ui::StrokeRound(g, recentCard, S(14), ui::Border());
+  if (g_recent.empty()) {
+    ui::Icon(g, UI_ICON_CLOCK, ui::ICON_MUTED,
+             RectF(recentCard.X + S(20), recentCard.Y + S(28), S(24), S(24)));
+    ui::Text(g, L"还没有最近文档", RectF(recentCard.X + S(56), recentCard.Y + S(18), S(280), S(24)),
+             S(12.5), FontStyleBold, ui::Text());
+    ui::Text(g, L"通过“打开文件”打开文档后会出现在这里。",
+             RectF(recentCard.X + S(56), recentCard.Y + S(44), S(320), S(20)), S(10),
+             FontStyleRegular, ui::TextMuted());
+    AddHit(recentCard, A_OPEN_FILE);
+  } else {
+    const std::wstring& path = g_recent.front();
+    ui::Icon(g, UI_ICON_FILE_TEXT, ui::ICON_GREEN,
+             RectF(recentCard.X + S(20), recentCard.Y + S(28), S(24), S(24)));
+    ui::Text(g, BaseName(path), RectF(recentCard.X + S(56), recentCard.Y + S(16), S(380), S(24)),
+             S(12.5), FontStyleBold, ui::Text(), StringAlignmentNear, StringAlignmentNear, false);
+    ui::Text(g, path, RectF(recentCard.X + S(56), recentCard.Y + S(42), S(400), S(20)), S(9.5),
+             FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, false);
+    AddHit(recentCard, A_RECENT_BASE);
+  }
+
+  float rail = left + leftWidth + S(20);
+  DrawVersionCard(g, RectF(rail, top, S(228), S(160)));
+  DrawAnnouncementCard(g, RectF(rail, top + S(176), S(228), S(190)));
+  DrawEngineCard(g, RectF(rail, top + S(382), S(228), S(110)));
+}
+
+static void DrawNewPage(Graphics& g) {
+  float left = S(272), top = S(88);
+  ui::Text(g, L"选择一个新文档", RectF(left, top, S(520), S(34)), S(22), FontStyleBold,
+           ui::Text());
+  ui::Text(g, L"从空白文档开始，或直接打开已有文件继续工作。",
+           RectF(left, top + S(36), S(520), S(22)), S(11), FontStyleRegular, ui::TextMuted());
+  float cardWidth = S(250), cardHeight = S(132), gap = S(20);
+  DrawQuickCard(g, RectF(left, top + S(78), cardWidth, cardHeight), UI_ICON_FILE_TEXT,
+                L"Writer 文档", L"排版、写作与长文档", A_CREATE_WRITER);
+  DrawQuickCard(g, RectF(left + cardWidth + gap, top + S(78), cardWidth, cardHeight),
+                UI_ICON_TABLE, L"Calc 表格", L"数据、公式与图表", A_CREATE_CALC);
+  DrawQuickCard(g, RectF(left, top + S(78) + cardHeight + gap, cardWidth, cardHeight),
+                UI_ICON_PRESENTATION, L"Impress 演示", L"幻灯片与放映", A_CREATE_IMPRESS);
+  DrawQuickCard(g, RectF(left + cardWidth + gap, top + S(78) + cardHeight + gap, cardWidth,
+                         cardHeight),
+                UI_ICON_SHAPES, L"Draw 绘图", L"图形、流程图与海报", A_CREATE_DRAW);
+  RectF openCard(left, top + S(78) + (cardHeight + gap) * 2 + S(12), S(520), S(64));
+  ui::SoftShadow(g, openCard, S(14));
+  ui::FillRound(g, openCard, S(14), ui::Surface());
+  ui::StrokeRound(g, openCard, S(14), ui::Border());
+  ui::Icon(g, UI_ICON_FOLDER_OPEN, ui::ICON_GREEN,
+           RectF(openCard.X + S(20), openCard.Y + S(20), S(24), S(24)));
+  ui::Text(g, L"打开已有文件", RectF(openCard.X + S(58), openCard.Y + S(14), S(300), S(22)),
+           S(12.5), FontStyleBold, ui::Text());
+  ui::Text(g, L"支持 ODF、Office Open XML 和 PDF", RectF(openCard.X + S(58), openCard.Y + S(36),
+                                                        S(360), S(18)),
+           S(9.5), FontStyleRegular, ui::TextMuted());
+  AddHit(openCard, A_OPEN_FILE);
+}
+
+static void DrawRecentPage(Graphics& g) {
+  float left = S(272), top = S(88);
+  ui::Text(g, L"最近使用", RectF(left, top, S(520), S(34)), S(22), FontStyleBold, ui::Text());
+  ui::Text(g, L"这里记录通过 Chenyi Office 打开过的文件。",
+           RectF(left, top + S(36), S(520), S(22)), S(11), FontStyleRegular, ui::TextMuted());
+  if (g_recent.empty()) {
+    RectF empty(left, top + S(82), S(520), S(180));
+    ui::SoftShadow(g, empty, S(16));
+    ui::FillRound(g, empty, S(16), ui::Surface());
+    ui::StrokeRound(g, empty, S(16), ui::Border());
+    ui::Icon(g, UI_ICON_CLOCK, ui::ICON_MUTED, RectF(left + S(24), top + S(110), S(32), S(32)));
+    ui::Text(g, L"还没有最近文档", RectF(left + S(72), top + S(108), S(360), S(26)), S(15),
+             FontStyleBold, ui::Text());
+    ui::Text(g, L"打开一个文档后，它会出现在这里。", RectF(left + S(72), top + S(138), S(360), S(22)),
+             S(10.5), FontStyleRegular, ui::TextMuted());
+    DrawButton(g, RectF(left + S(24), top + S(184), S(132), S(34)), L"打开文件",
+               UI_ICON_FOLDER_OPEN, false, A_OPEN_FILE);
+    return;
+  }
+  DrawButton(g, RectF(left + S(388), top - S(2), S(132), S(32)), L"清空记录", UI_ICON_TRASH,
+             false, A_CLEAR_RECENT);
+  float y = top + S(74);
+  for (size_t i = 0; i < g_recent.size() && i < 5; ++i) {
+    RectF row(left, y, S(520), S(64));
+    ui::FillRound(g, row, S(12), ui::Surface());
+    ui::StrokeRound(g, row, S(12), ui::Border());
+    ui::Icon(g, UI_ICON_FILE_TEXT, ui::ICON_GREEN, RectF(row.X + S(18), row.Y + S(18), S(24), S(24)));
+    ui::Text(g, BaseName(g_recent[i]), RectF(row.X + S(54), row.Y + S(12), S(400), S(22)), S(12),
+             FontStyleBold, ui::Text());
+    ui::Text(g, g_recent[i], RectF(row.X + S(54), row.Y + S(36), S(420), S(18)), S(9.5),
+             FontStyleRegular, ui::TextMuted());
+    ui::Icon(g, UI_ICON_CHEVRON_RIGHT, ui::ICON_MUTED,
+             RectF(row.X + row.Width - S(30), row.Y + S(24), S(14), S(14)));
+    AddHit(row, A_RECENT_BASE + (int)i);
+    y += S(74);
+  }
+}
+
+static void DrawSettingsPage(Graphics& g) {
+  float left = S(272), top = S(88);
+  ui::Text(g, L"设置", RectF(left, top, S(520), S(34)), S(22), FontStyleBold, ui::Text());
+  ui::Text(g, L"更新、本地数据和产品信息。", RectF(left, top + S(36), S(520), S(22)), S(11),
+           FontStyleRegular, ui::TextMuted());
+
+  RectF updateCard(left, top + S(80), S(520), S(132));
+  ui::SoftShadow(g, updateCard, S(14));
+  ui::FillRound(g, updateCard, S(14), ui::Surface());
+  ui::StrokeRound(g, updateCard, S(14), ui::Border());
+  ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_GREEN,
+           RectF(updateCard.X + S(20), updateCard.Y + S(20), S(24), S(24)));
+  ui::Text(g, L"版本与更新", RectF(updateCard.X + S(58), updateCard.Y + S(16), S(300), S(22)),
+           S(13), FontStyleBold, ui::Text());
+  ui::TextLatin(g, std::wstring(L"v") + kVersion,
+                RectF(updateCard.X + S(58), updateCard.Y + S(42), S(200), S(28)), S(18),
+                FontStyleBold, ui::Text());
+  ui::Text(g, GetStatus(), RectF(updateCard.X + S(58), updateCard.Y + S(74), S(300), S(20)),
+           S(10), FontStyleRegular, ui::TextMuted());
+  DrawButton(g, RectF(updateCard.X + S(360), updateCard.Y + S(82), S(140), S(34)),
+             g_update.version.empty() ? L"检查更新" : L"立即更新",
+             g_update.version.empty() ? UI_ICON_REFRESH : UI_ICON_DOWNLOAD, true,
+             g_update.version.empty() ? A_CHECK_UPDATE : A_DOWNLOAD);
+
+  RectF dataCard(left, top + S(228), S(520), S(132));
+  ui::FillRound(g, dataCard, S(14), ui::Surface());
+  ui::StrokeRound(g, dataCard, S(14), ui::Border());
+  ui::Icon(g, UI_ICON_HARD_DRIVE, ui::ICON_GREEN,
+           RectF(dataCard.X + S(20), dataCard.Y + S(20), S(24), S(24)));
+  ui::Text(g, L"本地数据", RectF(dataCard.X + S(58), dataCard.Y + S(16), S(300), S(22)), S(13),
+           FontStyleBold, ui::Text());
+  ui::Text(g, L"配置、日志和已读公告保存在本地；卸载时会一并清理。",
+           RectF(dataCard.X + S(58), dataCard.Y + S(44), S(420), S(40)), S(10.5),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
+  DrawButton(g, RectF(dataCard.X + S(20), dataCard.Y + S(86), S(150), S(34)), L"打开配置目录",
+             UI_ICON_FOLDER_OPEN, false, A_OPEN_PROFILE);
+  DrawButton(g, RectF(dataCard.X + S(184), dataCard.Y + S(86), S(140), S(34)), L"清空最近记录",
+             UI_ICON_TRASH, false, A_CLEAR_RECENT);
+
+  RectF aboutCard(left, top + S(376), S(520), S(132));
+  ui::FillRound(g, aboutCard, S(14), ui::Surface());
+  ui::StrokeRound(g, aboutCard, S(14), ui::Border());
+  ui::Image(g, 110, RectF(aboutCard.X + S(20), aboutCard.Y + S(20), S(28), S(28)));
+  ui::Text(g, L"Chenyi Office（胡辰逸定制版）",
+           RectF(aboutCard.X + S(60), aboutCard.Y + S(16), S(420), S(22)), S(13),
+           FontStyleBold, ui::Text());
+  ui::Text(g, L"基于 LibreOffice 技术构建，界面与更新由本项目维护。",
+           RectF(aboutCard.X + S(60), aboutCard.Y + S(44), S(420), S(22)), S(10.5),
+           FontStyleRegular, ui::TextMuted());
+  ui::Text(g, L"Mozilla Public License 2.0 · Apache 2.0 图标",
+           RectF(aboutCard.X + S(20), aboutCard.Y + S(82), S(420), S(20)), S(9.5),
+           FontStyleRegular, ui::TextMuted());
+  DrawButton(g, RectF(aboutCard.X + S(360), aboutCard.Y + S(84), S(140), S(32)), L"关于",
+             UI_ICON_INFO, false, A_ABOUT);
+}
+
+static void DrawHome(Graphics& g) {
+  DrawSidebar(g);
+  switch (g_homeSection) {
+    case 1:
+      DrawTitleBar(g, L"新建", true);
+      DrawNewPage(g);
+      break;
+    case 2:
+      DrawTitleBar(g, L"最近", true);
+      DrawRecentPage(g);
+      break;
+    case 3:
+      DrawTitleBar(g, L"设置", true);
+      DrawSettingsPage(g);
+      break;
+    default:
+      DrawTitleBar(g, L"首页", true);
+      DrawDashboard(g);
+      break;
+  }
+}
+
+static void DrawSplash(Graphics& g) {
+  RectF full(0, 0, g_width, g_height);
+  LinearGradientBrush background(full, ui::rgba(20, 46, 36), ui::rgba(8, 20, 16),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, full);
+
+  ULONGLONG elapsed = GetTickCount64() - g_startTick;
+  float center = g_width / 2.0f;
+  ui::Image(g, 111, RectF(center - S(48), g_height / 2.0f - S(150), S(96), S(96)));
+  ui::TextLatin(g, L"CHENYI OFFICE", RectF(0, g_height / 2.0f - S(34), g_width, S(44)), S(34),
+                FontStyleBold, ui::SidebarText(), StringAlignmentCenter);
+  ui::Text(g, L"胡辰逸定制版", RectF(0, g_height / 2.0f + S(14), g_width, S(24)), S(14),
+           FontStyleRegular, ui::Accent(), StringAlignmentCenter);
+  float lineWidth = (float)S(220) * std::min(1.0, (double)elapsed / 900.0);
+  ui::FillRound(g, RectF(center - lineWidth / 2, g_height / 2.0f + S(54), lineWidth, S(3)), S(2),
+                ui::Accent());
+  ui::Text(g, GetStatus(), RectF(S(56), g_height - S(74), g_width - S(220), S(24)), S(11),
+           FontStyleRegular, ui::SidebarMuted());
+  ui::TextLatin(g, std::wstring(L"v") + kVersion,
+                RectF(g_width - S(220), g_height - S(74), S(164), S(24)), S(11),
+                FontStyleRegular, ui::TextSoft(), StringAlignmentFar);
+}
+
+static void DrawAnnouncement(Graphics& g) {
+  RectF full(0, 0, g_width, g_height);
+  LinearGradientBrush background(full, ui::rgba(20, 46, 36), ui::rgba(8, 20, 16),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, full);
+
+  const Announcement& announcement = g_announcements[g_announcementIndex];
+  float cardWidth = std::min((float)S(760), (float)g_width - S(112));
+  float cardHeight = std::min((float)S(540), (float)g_height - S(112));
+  RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
+  ui::SoftShadow(g, card, S(20));
+  ui::FillRound(g, card, S(20), ui::Paper());
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_CLOSE, true);
+
+  wchar_t counter[64];
+  swprintf(counter, 64, L"公告  %d / %d", (int)g_announcementIndex + 1,
+           (int)g_announcements.size());
+  ui::Text(g, counter, RectF(card.X + S(36), card.Y + S(28), card.Width - S(72), S(20)), S(10),
+           FontStyleBold, ui::Green());
+  ui::Text(g, announcement.title,
+           RectF(card.X + S(36), card.Y + S(58), card.Width - S(72), S(78)), S(24),
+           FontStyleBold, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
+
+  RectF bodyArea(card.X + S(36), card.Y + S(150), card.Width - S(72), card.Height - S(242));
+  RectF measured = ui::MeasureText(g, announcement.body,
+                                   RectF(0, 0, bodyArea.Width, S(2000)), S(12.5),
+                                   FontStyleRegular, true);
+  g_scrollMax = std::max(0, (int)measured.Height - (int)bodyArea.Height);
+  if (g_scroll < 0) g_scroll = 0;
   if (g_scroll > g_scrollMax) g_scroll = g_scrollMax;
 
-  int saved = SaveDC(dc);
-  IntersectClipRect(dc, bodyArea.left, bodyArea.top, bodyArea.right, bodyArea.bottom);
-  RECT body = bodyArea;
-  body.top -= g_scroll;
-  body.bottom = body.top + bodyHeight + S(4);
-  DrawTextLine(dc, a.body, body, 15, FW_NORMAL, RGB(210, 216, 208), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
-  RestoreDC(dc, saved);
+  GraphicsState state = g.Save();
+  g.SetClip(bodyArea);
+  ui::Text(g, announcement.body,
+           RectF(bodyArea.X, bodyArea.Y - g_scroll, bodyArea.Width, measured.Height + S(20)),
+           S(12.5), FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
+  g.Restore(state);
 
-  DrawButton(dc, L"继续", false);
+  if (g_scrollMax > 0) {
+    float trackX = card.X + card.Width - S(20);
+    float thumbHeight = std::max((float)S(32), bodyArea.Height * bodyArea.Height / measured.Height);
+    float thumbY = bodyArea.Y + (bodyArea.Height - thumbHeight) * g_scroll / g_scrollMax;
+    ui::FillRound(g, RectF(trackX, bodyArea.Y, S(4), bodyArea.Height), S(2),
+                  ui::rgba(16, 32, 26, 18));
+    ui::FillRound(g, RectF(trackX, thumbY, S(4), thumbHeight), S(2), ui::rgba(31, 92, 70, 120));
+  }
+
+  bool last = g_announcementIndex + 1 >= g_announcements.size();
+  DrawButton(g, RectF(card.X + card.Width - S(172), card.Y + card.Height - S(64), S(136), S(40)),
+             last ? L"继续" : L"下一条", last ? UI_ICON_ARROW_RIGHT : UI_ICON_CHEVRON_RIGHT,
+             true, A_CONTINUE);
 }
 
-static void DrawUpdate(HDC dc) {
-  int pad = S(56);
+static void DrawUpdate(Graphics& g) {
+  RectF full(0, 0, g_width, g_height);
+  LinearGradientBrush background(full, ui::rgba(20, 46, 36), ui::rgba(8, 20, 16),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, full);
 
-  RECT label{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, L"强制更新", label, 11, FW_NORMAL, RGB(232, 166, 120), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
+  float cardWidth = std::min((float)S(720), (float)g_width - S(112));
+  float cardHeight = std::min((float)S(520), (float)g_height - S(112));
+  RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
+  ui::SoftShadow(g, card, S(20));
+  ui::FillRound(g, card, S(20), ui::Paper());
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+                   true);
 
-  RECT title{pad, S(88), g_width - pad, S(140)};
-  DrawTextLine(dc, L"发现新版本", title, 30, FW_SEMIBOLD, RGB(244, 241, 232),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
+  ui::FillRoundGradient(g, RectF(card.X, card.Y, card.Width, S(160)), S(20), ui::GreenLight(),
+                        ui::Green());
+  ui::FillRound(g, RectF(card.X, card.Y + S(120), card.Width, S(40)), 0, ui::Green());
+  ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_CREAM,
+           RectF(card.X + S(32), card.Y + S(30), S(44), S(44)));
+  ui::Text(g, L"强制更新", RectF(card.X + S(92), card.Y + S(28), S(300), S(20)), S(10),
+           FontStyleBold, ui::rgba(220, 240, 230));
+  ui::Text(g, L"发现新版本", RectF(card.X + S(92), card.Y + S(48), S(400), S(36)), S(24),
+           FontStyleBold, ui::SidebarText());
+  ui::TextLatin(g, std::wstring(L"v") + g_update.version,
+                RectF(card.X + S(32), card.Y + S(102), S(400), S(40)), S(28), FontStyleBold,
+                ui::Surface());
 
-  RECT ver{pad, S(148), g_width - pad, S(186)};
-  DrawTextLine(dc, std::wstring(L"v") + g_update.version, ver, 24, FW_SEMIBOLD,
-               RGB(136, 196, 168), L"Consolas", DT_LEFT | DT_SINGLELINE);
-
-  RECT meta{pad, S(194), g_width - pad, S(222)};
-  wchar_t metaText[512];
-  swprintf(metaText, 512, L"当前版本 v%ls · 安装包 %ls", kVersion,
+  wchar_t meta[512];
+  swprintf(meta, 512, L"当前版本 v%ls  ·  安装包 %ls", kVersion,
            FormatBytes(g_update.size).c_str());
-  DrawTextLine(dc, metaText, meta, 13, FW_NORMAL, RGB(150, 170, 158), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
+  ui::Text(g, meta, RectF(card.X + S(32), card.Y + S(184), card.Width - S(64), S(22)), S(10.5),
+           FontStyleRegular, ui::TextMuted());
+  ui::Text(g, L"此更新为强制更新。完成安装前，旧版本无法继续使用；更新页面不提供退出或跳过。",
+           RectF(card.X + S(32), card.Y + S(220), card.Width - S(64), S(48)), S(11.5),
+           FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
 
-  RECT body{pad, S(248), g_width - pad, S(330)};
-  DrawTextLine(dc,
-               L"此更新为强制更新。完成安装前，旧版本无法继续使用；更新页面不提供退出或跳过。",
-               body, 15, FW_NORMAL, RGB(210, 216, 208), L"Microsoft YaHei UI",
-               DT_LEFT | DT_WORDBREAK);
+  RectF note(card.X + S(32), card.Y + S(286), card.Width - S(64), S(64));
+  ui::FillRound(g, note, S(12), ui::SurfaceMuted());
+  ui::Icon(g, UI_ICON_INFO, ui::ICON_GREEN, RectF(note.X + S(14), note.Y + S(20), S(20), S(20)));
+  ui::Text(g, L"下载完成后会自动校验 SHA-256 与发布者签名，再静默安装并重新打开。",
+           RectF(note.X + S(44), note.Y + S(14), note.Width - S(58), S(40)), S(10.5),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
 
-  RECT note{pad, S(348), g_width - pad, g_height - S(150)};
-  DrawTextLine(dc, L"下载完成后会自动校验安装包并启动安装程序，安装结束后自动重新打开。", note, 13,
-               FW_NORMAL, RGB(150, 170, 158), L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
-
-  DrawButton(dc, L"下载并安装", false);
+  DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(180), S(40)),
+             L"下载并安装", UI_ICON_DOWNLOAD, true, A_DOWNLOAD);
+  ui::Text(g, L"此页面不可跳过", RectF(card.X + S(228), card.Y + card.Height - S(52), S(240), S(20)),
+           S(9.5), FontStyleRegular, ui::TextSoft());
 }
 
-static void DrawDownloading(HDC dc) {
-  int pad = S(56);
+static void DrawDownloading(Graphics& g) {
+  RectF full(0, 0, g_width, g_height);
+  LinearGradientBrush background(full, ui::rgba(20, 46, 36), ui::rgba(8, 20, 16),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, full);
+  float cardWidth = std::min((float)S(720), (float)g_width - S(112));
+  float cardHeight = std::min((float)S(500), (float)g_height - S(112));
+  RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
+  ui::SoftShadow(g, card, S(20));
+  ui::FillRound(g, card, S(20), ui::Paper());
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+                   true);
+
   int percent = (int)InterlockedCompareExchange(&g_downloadPercent, 0, 0);
-
-  RECT label{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, L"强制更新", label, 11, FW_NORMAL, RGB(232, 166, 120), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
-
-  RECT title{pad, S(96), g_width - pad, S(148)};
-  DrawTextLine(dc, L"正在下载更新", title, 30, FW_SEMIBOLD, RGB(244, 241, 232),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
+  ui::FillRound(g, RectF(card.X + S(32), card.Y + S(32), S(56), S(56)), S(16),
+                ui::rgba(232, 244, 238));
+  ui::Icon(g, UI_ICON_DOWNLOAD, ui::ICON_GREEN,
+           RectF(card.X + S(46), card.Y + S(46), S(28), S(28)));
+  ui::Text(g, L"强制更新", RectF(card.X + S(104), card.Y + S(34), S(300), S(18)), S(10),
+           FontStyleBold, ui::Green());
+  ui::Text(g, L"正在下载更新", RectF(card.X + S(104), card.Y + S(54), S(400), S(32)), S(22),
+           FontStyleBold, ui::Text());
   wchar_t pct[32];
   swprintf(pct, 32, L"%d%%", percent);
-  RECT number{pad, S(170), g_width - pad, S(240)};
-  DrawTextLine(dc, pct, number, 44, FW_SEMIBOLD, RGB(136, 196, 168), L"Consolas",
-               DT_LEFT | DT_SINGLELINE);
-
-  DrawProgress(dc, percent);
-
-  RECT hint{pad, g_height - S(190), g_width - pad, g_height - S(140)};
-  DrawTextLine(dc, L"下载期间请保持网络连接。完成前无法关闭或跳过更新。", hint, 13, FW_NORMAL,
-               RGB(150, 170, 158), L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
+  ui::TextLatin(g, pct, RectF(card.X + S(32), card.Y + S(120), card.Width - S(64), S(64)), S(48),
+                FontStyleBold, ui::Green());
+  RectF track(card.X + S(32), card.Y + S(196), card.Width - S(64), S(10));
+  ui::FillRound(g, track, S(5), ui::SurfaceMuted());
+  if (percent > 0) {
+    ui::FillRound(g, RectF(track.X, track.Y, track.Width * percent / 100.0f, track.Height), S(5),
+                  ui::Green());
+  }
+  ui::Text(g, L"下载期间请保持网络连接。完成前无法关闭或跳过更新。",
+           RectF(card.X + S(32), card.Y + S(228), card.Width - S(64), S(44)), S(11),
+           FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
+  ui::Text(g, L"完成后会自动校验安装包并启动安装程序。",
+           RectF(card.X + S(32), card.Y + S(286), card.Width - S(64), S(22)), S(10),
+           FontStyleRegular, ui::TextMuted());
 }
 
-static void DrawError(HDC dc) {
-  int pad = S(56);
+static void DrawError(Graphics& g) {
+  RectF full(0, 0, g_width, g_height);
+  LinearGradientBrush background(full, ui::rgba(34, 34, 30), ui::rgba(16, 20, 18),
+                                 LinearGradientModeVertical);
+  g.FillRectangle(&background, full);
+  float cardWidth = std::min((float)S(760), (float)g_width - S(112));
+  float cardHeight = std::min((float)S(520), (float)g_height - S(112));
+  RectF card((g_width - cardWidth) / 2, (g_height - cardHeight) / 2, cardWidth, cardHeight);
+  ui::SoftShadow(g, card, S(20));
+  ui::FillRound(g, card, S(20), ui::Paper());
+  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
+                   true);
 
-  RECT label{pad, S(46), g_width - pad, S(70)};
-  DrawTextLine(dc, L"更新失败", label, 11, FW_NORMAL, RGB(232, 133, 120), L"Microsoft YaHei UI",
-               DT_LEFT | DT_SINGLELINE);
+  ui::FillRound(g, RectF(card.X + S(32), card.Y + S(32), S(56), S(56)), S(16), ui::DangerSoft());
+  ui::Icon(g, UI_ICON_INFO, ui::ICON_MUTED, RectF(card.X + S(46), card.Y + S(46), S(28), S(28)));
+  ui::Text(g, L"更新失败", RectF(card.X + S(104), card.Y + S(34), S(300), S(18)), S(10),
+           FontStyleBold, ui::Danger());
+  ui::Text(g, L"更新未能完成", RectF(card.X + S(104), card.Y + S(54), S(400), S(32)), S(22),
+           FontStyleBold, ui::Text());
+  ui::Text(g, GetDownloadError(), RectF(card.X + S(32), card.Y + S(112), card.Width - S(64), S(150)),
+           S(11.5), FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
+  ui::Text(g, g_update.url, RectF(card.X + S(32), card.Y + S(272), card.Width - S(64), S(44)),
+           S(9.5), FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear,
+           true);
+  DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(136), S(40)), L"重试",
+             UI_ICON_REFRESH, true, A_RETRY);
+  DrawButton(g, RectF(card.X + S(184), card.Y + card.Height - S(64), S(168), S(40)),
+             L"打开下载页", UI_ICON_EXTERNAL_LINK, false, A_OPEN_RELEASES);
+}
 
-  RECT title{pad, S(96), g_width - pad, S(148)};
-  DrawTextLine(dc, L"更新未能完成", title, 30, FW_SEMIBOLD, RGB(244, 241, 232),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT msg{pad, S(168), g_width - pad, S(318)};
-  DrawTextLine(dc, GetDownloadError(), msg, 15, FW_NORMAL, RGB(226, 166, 158),
-               L"Microsoft YaHei UI", DT_LEFT | DT_WORDBREAK);
-
-  RECT linkLabel{pad, S(336), g_width - pad, S(360)};
-  DrawTextLine(dc, L"手动下载地址：", linkLabel, 12, FW_NORMAL, RGB(150, 170, 158),
-               L"Microsoft YaHei UI", DT_LEFT | DT_SINGLELINE);
-
-  RECT link{pad, S(362), g_width - pad, S(410)};
-  DrawTextLine(dc, g_update.url, link, 11, FW_NORMAL, RGB(136, 196, 168), L"Consolas",
-               DT_LEFT | DT_WORDBREAK | DT_END_ELLIPSIS);
-
-  DrawButton(dc, L"重试", false);
+static void OnAction(int action) {
+  if (action >= A_RECENT_BASE) {
+    size_t index = (size_t)(action - A_RECENT_BASE);
+    if (index < g_recent.size()) LaunchEngine(L"\"" + g_recent[index] + L"\"");
+    return;
+  }
+  switch (action) {
+    case A_NAV_HOME:
+      g_homeSection = 0;
+      break;
+    case A_NAV_NEW:
+      g_homeSection = 1;
+      break;
+    case A_NAV_OPEN:
+      OpenFileDialog();
+      return;
+    case A_NAV_RECENT:
+      g_homeSection = 2;
+      break;
+    case A_NAV_ANNOUNCE:
+      ShowAnnouncements();
+      return;
+    case A_NAV_SETTINGS:
+      g_homeSection = 3;
+      break;
+    case A_CREATE_WRITER:
+      LaunchEngine(L"--writer");
+      return;
+    case A_CREATE_CALC:
+      LaunchEngine(L"--calc");
+      return;
+    case A_CREATE_IMPRESS:
+      LaunchEngine(L"--impress");
+      return;
+    case A_CREATE_DRAW:
+      LaunchEngine(L"--draw");
+      return;
+    case A_OPEN_FILE:
+      OpenFileDialog();
+      return;
+    case A_CHECK_UPDATE:
+      StartUpdateCheck();
+      return;
+    case A_DOWNLOAD:
+      if (!g_update.url.empty()) StartDownload();
+      return;
+    case A_VIEW_ANNOUNCE:
+      ShowAnnouncements();
+      return;
+    case A_CONTINUE:
+      if (g_screen == 1) {
+        if (g_announcementIndex + 1 < g_announcements.size()) {
+          ++g_announcementIndex;
+          g_scroll = 0;
+        } else {
+          FinishAnnouncements();
+          return;
+        }
+      }
+      break;
+    case A_RETRY:
+      if (!g_update.url.empty()) StartDownload();
+      return;
+    case A_MINIMIZE:
+      ShowWindow(g_window, SW_MINIMIZE);
+      return;
+    case A_CLOSE:
+      if (g_screen == 1) {
+        FinishAnnouncements();
+      } else if (g_screen == 5 || g_screen == 0) {
+        PostQuitMessage(0);
+      }
+      return;
+    case A_OPEN_PROFILE:
+      ShellExecuteW(nullptr, L"open", StateDirectory().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+      return;
+    case A_ABOUT:
+      MessageBoxW(g_window,
+                  L"Chenyi Office（胡辰逸定制版）\n\n"
+                  L"基于 LibreOffice 技术构建。\n"
+                  L"Mozilla Public License 2.0。\n"
+                  L"产品图标来自 Google Material Design Icons（Apache 2.0）。",
+                  kProductName, MB_ICONINFORMATION | MB_OK);
+      return;
+    case A_OPEN_RELEASES:
+      ShellExecuteW(nullptr, L"open", kReleasesUrl, nullptr, nullptr, SW_SHOWNORMAL);
+      return;
+    case A_CLEAR_RECENT:
+      DeleteFileW((StateDirectory() + L"\\recent.ini").c_str());
+      RefreshRecent();
+      break;
+    default:
+      return;
+  }
+  InvalidateRect(g_window, nullptr, FALSE);
 }
 
 static std::wstring ProfileDirectory() {
@@ -1542,7 +2168,7 @@ static void EnsureProfile() {
           kVersion);
 }
 
-static void LaunchEngine() {
+static void LaunchEngine(const std::wstring& extraArgs) {
   std::wstring engine = FindEngine();
   LogLine(engine.empty() ? L"engine not found" : L"launch engine: " + engine);
   if (engine.empty()) {
@@ -1569,9 +2195,10 @@ static void LaunchEngine() {
   info.lpFile = engine.c_str();
   info.lpDirectory = dir.c_str();
   EnsureProfile();
-  std::wstring profileArg =
+  std::wstring params =
       L"-env:UserInstallation=\"" + FileUrlFromPath(ProfileDirectory()) + L"\"";
-  info.lpParameters = profileArg.c_str();
+  if (!extraArgs.empty()) params += L" " + extraArgs;
+  info.lpParameters = params.c_str();
   info.nShow = SW_SHOWNORMAL;
   if (!ShellExecuteExW(&info)) {
     MessageBoxW(g_window, L"无法启动办公套件。", kProductName, MB_ICONERROR | MB_OK);
@@ -1585,7 +2212,9 @@ static void FinishAnnouncements() {
   std::vector<std::string> ids;
   for (const auto& a : g_announcements) ids.push_back(a.id);
   AppendSeen(ids);
-  LaunchEngine();
+  g_screen = 5;
+  g_homeSection = 0;
+  InvalidateRect(g_window, nullptr, FALSE);
 }
 
 static void StartDownload() {
@@ -1650,20 +2279,6 @@ static void RunInstallerAndRestart() {
   PostQuitMessage(0);
 }
 
-static void HandleButton() {
-  if (g_screen == 1) {
-    if (g_announcementIndex + 1 < g_announcements.size()) {
-      ++g_announcementIndex;
-      g_scroll = 0;
-      InvalidateRect(g_window, nullptr, FALSE);
-    } else {
-      FinishAnnouncements();
-    }
-  } else if (g_screen == 2 || g_screen == 4) {
-    if (!g_update.url.empty()) StartDownload();
-  }
-}
-
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_CREATE:
@@ -1672,25 +2287,26 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
-      HDC mem = CreateCompatibleDC(dc);
-      HBITMAP bitmap = CreateCompatibleBitmap(dc, g_width, g_height);
-      HGDIOBJ old = SelectObject(mem, bitmap);
+      g_hits.clear();
 
-      RECT full{0, 0, g_width, g_height};
-      FillColor(mem, full, RGB(16, 32, 26));
+      Bitmap buffer(g_width, g_height, PixelFormat32bppPARGB);
+      Graphics g(&buffer);
+      g.SetSmoothingMode(SmoothingModeAntiAlias);
+      g.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+      g.Clear(ui::Paper());
 
       switch (g_screen) {
-        case 0: DrawSplash(mem); break;
-        case 1: DrawAnnouncement(mem); break;
-        case 2: DrawUpdate(mem); break;
-        case 3: DrawDownloading(mem); break;
-        case 4: DrawError(mem); break;
+        case 0: DrawSplash(g); break;
+        case 1: DrawAnnouncement(g); break;
+        case 2: DrawUpdate(g); break;
+        case 3: DrawDownloading(g); break;
+        case 4: DrawError(g); break;
+        case 5: DrawHome(g); break;
+        default: DrawSplash(g); break;
       }
 
-      BitBlt(dc, 0, 0, g_width, g_height, mem, 0, 0, SRCCOPY);
-      SelectObject(mem, old);
-      DeleteObject(bitmap);
-      DeleteDC(mem);
+      Graphics target(dc);
+      target.DrawImage(&buffer, 0, 0, g_width, g_height);
       EndPaint(hwnd, &ps);
       return 0;
     }
@@ -1702,7 +2318,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       if (g_screen == 0) {
         ULONGLONG elapsed = GetTickCount64() - g_startTick;
         LONG state = InterlockedCompareExchange(&g_checkState, 0, 0);
-        if (state == 1 && elapsed >= 1500) {
+        if (state == 1 && elapsed >= 1400) {
           if (!g_update.version.empty()) {
             g_screen = 2;
           } else if (!g_announcements.empty()) {
@@ -1710,20 +2326,22 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             g_announcementIndex = 0;
             g_scroll = 0;
           } else {
-            LaunchEngine();
-            return 0;
+            g_screen = 5;
+            g_homeSection = 0;
           }
-        } else if (state == 2 && elapsed >= 1200) {
-          LaunchEngine();
+          InvalidateRect(hwnd, nullptr, FALSE);
+          return 0;
+        }
+        if (state == 2 && elapsed >= 1000) {
+          g_screen = 5;
+          g_homeSection = 0;
+          InvalidateRect(hwnd, nullptr, FALSE);
           return 0;
         }
         InvalidateRect(hwnd, nullptr, FALSE);
       } else if (g_screen == 3) {
         LONG state = InterlockedCompareExchange(&g_downloadState, 0, 0);
         if (state == 2) {
-          g_screen = 3;
-          SetWindowTextW(hwnd, L"正在安装更新");
-          InvalidateRect(hwnd, nullptr, FALSE);
           RunInstallerAndRestart();
           return 0;
         }
@@ -1735,15 +2353,54 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
     }
 
+    case WM_MOUSEMOVE: {
+      POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      int hover = HitTest(point);
+      if (hover != g_hover) {
+        g_hover = hover;
+        InvalidateRect(hwnd, nullptr, FALSE);
+      }
+      TRACKMOUSEEVENT track{};
+      track.cbSize = sizeof(track);
+      track.dwFlags = TME_LEAVE;
+      track.hwndTrack = hwnd;
+      TrackMouseEvent(&track);
+      return 0;
+    }
+
+    case WM_MOUSELEAVE:
+      if (g_hover != 0) {
+        g_hover = 0;
+        InvalidateRect(hwnd, nullptr, FALSE);
+      }
+      return 0;
+
     case WM_LBUTTONDOWN: {
-      POINT p{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-      RECT button = ButtonRect();
-      if (PtInRect(&button, p)) HandleButton();
+      POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      int action = HitTest(point);
+      if (action != A_NONE) {
+        OnAction(action);
+        return 0;
+      }
+      if (point.y < TITLEBAR) {
+        ReleaseCapture();
+        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+      }
       return 0;
     }
 
     case WM_KEYDOWN:
-      if (wParam == VK_RETURN) HandleButton();
+      if (wParam == VK_RETURN) {
+        if (g_screen == 1) {
+          OnAction(A_CONTINUE);
+        } else if (g_screen == 2) {
+          OnAction(A_DOWNLOAD);
+        } else if (g_screen == 4) {
+          OnAction(A_RETRY);
+        } else if (g_screen == 5) {
+          OnAction(A_OPEN_FILE);
+        }
+      }
       return 0;
 
     case WM_MOUSEWHEEL:
@@ -1757,14 +2414,14 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
 
     case WM_CLOSE:
-      // The splash can be closed; the announcement gate behaves like the
-      // "continue" button. Mandatory updates and downloads cannot be closed.
-      if (g_screen == 0) {
-        PostQuitMessage(0);
-        return 0;
-      }
+      // The splash and home can be closed; the announcement gate behaves like
+      // "continue". Mandatory updates, downloads and failures cannot be closed.
       if (g_screen == 1) {
         FinishAnnouncements();
+        return 0;
+      }
+      if (g_screen == 0 || g_screen == 5) {
+        PostQuitMessage(0);
         return 0;
       }
       return 0;
@@ -1779,6 +2436,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   g_instance = instance;
   SetProcessDPIAware();
+  ui::InitGdiplus(g_gdiplusToken);
   InitializeCriticalSection(&g_dataLock);
 
   HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\ChenyiOfficeLauncher");
@@ -1792,8 +2450,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   if (screen) ReleaseDC(nullptr, screen);
   if (g_dpi <= 0) g_dpi = 96;
 
-  g_width = S(860);
-  g_height = S(540);
+  g_width = S(1080);
+  g_height = S(700);
   g_startTick = GetTickCount64();
 
   WNDCLASSW wc{};
@@ -1810,7 +2468,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
   g_window = CreateWindowExW(0, wc.lpszClassName, kProductName, WS_POPUP, x, y, g_width, g_height,
                             nullptr, nullptr, instance, nullptr);
-  if (!g_window) return 1;
+  if (!g_window) {
+    ui::ShutdownGdiplus(g_gdiplusToken);
+    return 1;
+  }
+  ui::ApplyWindowChrome(g_window, g_width, g_height, S(18), false);
+  RefreshRecent();
 
   ShowWindow(g_window, SW_SHOW);
   UpdateWindow(g_window);
@@ -1825,5 +2488,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   }
   DeleteCriticalSection(&g_dataLock);
   if (singleInstance) CloseHandle(singleInstance);
+  ui::ShutdownGdiplus(g_gdiplusToken);
   return 0;
 }

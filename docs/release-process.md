@@ -10,7 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/):
 - `MINOR` — new features and user-visible improvements
 - `PATCH` — bug fixes and security updates
 
-Tags use a `v` prefix (`v0.1.7`). Pre-releases use suffixes (`0.2.0-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
+Tags use a `v` prefix (`v0.2.0`). Pre-releases use suffixes (`0.2.0-beta.1`). Only a published, non-prerelease release produces an update manifest, because clients read `releases/latest`.
 
 ## Checklist
 
@@ -27,14 +27,14 @@ Tags use a `v` prefix (`v0.1.7`). Pre-releases use suffixes (`0.2.0-beta.1`). On
 6. **Tag** — create an annotated tag and push it:
 
    ```bash
-   git tag -a v0.1.7 -m "Chenyi Office（胡辰逸定制版） 0.1.7"
-   git push origin v0.1.7
+   git tag -a v0.2.0 -m "Chenyi Office（胡辰逸定制版） 0.2.0"
+   git push origin v0.2.0
    ```
 
 7. **Publish** — create a GitHub Release from the tag:
-   - title: `Chenyi Office（胡辰逸定制版） 0.1.7`
+   - title: `Chenyi Office（胡辰逸定制版） 0.2.0`
    - notes: highlights, changes, known issues
-   - assets: `ChenyiOffice-0.1.7-x64.exe`, its `.sha256`, and `ChenyiOffice-code-signing.cer`
+   - assets: `ChenyiOffice-0.2.0-x64.exe`, its `.sha256`, and `ChenyiOffice-code-signing.cer`
    - do not mark it as a pre-release.
 8. **Manifest** — confirm `.github/workflows/update-manifest.yml` attached `latest.json` with the right version, hash, size, and installer URL. From this point the previous version is blocked on its next launch.
 9. **Announce** — update `announcements.json` with a new unique id so installed clients show the release notice, and post in [Discussions → Announcements](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).

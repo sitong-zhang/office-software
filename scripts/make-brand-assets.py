@@ -139,6 +139,7 @@ def make_background(width=1800, height=1200):
 def main():
     logo = make_logo()
     logo.resize((512, 512), Image.LANCZOS).save(BRAND / "logo.png")
+    material_icon.render(512, CREAM).save(BRAND / "logo-cream.png")
     (ROOT / "docs" / "assets").mkdir(parents=True, exist_ok=True)
     logo.resize((256, 256), Image.LANCZOS).save(ROOT / "docs" / "assets" / "logo.png")
     for target in (

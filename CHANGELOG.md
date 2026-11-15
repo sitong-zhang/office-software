@@ -2,6 +2,28 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-11-15
+
+### Changed
+
+- Rebuilt the shell UI around a WPS-style workspace: vertical sidebar navigation, a hero greeting card, quick-create cards for Writer / Calc / Impress / Draw, a recent-documents list, and a right rail with version, announcement, and engine status.
+- The launcher now has a real home screen instead of jumping straight into the engine. Sidebar actions: 首页、新建、打开、最近、公告、设置.
+- Added working actions: create a document, open an existing file, open recent files, check for updates, view announcements, open the local data folder, clear recent records, and show About information.
+- Rebuilt the installer as a two-column wizard with a dark brand sidebar, three-step progress, feature rows, password field, and a bottom-right primary action.
+- Rebuilt the uninstaller as a two-column layout with a four-step cleanup list and a completion card.
+- Added custom window chrome: rounded corners, DWM shadow/corner hints, drag regions, hover states, minimize/close controls, and disabled close while installing or updating.
+- Ported layout structure and design tokens from **Tabler** (42k, MIT), **shadcn/ui** (128k, MIT), **AppFlowy** (79k, AGPL, layout inspiration only), and **Fluent UI** (20k, MIT). See `docs/ui-references.md`.
+- Added 24 **Lucide** interface icons (25.7k, ISC), vendored with license and pinned commit in `app/branding/third-party/lucide/`.
+
+### Build
+
+- The shell now uses GDI+ and DWM (`-lgdiplus -ldwmapi`); `make-ui-icons.py` rasterizes the Lucide SVGs at build time.
+
+### Known limitations
+
+- LibreOffice's internal Start Center, dialogs, and toolbar remain upstream VCL layouts; this release rebuilds the Chenyi Office shell, not the engine source.
+- No Windows 10/11 hardware test was available; the new UI was verified under Wine and the Windows smoke workflow still covers hash, signature, and the silent-mode guard.
+
 ## [0.1.7] — 2026-11-15
 
 ### Changed
@@ -159,6 +181,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.2.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.2.0
 [0.1.7]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.7
 [0.1.6]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.6
 [0.1.5]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.5

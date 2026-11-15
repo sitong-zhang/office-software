@@ -31,6 +31,16 @@ The icon path geometry is used unchanged. This project only rasterizes it
 and applies the product fill color. A copy of the license is shipped in
 app/branding/third-party/material-design-icons/LICENSE.
 
+Interface icons (navigation, cards, actions, window controls) use Lucide:
+
+  Upstream:  https://github.com/lucide-icons/lucide
+  Commit:    55782beff3a0133df79c417eb68f96e8f19e2404
+  Copyright: Lucide Icons and contributors
+  License:   ISC License
+
+A copy of the ISC license is shipped in
+app/branding/third-party/lucide/LICENSE.
+
 Trademarks
 ----------
 

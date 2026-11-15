@@ -14,7 +14,7 @@ LO_URL="${LO_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/s
 # Pinned SHA-256 of the engine MSI. Override together with LO_VERSION only when
 # you have independently verified a new upstream artifact.
 LO_MSI_SHA256="${LO_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
-VERSION="0.1.7"
+VERSION="0.2.0"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"
@@ -41,7 +41,7 @@ CXX=x86_64-w64-mingw32-g++
 RC=x86_64-w64-mingw32-windres
 CXXFLAGS=(-std=c++17 -O2 -municode -mwindows -DUNICODE -D_UNICODE
           -finput-charset=UTF-8 -fexec-charset=UTF-8
-          -static -static-libgcc -static-libstdc++ -lwinpthread)
+          -static -static-libgcc -static-libstdc++ -lwinpthread -I"$ROOT")
 
 mkdir -p "$BUILD" "$CACHE" "$DIST"
 
@@ -83,19 +83,20 @@ sign_file() {
 echo "[1/8] Generating brand assets"
 python3 "$ROOT/scripts/make-brand-assets.py"
 python3 "$ROOT/scripts/make-engine-assets.py"
+python3 "$ROOT/scripts/make-ui-icons.py"
 
 echo "[2/8] Building and signing launcher"
 "$RC" "$ROOT/app/launcher/app.rc" -O coff -o "$BUILD/app.res.o"
 "$CXX" "${CXXFLAGS[@]}" "$ROOT/app/launcher/main.cpp" "$BUILD/app.res.o" \
   -o "$BUILD/ChenyiOffice.exe" \
-  -lwinhttp -lbcrypt -lwintrust -lcrypt32 -lshell32 -lole32 -luuid -lshlwapi -lgdi32 -luser32 -ladvapi32
+  -lwinhttp -lbcrypt -lwintrust -lcrypt32 -lshell32 -lole32 -luuid -lshlwapi -lgdi32 -luser32 -ladvapi32 -lgdiplus -ldwmapi
 sign_file "$BUILD/ChenyiOffice.exe"
 
 echo "[3/8] Building and signing uninstaller"
 "$RC" "$ROOT/uninstaller/app.rc" -O coff -o "$BUILD/uninstall.res.o"
 "$CXX" "${CXXFLAGS[@]}" "$ROOT/uninstaller/main.cpp" "$BUILD/uninstall.res.o" \
   -o "$BUILD/Uninstall.exe" \
-  -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32
+  -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32 -lshlwapi -lgdiplus -ldwmapi
 sign_file "$BUILD/Uninstall.exe"
 
 echo "[4/8] Preparing LibreOffice engine"
@@ -124,7 +125,7 @@ echo "[6/8] Building installer shell"
 "$RC" "$ROOT/installer/app.rc" -O coff -o "$BUILD/setup.res.o"
 "$CXX" "${CXXFLAGS[@]}" -I"$BUILD" "$ROOT/installer/main.cpp" "$BUILD/setup.res.o" \
   -o "$BUILD/ChenyiOfficeSetup-base.exe" \
-  -lbcrypt -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32
+  -lbcrypt -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32 -lshlwapi -lgdiplus -ldwmapi
 
 echo "[7/8] Appending engine payload"
 python3 - "$BUILD/ChenyiOfficeSetup-base.exe" "$CACHE/$LO_MSI" "$OUT" <<'PY'

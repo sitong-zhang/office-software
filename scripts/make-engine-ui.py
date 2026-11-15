@@ -7,7 +7,7 @@ engine's share/config/soffice.cfg tree for engines that Chenyi Office installs
 itself. A pre-existing engine is never touched.
 
 Layout changes:
-  * Grouped tab order for Writer, Calc, Impress and Draw.
+  * Grouped tab order for Writer, Calc, Impress, Draw and Math.
   * An "Editing" group (Find & Replace / Select All) at the end of Home.
   * Getting-involved, donation, feedback and About entries removed
     from the notebookbar Help menu and the classic menu bar.
@@ -24,7 +24,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = ROOT / "app" / "engine-ui"
 
-MODULES = ("swriter", "scalc", "simpress", "sdraw")
+# Math (smath) is included so its menubar receives the same
+# donation/About stripping as the other modules. Math ships a classic
+# menubar and may or may not carry a notebookbar; build_notebookbar()
+# skips modules without one, and reorder_tabs() preserves source order
+# when a module has no TAB_ORDER entry.
+MODULES = ("swriter", "scalc", "simpress", "sdraw", "smath")
 
 # Grouped tab order. Keys are derived from the tab label text after removing
 # the mnemonic marker and lower-casing: "Reference~s" -> "references".
@@ -234,7 +239,11 @@ def reorder_tabs(root: ET.Element, module: str) -> list[str]:
     if pending is not None:
         pairs.append(("", [pending]))
 
-    order = TAB_ORDER[module]
+    order = TAB_ORDER.get(module)
+    if order is None:
+        # No preferred tab order for this module (e.g. Math); keep source order
+        # instead of raising KeyError.
+        return [key for key, _ in pairs]
     indexed = {key: index for index, key in enumerate(order)}
     ordered = sorted(
         enumerate(pairs),
@@ -532,11 +541,18 @@ def main() -> None:
         shutil.rmtree(out_root)
 
     for module in MODULES:
-        removed, order, added = build_notebookbar(
-            source_root / "modules" / module / "ui" / "notebookbar.ui",
-            out_root / "modules" / module / "ui" / "notebookbar.ui",
-            module,
-        )
+        nb_source = source_root / "modules" / module / "ui" / "notebookbar.ui"
+        if nb_source.exists():
+            removed, order, added = build_notebookbar(
+                nb_source,
+                out_root / "modules" / module / "ui" / "notebookbar.ui",
+                module,
+            )
+        else:
+            # Module (e.g. Math) ships only a classic menubar; skip the
+            # notebookbar pass but keep it in the consistency report.
+            removed, order, added = 0, [], False
+            print(f"{module}: no notebookbar.ui; menubar only")
         build_menubar(
             source_root / "modules" / module / "menubar" / "menubar.xml",
             out_root / "modules" / module / "menubar" / "menubar.xml",

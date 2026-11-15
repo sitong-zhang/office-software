@@ -634,6 +634,7 @@ static void ApplyEngineBranding(const std::wstring& engineRoot) {
   WriteResourceFile(167, cfg + L"\\modules\\sdraw\\menubar\\menubar.xml");
   WriteResourceFile(168, cfg + L"\\sfx\\ui\\startcenter.ui");
   WriteResourceFile(169, cfg + L"\\cui\\ui\\aboutdialog.ui");
+  WriteResourceFile(170, cfg + L"\\modules\\smath\\menubar\\menubar.xml");
 }
 
 static void Fail(const std::wstring& message) {

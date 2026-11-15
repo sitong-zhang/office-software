@@ -26,6 +26,7 @@
 167 RCDATA "app/engine-ui/modules/sdraw/menubar/menubar.xml"
 168 RCDATA "app/engine-ui/sfx/ui/startcenter.ui"
 169 RCDATA "app/engine-ui/cui/ui/aboutdialog.ui"
+170 RCDATA "app/engine-ui/modules/smath/menubar/menubar.xml"
 
 #include "../app/ui/icons.rc"
 

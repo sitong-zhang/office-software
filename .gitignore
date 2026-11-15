@@ -10,6 +10,8 @@
 build/
 out/
 dist/
+# Extracted engine MSI contents (large, regenerated from release asset)
+engine-src/
 *.o
 *.obj
 installer/welcome.png

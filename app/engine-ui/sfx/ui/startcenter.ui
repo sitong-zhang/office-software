@@ -235,7 +235,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="writer_all">
-                        <property name="label" translatable="yes" context="startcenter|writer_all">_Writer Document</property>
+                        <property name="label" translatable="no" context="startcenter|writer_all">文字文档</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -255,7 +255,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="calc_all">
-                        <property name="label" translatable="yes" context="startcenter|calc_all">_Calc Spreadsheet</property>
+                        <property name="label" translatable="no" context="startcenter|calc_all">电子表格</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -275,7 +275,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="impress_all">
-                        <property name="label" translatable="yes" context="startcenter|impress_all">_Impress Presentation</property>
+                        <property name="label" translatable="no" context="startcenter|impress_all">演示文稿</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -295,7 +295,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="draw_all">
-                        <property name="label" translatable="yes" context="startcenter|draw_all">_Draw Drawing</property>
+                        <property name="label" translatable="no" context="startcenter|draw_all">绘图</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -315,7 +315,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="math_all">
-                        <property name="label" translatable="yes" context="startcenter|math_all">_Math Formula</property>
+                        <property name="label" translatable="no" context="startcenter|math_all">公式</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -335,7 +335,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="database_all">
-                        <property name="label" translatable="yes" context="startcenter|database_all">_Base Database</property>
+                        <property name="label" translatable="no" context="startcenter|database_all">数据库</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
@@ -575,11 +575,11 @@
                     <property name="halign">start</property>
                     <property name="active">0</property>
                     <items>
-                      <item id="filter_none" translatable="yes" context="startcenter|filter_none">All Documents</item>
-                      <item id="filter_writer" translatable="yes" context="startcenter|filter_writer">Text Documents</item>
-                      <item id="filter_calc" translatable="yes" context="startcenter|filter_calc">Spreadsheets</item>
-                      <item id="filter_impress" translatable="yes" context="startcenter|filter_impress">Presentations</item>
-                      <item id="filter_draw" translatable="yes" context="startcenter|filter_draw">Drawings</item>
+                      <item id="filter_none" translatable="no" context="startcenter|filter_none">所有文档</item>
+                      <item id="filter_writer" translatable="no" context="startcenter|filter_writer">文本文档</item>
+                      <item id="filter_calc" translatable="no" context="startcenter|filter_calc">电子表格</item>
+                      <item id="filter_impress" translatable="no" context="startcenter|filter_impress">演示文稿</item>
+                      <item id="filter_draw" translatable="no" context="startcenter|filter_draw">绘图</item>
                     </items>
                     <accessibility>
                       <relation type="labelled-by" target="lbFilter" />

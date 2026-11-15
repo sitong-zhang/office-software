@@ -9,7 +9,6 @@ projects. Icon assets are vendored directly.
 | --- | --- | --- | --- |
 | [shadcn/ui](https://github.com/shadcn-ui/ui) | 128,200 | MIT | Card, border, muted surface, radius, and typography tokens |
 | [Tabler](https://github.com/tabler/tabler) | 42,064 | MIT | Sidebar + page header + card grid dashboard layout |
-| [AppFlowy](https://github.com/AppFlowy-IO/AppFlowy) | 78,915 | AGPL-3.0 | Sidebar/workspace information architecture only; no code or assets copied |
 | [Fluent UI](https://github.com/microsoft/fluentui) | 20,407 | MIT | Windows window chrome, button, and focus conventions |
 | [Lucide](https://github.com/lucide-icons/lucide) | 25,758 | ISC | Interface icons, vendored in `app/branding/third-party/lucide/` |
 | [Material Design Icons](https://github.com/google/material-design-icons) | 54,299 | Apache-2.0 | Brand mark, vendored in `app/branding/third-party/material-design-icons/` |
@@ -33,7 +32,6 @@ projects. Icon assets are vendored directly.
 
 ## What was not copied
 
-- No AGPL code or assets from AppFlowy.
 - No Tabler Bootstrap CSS or JavaScript is linked at runtime; only the layout
   structure and spacing conventions were ported to native code.
 - Icons are used under their respective licenses, with full license texts in

@@ -7,7 +7,7 @@ engine's share/config/soffice.cfg tree for engines that Chenyi Office installs
 itself. A pre-existing engine is never touched.
 
 Layout changes:
-  * WPS-style tab order for Writer, Calc, Impress and Draw.
+  * Grouped tab order for Writer, Calc, Impress and Draw.
   * An "Editing" group (Find & Replace / Select All) at the end of Home.
   * Getting-involved, donation, feedback and About entries removed
     from the notebookbar Help menu and the classic menu bar.
@@ -26,7 +26,7 @@ DEFAULT_OUT = ROOT / "app" / "engine-ui"
 
 MODULES = ("swriter", "scalc", "simpress", "sdraw")
 
-# WPS-like tab order. Keys are derived from the tab label text after removing
+# Grouped tab order. Keys are derived from the tab label text after removing
 # the mnemonic marker and lower-casing: "Reference~s" -> "references".
 TAB_ORDER = {
     "swriter": [
@@ -397,11 +397,95 @@ def build_menubar(source: Path, target: Path) -> int:
     return removed
 
 
+def build_about_dialog(source: Path, target: Path) -> None:
+    tree = ET.parse(source)
+    root = tree.getroot()
+    strip_requirements(root)
+
+    def set_prop(object_id: str, name: str, value: str) -> None:
+        for obj in root.iter("object"):
+            if obj.get("id") != object_id:
+                continue
+            node = next(
+                (entry for entry in obj if entry.tag == "property" and entry.get("name") == name),
+                None,
+            )
+            if node is None:
+                node = ET.SubElement(obj, "property", {"name": name})
+            node.text = value
+            if name in ("label", "title"):
+                node.set("translatable", "no")
+
+    set_prop("AboutDialog", "title", "关于 Chenyi Office")
+    set_prop(
+        "lbAbout",
+        "label",
+        "Chenyi Office（胡辰逸定制版）是一套面向 Windows 10 / 11 64 位的桌面办公套件，"
+        "包含文档、表格、演示、绘图与公式编辑。",
+    )
+    set_prop("lbCopyright", "label", "Copyright © 2026 Chenyi Office contributors.")
+    set_prop("btnWebsite", "label", "项目主页")
+    set_prop("btnWebsite", "uri", "https://github.com/sitong-zhang/office-software")
+    set_prop("btnReleaseNotes", "label", "发行说明")
+    set_prop("btnReleaseNotes", "uri", "https://github.com/sitong-zhang/office-software/releases")
+    # The credits page is generated from the engine's contributor list.
+    set_prop("btnCredits", "visible", "False")
+
+    ET.indent(root, space="  ")
+    body = ET.tostring(root, encoding="unicode")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0\n"
+        "     source files; the corresponding source is this repository. -->\n"
+        + body
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def build_start_center(source: Path, target: Path) -> int:
     tree = ET.parse(source)
     root = tree.getroot()
     strip_requirements(root)
     hidden = 0
+
+    def set_label(object_id: str, text: str) -> None:
+        for obj in root.iter("object"):
+            if obj.get("id") != object_id:
+                continue
+            label = next(
+                (node for node in obj if node.tag == "property" and node.get("name") == "label"),
+                None,
+            )
+            if label is None:
+                label = ET.SubElement(obj, "property", {"name": "label"})
+            label.text = text
+            label.set("translatable", "no")
+
+    def set_item(item_id: str, text: str) -> None:
+        for item in root.iter("item"):
+            if item.get("id") == item_id:
+                item.text = text
+                item.set("translatable", "no")
+
+    for object_id, text in (
+        ("writer_all", "文字文档"),
+        ("calc_all", "电子表格"),
+        ("impress_all", "演示文稿"),
+        ("draw_all", "绘图"),
+        ("math_all", "公式"),
+        ("database_all", "数据库"),
+    ):
+        set_label(object_id, text)
+    for item_id, text in (
+        ("filter_none", "所有文档"),
+        ("filter_writer", "文本文档"),
+        ("filter_calc", "电子表格"),
+        ("filter_impress", "演示文稿"),
+        ("filter_draw", "绘图"),
+    ):
+        set_item(item_id, text)
 
     def hide_object(object_id: str) -> None:
         nonlocal hidden
@@ -461,6 +545,12 @@ def main() -> None:
             f"{module}: tabs={','.join(order)} menu-items-removed={removed} "
             f"editing-group={'yes' if added else 'no'}"
         )
+
+    build_about_dialog(
+        source_root / "cui" / "ui" / "aboutdialog.ui",
+        out_root / "cui" / "ui" / "aboutdialog.ui",
+    )
+    print("aboutdialog: branded")
 
     dropped = build_start_center(
         source_root / "sfx" / "ui" / "startcenter.ui",

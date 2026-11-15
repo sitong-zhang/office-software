@@ -9,12 +9,12 @@ BUILD="$ROOT/build"
 CACHE="$BUILD/cache"
 DIST="$ROOT/dist"
 ENGINE_VERSION="${ENGINE_VERSION:-26.8.3}"
-ENGINE_MSI="LibreOffice_${ENGINE_VERSION}_Win_x86-64.msi"
-ENGINE_URL="${ENGINE_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libreoffice/stable/${ENGINE_VERSION}/win/x86_64/${ENGINE_MSI}}"
+ENGINE_MSI="ChenyiEngine-${ENGINE_VERSION}-x64.msi"
+ENGINE_URL="${ENGINE_URL:-https://github.com/sitong-zhang/office-software/releases/download/v0.3.1/${ENGINE_MSI}}"
 # Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
 # when you have independently verified a new external artifact.
 ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
-VERSION="0.3.1"
+VERSION="0.4.0"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"

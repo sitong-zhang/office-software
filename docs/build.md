@@ -43,12 +43,12 @@ Environment overrides:
 5. **Engine** — downloads the pinned MSI into `build/cache/` and verifies the pinned SHA-256 before use.
 6. **Installer shell** — Win32 app with the password-gated welcome page (first install only), installation progress, and finish screen. The launcher, uninstaller, license, notice, splash images, logo/About marks, and generated editor layouts are embedded as resources. After the MSI completes, the installer writes the brand artwork and layouts into an engine it installed itself, hides the engine's own Add/Remove Programs entry, and removes its shortcuts.
 7. **Payload** — the MSI is appended to the installer with a 24-byte footer (`CHNYSET1`, offset, size). The installer extracts it to `%TEMP%` at install time.
-8. **Output** — `dist/ChenyiOffice-0.3.1-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
+8. **Output** — `dist/ChenyiOffice-0.4.0-x64.exe`, its SHA-256, and `ChenyiOffice-code-signing.cer`.
 
 ## Runtime layout
 
 - Program files: `%ProgramFiles%\ChenyiOffice`
-- Engine: the directory created by the engine MSI
+- Engine: `%ProgramFiles%\ChenyiOffice\Engine` on fresh installs; existing installations keep their previous path
 - State: `%LOCALAPPDATA%\ChenyiOffice\state.ini`
 - Shortcuts: Public Desktop and the common Start Menu
 
@@ -64,8 +64,8 @@ If a compatible engine is already installed and Chenyi Office was not previously
 
 After building:
 
-1. Create a draft GitHub Release tagged `v0.3.1`.
-2. Upload `dist/ChenyiOffice-0.3.1-x64.exe`, its checksum, and the public certificate.
+1. Create a draft GitHub Release tagged `v0.4.0`.
+2. Upload `dist/ChenyiOffice-0.4.0-x64.exe`, its checksum, and the public certificate.
 3. Publish the release. `.github/workflows/update-manifest.yml` generates and attaches `latest.json`.
 
 The installer filename must contain `x64` so the manifest workflow can identify it.

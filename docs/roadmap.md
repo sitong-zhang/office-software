@@ -1,6 +1,6 @@
 # Roadmap
 
-Current release: **v0.3.1** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, mandatory update gate, and announcement channel.
+Current release: **v0.4.0** — Windows 10/11 x64 preview with the Chenyi Office launcher, installer, rebuilt editor ribbon, passwordless updates, mandatory update gate, and announcement channel.
 
 Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) and announced in [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements).
 
@@ -29,7 +29,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [x] Branded engine profile (Tabbed ribbon, product name, clean first run)
 - [x] Dedicated user profile launched with `-env:UserInstallation`
 - [x] Remove tip, What's New, feedback, and getting-involved entries
-- [x] WPS-style tab order and compact Home groups for all four applications
+- [x] grouped tab order and compact Home groups for all four applications
 - [x] Start Center without the promotional panel
 - [x] Engine artwork without third-party product references
 - [ ] Dialog and settings reorganization

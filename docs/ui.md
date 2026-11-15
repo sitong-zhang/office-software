@@ -8,7 +8,7 @@ mapping.
 
 ## Implemented in v0.3.1
 
-- **Tabbed ribbon** is the default UI for Writer, Calc, Impress, and Draw, with a WPS-style tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展).
+- **Tabbed ribbon** is the default UI for Writer, Calc, Impress, and Draw, with a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展).
 - **编辑 group** on the Home tab of all four applications, with Find & Replace and Select All.
 - **Sifr icon theme** for a quieter, modern look.
 - **Engine artwork**: custom splash screens (`intro.png`, `intro-highres.png`) and Start Center / About marks (`logo.svg`, `logo-sc.svg`, `about.svg`) are written into the installed engine.

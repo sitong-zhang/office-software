@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify
         required: true
-        default: v0.3.1
+        default: v0.4.0
         type: string
 
 permissions:
@@ -51,9 +51,13 @@ jobs:
             throw "Unexpected signature status: $($signature.Status)"
           }
 
+          $expectedVersion = "${{ inputs.tag }}".TrimStart('v')
+          if ($manifest.version -ne $expectedVersion) {
+            throw "Manifest version $($manifest.version) does not match tag $expectedVersion"
+          }
+
           if (Test-Path "$env:ProgramFiles\ChenyiOffice\ChenyiOffice.exe") {
-            Write-Host 'Chenyi Office is already installed; skipping the silent fresh-install guard.'
-            exit 0
+            throw 'Chenyi Office is already installed; the smoke runner must be clean.'
           }
 
           $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' `

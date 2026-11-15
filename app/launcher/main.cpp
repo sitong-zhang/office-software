@@ -43,8 +43,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.3.1";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.3.1";
+static const wchar_t* kVersion = L"0.4.0";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.0";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -857,7 +857,11 @@ static std::wstring FindEngine() {
 
   wchar_t programFiles[MAX_PATH] = {0};
   GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
-  if (programFiles[0]) candidates.push_back(std::wstring(programFiles) + L"\\LibreOffice\\program\\soffice.exe");
+  if (programFiles[0]) {
+    candidates.push_back(std::wstring(programFiles) +
+                         L"\\ChenyiOffice\\Engine\\program\\soffice.exe");
+    candidates.push_back(std::wstring(programFiles) + L"\\LibreOffice\\program\\soffice.exe");
+  }
 
   candidates.push_back(L"C:\\Program Files\\LibreOffice\\program\\soffice.exe");
 
@@ -1150,6 +1154,8 @@ static HWND g_window = nullptr;
 static int g_dpi = 96;
 static int g_width = 1080;
 static int g_height = 700;
+static const int kBaseWidth = 1080;
+static const int kBaseHeight = 700;
 static ULONGLONG g_startTick = 0;
 static ULONG_PTR g_gdiplusToken = 0;
 static int g_screen = 0;  // 0 splash, 1 announcement, 2 update, 3 downloading, 4 error, 5 home
@@ -1477,7 +1483,16 @@ static void DrawEngineCard(Graphics& g, const RectF& rect) {
   ui::Text(g, engine.empty() ? L"请重新安装内核" : BaseName(engine),
            RectF(rect.X + S(18), rect.Y + S(72), rect.Width - S(36), S(20)), S(9.5),
            FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, false);
-  if (engine.empty()) AddHit(rect, A_OPEN_RELEASES);
+  if (engine.empty()) {
+    RectF repair(rect.X + S(18), rect.Y + rect.Height - S(44), rect.Width - S(36), S(32));
+    ui::FillRound(g, repair, S(9),
+                  g_hover == A_OPEN_RELEASES ? ui::Surface() : ui::SurfaceMuted());
+    ui::Icon(g, UI_ICON_DOWNLOAD, ui::ICON_GREEN,
+             RectF(repair.X + S(10), repair.Y + S(8), S(16), S(16)));
+    ui::Text(g, L"重新安装内核", RectF(repair.X + S(32), repair.Y, repair.Width - S(40), S(32)),
+             S(10.5), FontStyleBold, ui::Green(), StringAlignmentNear, StringAlignmentCenter);
+    AddHit(repair, A_OPEN_RELEASES);
+  }
 }
 
 static void DrawDashboard(Graphics& g) {
@@ -2283,6 +2298,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_CREATE:
       return 0;
 
+    case WM_DPICHANGED: {
+      g_dpi = HIWORD(wParam);
+      if (g_dpi <= 0) g_dpi = 96;
+      g_width = MulDiv(kBaseWidth, g_dpi, 96);
+      g_height = MulDiv(kBaseHeight, g_dpi, 96);
+      RECT* suggested = reinterpret_cast<RECT*>(lParam);
+      SetWindowPos(hwnd, nullptr, suggested->left, suggested->top, g_width, g_height,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      ui::ApplyWindowChrome(hwnd, g_width, g_height, S(18), false);
+      InvalidateRect(hwnd, nullptr, FALSE);
+      return 0;
+    }
+
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
@@ -2449,8 +2477,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   if (screen) ReleaseDC(nullptr, screen);
   if (g_dpi <= 0) g_dpi = 96;
 
-  g_width = S(1080);
-  g_height = S(700);
+  g_width = MulDiv(kBaseWidth, g_dpi, 96);
+  g_height = MulDiv(kBaseHeight, g_dpi, 96);
   g_startTick = GetTickCount64();
 
   WNDCLASSW wc{};

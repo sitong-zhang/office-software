@@ -2,6 +2,20 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-11-15
+
+### Changed
+
+- The editor About dialog now uses Chenyi Office title, description, copyright, project link, and release-notes link; the credits entry is hidden.
+- Fresh installations place the engine in `%ProgramFiles%\ChenyiOffice\Engine`. Existing installations keep their current engine path, so updates do not relocate files.
+- The installer passes `INSTALLLOCATION` to the engine MSI for new installations and removes the engine's legacy registry root after a bundled install.
+- The Start Center create list and document filter now use neutral Chinese labels (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库).
+- The build downloads a neutrally named mirrored engine asset instead of an upstream mirror; `engine/SOURCE.md` records the upstream version, pinned checksum, modified files, generators, and MPL source availability.
+- Removed the incompatible-license layout reference and replaced commercial-product wording in public documents with neutral descriptions.
+- The launcher handles `WM_DPICHANGED` and resizes/repositions the window and controls; the installer and uninstaller do the same.
+- The engine card now shows a **重新安装内核** button when no engine is found.
+- The Windows smoke workflow fails on a dirty runner instead of silently skipping, and checks that `latest.json` matches the release tag.
+
 ## [0.3.1] — 2026-11-15
 
 ### Changed
@@ -13,7 +27,7 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 ### Changed
 
-- Rebuilt the editor interface: Writer, Calc, Impress, and Draw now use a WPS-style tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展, with 公式 before 数据 in Calc).
+- Rebuilt the editor interface: Writer, Calc, Impress, and Draw now use a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展, with 公式 before 数据 in Calc).
 - Added a compact **编辑** group (Find & Replace, Select All) to the Home tab of all four applications.
 - Removed the Start Center promotional panel and button, and removed getting-involved, feedback, Q&A, tip-of-the-day, documentation, and about entries from the editor Help menus. The licence entry remains reachable.
 - Removed every user-facing reference to the underlying project from the launcher, installer, uninstaller, splash, About artwork, README, project site, announcements, and documentation.
@@ -32,13 +46,13 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 ### Changed
 
-- Rebuilt the shell UI around a WPS-style workspace: vertical sidebar navigation, a hero greeting card, quick-create cards for Writer / Calc / Impress / Draw, a recent-documents list, and a right rail with version, announcement, and engine status.
+- Rebuilt the shell UI around a grouped workspace: vertical sidebar navigation, a hero greeting card, quick-create cards for Writer / Calc / Impress / Draw, a recent-documents list, and a right rail with version, announcement, and engine status.
 - The launcher now has a real home screen instead of jumping straight into the engine. Sidebar actions: 首页、新建、打开、最近、公告、设置.
 - Added working actions: create a document, open an existing file, open recent files, check for updates, view announcements, open the local data folder, clear recent records, and show About information.
 - Rebuilt the installer as a two-column wizard with a dark brand sidebar, three-step progress, feature rows, password field, and a bottom-right primary action.
 - Rebuilt the uninstaller as a two-column layout with a four-step cleanup list and a completion card.
 - Added custom window chrome: rounded corners, DWM shadow/corner hints, drag regions, hover states, minimize/close controls, and disabled close while installing or updating.
-- Ported layout structure and design tokens from **Tabler** (42k, MIT), **shadcn/ui** (128k, MIT), **AppFlowy** (79k, AGPL, layout inspiration only), and **Fluent UI** (20k, MIT). See `docs/ui-references.md`.
+- Ported layout structure and design tokens from **Tabler** (42k, MIT), **shadcn/ui** (128k, MIT), and **Fluent UI** (20k, MIT). See `docs/ui-references.md`.
 - Added 24 **Lucide** interface icons (25.7k, ISC), vendored with license and pinned commit in `app/branding/third-party/lucide/`.
 
 ### Build
@@ -207,6 +221,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.4.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.2.0

@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T13:00:00+08:00",
+  "updated_at": "2026-11-15T15:00:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-15-v0-4-0",
+      "title": "v0.4.0 已发布：关于页与安装路径去品牌化",
+      "body": "Chenyi Office（胡辰逸定制版）v0.4.0 已发布。\n\n编辑器的“关于”对话框现在完全使用 Chenyi Office 自己的标题、说明、版权和链接，不再显示第三方名称或贡献者名单。全新安装会把办公内核放到 C:\\Program Files\\ChenyiOffice\\Engine，旧安装保持原路径，更新不会搬文件。\n\n启动中心的“新建”列表改为文字文档、电子表格、演示文稿、绘图、公式、数据库；安装器会隐藏内核自带的程序和功能条目，并清理它创建的开始菜单与桌面快捷方式。\n\n构建改为从本仓库的发布资产获取中性命名的内核包，并增加 engine/SOURCE.md 记录开源许可与源码位置。\n\n首次安装仍需密码，更新不需要。",
+      "severity": "important",
+      "published_at": "2026-11-15T15:00:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-3-1",
       "title": "v0.3.1 已发布：界面资源再清理",
@@ -17,7 +29,7 @@
     {
       "id": "2026-11-15-v0-3-0",
       "title": "v0.3.0 已发布：深度界面改版",
-      "body": "Chenyi Office（胡辰逸定制版）v0.3.0 已发布。\n\n这次改的不只是外壳，编辑器内部的界面也重排了：Writer、Calc、Impress、Draw 的标签页顺序改成 WPS 风格，首页新增“编辑”分组（查找替换、全选），Calc 的公式页放到数据页前面，工具页移到扩展页前面。\n\n启动中心的推广面板已移除；帮助菜单里的参与贡献、反馈、问答、每日提示、在线文档和关于入口也一并移除，只保留帮助、安全模式、命令搜索和许可证。\n\n启动器、安装器、卸载器、开屏、关于页、README、项目站和公告已统一为 Chenyi Office 独立身份。安装器会隐藏办公内核自带的程序和功能条目，并清理它创建的开始菜单与桌面快捷方式。\n\n首次安装仍需密码，更新不需要。",
+      "body": "Chenyi Office（胡辰逸定制版）v0.3.0 已发布。\n\n这次改的不只是外壳，编辑器内部的界面也重排了：Writer、Calc、Impress、Draw 的标签页顺序改成 三段式标签页，首页新增“编辑”分组（查找替换、全选），Calc 的公式页放到数据页前面，工具页移到扩展页前面。\n\n启动中心的推广面板已移除；帮助菜单里的参与贡献、反馈、问答、每日提示、在线文档和关于入口也一并移除，只保留帮助、安全模式、命令搜索和许可证。\n\n启动器、安装器、卸载器、开屏、关于页、README、项目站和公告已统一为 Chenyi Office 独立身份。安装器会隐藏办公内核自带的程序和功能条目，并清理它创建的开始菜单与桌面快捷方式。\n\n首次安装仍需密码，更新不需要。",
       "severity": "important",
       "published_at": "2026-11-15T12:00:00+08:00",
       "expires_at": null,
@@ -28,8 +40,8 @@
     },
     {
       "id": "2026-11-15-v0-2-0",
-      "title": "v0.2.0 已发布：WPS 风格工作台与全新安装器",
-      "body": "Chenyi Office（胡辰逸定制版）v0.2.0 已发布。\n\n启动器不再是“检查完更新就直接进编辑器”：现在有侧边栏、首页、新建、打开、最近、公告和设置。首页可以直接新建 Writer / Calc / Impress / Draw 文档、打开已有文件、查看最近文档、检查更新和查看公告。\n\n安装器改成左侧品牌栏 + 右侧内容的向导，卸载器也换成双栏布局，窗口加了圆角、描边、悬停和自定义标题栏。\n\n界面布局和设计 token 参考了 Tabler、shadcn/ui、AppFlowy、Fluent UI 等高星开源项目；图标使用 Lucide，品牌主图标继续使用 Material Design Icons。具体来源和许可证写在 docs/ui-references.md。\n\n首次安装仍需密码，更新不需要。",
+      "title": "v0.2.0 已发布：三段式标签页工作台与全新安装器",
+      "body": "Chenyi Office（胡辰逸定制版）v0.2.0 已发布。\n\n启动器不再是“检查完更新就直接进编辑器”：现在有侧边栏、首页、新建、打开、最近、公告和设置。首页可以直接新建 Writer / Calc / Impress / Draw 文档、打开已有文件、查看最近文档、检查更新和查看公告。\n\n安装器改成左侧品牌栏 + 右侧内容的向导，卸载器也换成双栏布局，窗口加了圆角、描边、悬停和自定义标题栏。\n\n界面布局和设计 token 参考了 Tabler、shadcn/ui、Fluent UI 等高星开源项目；图标使用 Lucide，品牌主图标继续使用 Material Design Icons。具体来源和许可证写在 docs/ui-references.md。\n\n首次安装仍需密码，更新不需要。",
       "severity": "important",
       "published_at": "2026-11-15T10:30:00+08:00",
       "expires_at": null,

@@ -33,6 +33,8 @@ static volatile LONG g_finishedShown = 0;
 static int g_dpi = 96;
 static int g_width = 760;
 static int g_height = 480;
+static const int kBaseWidth = 760;
+static const int kBaseHeight = 480;
 static ULONG_PTR g_gdiplusToken = 0;
 static int g_hover = 0;
 static bool g_enginePreExisting = false;
@@ -333,6 +335,19 @@ static void DrawScreen(Graphics& g) {
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
+    case WM_DPICHANGED: {
+      g_dpi = HIWORD(wParam);
+      if (g_dpi <= 0) g_dpi = 96;
+      g_width = MulDiv(kBaseWidth, g_dpi, 96);
+      g_height = MulDiv(kBaseHeight, g_dpi, 96);
+      RECT* suggested = reinterpret_cast<RECT*>(lParam);
+      SetWindowPos(hwnd, nullptr, suggested->left, suggested->top, g_width, g_height,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      ui::ApplyWindowChrome(hwnd, g_width, g_height, S(18), false);
+      InvalidateRect(hwnd, nullptr, FALSE);
+      return 0;
+    }
+
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
@@ -457,8 +472,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   wc.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(1));
   RegisterClassW(&wc);
 
-  g_width = S(760);
-  g_height = S(480);
+  g_width = MulDiv(kBaseWidth, g_dpi, 96);
+  g_height = MulDiv(kBaseHeight, g_dpi, 96);
   int x = (GetSystemMetrics(SM_CXSCREEN) - g_width) / 2;
   int y = (GetSystemMetrics(SM_CYSCREEN) - g_height) / 2;
   g_window = CreateWindowExW(0, wc.lpszClassName, kProduct, WS_POPUP, x, y, g_width, g_height,

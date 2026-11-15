@@ -37,7 +37,7 @@ using namespace Gdiplus;
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.3.1";
+static const wchar_t* kVersion = L"0.4.0";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.
@@ -50,11 +50,14 @@ static HINSTANCE g_instance = nullptr;
 static HWND g_window = nullptr;
 static HWND g_edit = nullptr;
 static WNDPROC g_editProc = nullptr;
+static HFONT g_editFont = nullptr;
 static HBITMAP g_background = nullptr;
 static HICON g_icon = nullptr;
 static int g_dpi = 96;
 static int g_width = 980;
 static int g_height = 680;
+static const int kBaseWidth = 980;
+static const int kBaseHeight = 680;
 static ULONG_PTR g_gdiplusToken = 0;
 static int g_hover = 0;
 static Screen g_screen = WELCOME;
@@ -607,8 +610,9 @@ static void RemoveEngineShortcuts() {
   RemoveShortcutsIn(FOLDERID_Desktop, L"LibreOffice*.lnk", false);
 }
 
-static void ApplyEngineBranding(const std::wstring& programFiles) {
-  std::wstring program = programFiles + L"\\LibreOffice\\program";
+static void ApplyEngineBranding(const std::wstring& engineRoot) {
+  if (engineRoot.empty()) return;
+  std::wstring program = engineRoot + L"\\program";
   std::wstring shell = program + L"\\shell";
   if (GetFileAttributesW(program.c_str()) == INVALID_FILE_ATTRIBUTES) return;
 
@@ -619,7 +623,7 @@ static void ApplyEngineBranding(const std::wstring& programFiles) {
   WriteResourceFile(154, shell + L"\\about.svg");
 
   // Deep UI layout: tab order, Home groups, menus and Start Center.
-  std::wstring cfg = programFiles + L"\\LibreOffice\\share\\config\\soffice.cfg";
+  std::wstring cfg = engineRoot + L"\\share\\config\\soffice.cfg";
   WriteResourceFile(160, cfg + L"\\modules\\swriter\\ui\\notebookbar.ui");
   WriteResourceFile(161, cfg + L"\\modules\\swriter\\menubar\\menubar.xml");
   WriteResourceFile(162, cfg + L"\\modules\\scalc\\ui\\notebookbar.ui");
@@ -629,6 +633,7 @@ static void ApplyEngineBranding(const std::wstring& programFiles) {
   WriteResourceFile(166, cfg + L"\\modules\\sdraw\\ui\\notebookbar.ui");
   WriteResourceFile(167, cfg + L"\\modules\\sdraw\\menubar\\menubar.xml");
   WriteResourceFile(168, cfg + L"\\sfx\\ui\\startcenter.ui");
+  WriteResourceFile(169, cfg + L"\\cui\\ui\\aboutdialog.ui");
 }
 
 static void Fail(const std::wstring& message) {
@@ -644,11 +649,51 @@ static bool EngineAlreadyInstalled() {
   return GetFileAttributesW((dir + L"\\ChenyiOffice.exe").c_str()) != INVALID_FILE_ATTRIBUTES;
 }
 
-static std::wstring DefaultEnginePath() {
+static bool PathExists(const std::wstring& path) {
+  return !path.empty() && GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
+static std::wstring EngineRootFromExe(const std::wstring& exe) {
+  size_t program = exe.find_last_of(L'\\');
+  if (program == std::wstring::npos) return L"";
+  std::wstring programDir = exe.substr(0, program);
+  size_t root = programDir.find_last_of(L'\\');
+  if (root == std::wstring::npos) return L"";
+  return programDir.substr(0, root);
+}
+
+static std::wstring FreshEngineRoot() {
   wchar_t programFiles[MAX_PATH] = {0};
   GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
   if (!programFiles[0]) return L"";
-  return std::wstring(programFiles) + L"\\LibreOffice\\program\\soffice.exe";
+  return std::wstring(programFiles) + L"\\ChenyiOffice\\Engine";
+}
+
+// Returns the engine root for an existing installation, preferring the
+// registry path, then the new ChenyiOffice\Engine layout, then the legacy
+// layout used by earlier preview builds.
+static std::wstring CurrentEngineRoot() {
+  std::wstring configured =
+      GetString(HKEY_LOCAL_MACHINE, L"Software\\ChenyiOffice", L"EnginePath");
+  if (!configured.empty()) {
+    std::wstring root = EngineRootFromExe(configured);
+    if (!root.empty() && PathExists(configured)) return root;
+  }
+
+  std::wstring fresh = FreshEngineRoot();
+  if (PathExists(fresh + L"\\program\\soffice.exe")) return fresh;
+
+  wchar_t programFiles[MAX_PATH] = {0};
+  GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
+  std::wstring legacy = std::wstring(programFiles) + L"\\LibreOffice";
+  if (PathExists(legacy + L"\\program\\soffice.exe")) return legacy;
+  return L"";
+}
+
+static std::wstring DefaultEnginePath() {
+  std::wstring root = CurrentEngineRoot();
+  if (root.empty()) return L"";
+  return root + L"\\program\\soffice.exe";
 }
 
 // A "foreign" engine is an office engine that existed before Chenyi Office was
@@ -657,8 +702,14 @@ static bool DetectForeignEngine() {
   if (EngineAlreadyInstalled()) {
     return GetDword(HKEY_LOCAL_MACHINE, L"Software\\ChenyiOffice", L"EnginePreExisting") != 0;
   }
-  std::wstring probe = DefaultEnginePath();
-  return !probe.empty() && GetFileAttributesW(probe.c_str()) != INVALID_FILE_ATTRIBUTES;
+  // A leftover engine in our own layout is ours, not a foreign installation.
+  std::wstring fresh = FreshEngineRoot();
+  if (PathExists(fresh + L"\\program\\soffice.exe")) return false;
+
+  wchar_t programFiles[MAX_PATH] = {0};
+  GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
+  std::wstring legacy = std::wstring(programFiles) + L"\\LibreOffice";
+  return PathExists(legacy + L"\\program\\soffice.exe");
 }
 
 static DWORD WINAPI InstallThreadProc(LPVOID);
@@ -806,8 +857,12 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
     wchar_t systemDir[MAX_PATH] = {0};
     GetSystemDirectoryW(systemDir, MAX_PATH);
     std::wstring msiexec = std::wstring(systemDir) + L"\\msiexec.exe";
+    std::wstring installLocation;
+    if (EngineAlreadyInstalled()) installLocation = CurrentEngineRoot();
+    if (installLocation.empty()) installLocation = FreshEngineRoot();
     std::wstring command = L"\"" + msiexec + L"\" /i \"" + msi +
-                           L"\" /qn /norestart ARPSYSTEMCOMPONENT=1";
+                           L"\" /qn /norestart ARPSYSTEMCOMPONENT=1 INSTALLLOCATION=\"" +
+                           installLocation + L"\"";
     DWORD exitCode = 1;
     if (!RunAndWait(command, exitCode)) {
       Fail(L"无法启动办公内核安装程序。");
@@ -819,6 +874,9 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
       Fail(buf);
       return 0;
     }
+    // The bundled engine no longer needs its own registry root; Chenyi Office
+    // records the engine path under Software\ChenyiOffice instead.
+    RegDeleteTreeW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\LibreOffice");
   }
 
   // Copy application files.
@@ -838,7 +896,7 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
   // Only brand an engine we installed ourselves; a pre-existing engine
   // keeps its original splash and About artwork.
   if (!enginePreExisting) {
-    ApplyEngineBranding(std::wstring(programFiles));
+    ApplyEngineBranding(CurrentEngineRoot());
     RemoveEngineShortcuts();
   }
 
@@ -960,6 +1018,29 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
   switch (msg) {
     case WM_CREATE:
       return 0;
+
+    case WM_DPICHANGED: {
+      g_dpi = HIWORD(wParam);
+      if (g_dpi <= 0) g_dpi = 96;
+      g_width = MulDiv(kBaseWidth, g_dpi, 96);
+      g_height = MulDiv(kBaseHeight, g_dpi, 96);
+      RECT* suggested = reinterpret_cast<RECT*>(lParam);
+      SetWindowPos(hwnd, nullptr, suggested->left, suggested->top, g_width, g_height,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      ui::ApplyWindowChrome(hwnd, g_width, g_height, S(18), false);
+      if (g_edit) {
+        SetWindowPos(g_edit, nullptr, S(320), S(406), S(300), S(42),
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+        if (g_editFont) DeleteObject(g_editFont);
+        g_editFont =
+            CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                        DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+        SendMessageW(g_edit, WM_SETFONT, (WPARAM)g_editFont, TRUE);
+      }
+      InvalidateRect(hwnd, nullptr, FALSE);
+      return 0;
+    }
 
     case WM_PAINT: {
       PAINTSTRUCT ps;
@@ -1088,8 +1169,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
   g_dpi = screen ? GetDeviceCaps(screen, LOGPIXELSX) : 96;
   if (screen) ReleaseDC(nullptr, screen);
   if (g_dpi <= 0) g_dpi = 96;
-  g_width = S(980);
-  g_height = S(680);
+  g_width = MulDiv(kBaseWidth, g_dpi, 96);
+  g_height = MulDiv(kBaseHeight, g_dpi, 96);
 
   // Silent mode is the update path used by the launcher: no UI, no password.
   // Parse exact arguments so a path such as "C:\Setup\app.exe" cannot trigger
@@ -1142,11 +1223,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int) {
                              WS_CHILD | WS_VISIBLE | ES_PASSWORD | ES_AUTOHSCROLL | ES_LEFT,
                              S(320), S(406), S(300), S(42), g_window, (HMENU)1001, instance,
                              nullptr);
-    HFONT editFont =
+    g_editFont =
         CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                     OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                     DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
-    SendMessageW(g_edit, WM_SETFONT, (WPARAM)editFont, TRUE);
+    SendMessageW(g_edit, WM_SETFONT, (WPARAM)g_editFont, TRUE);
     SendMessageW(g_edit, EM_SETLIMITTEXT, 64, 0);
     g_editProc = (WNDPROC)SetWindowLongPtrW(g_edit, GWLP_WNDPROC, (LONG_PTR)EditProc);
   }

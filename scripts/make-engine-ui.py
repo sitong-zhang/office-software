@@ -319,9 +319,21 @@ def add_editing_group(root: ET.Element, module: str) -> bool:
     return True
 
 
+def strip_requirements(root: ET.Element) -> None:
+    """Drop the builder requirement tag that names the engine project.
+
+    The UI builder only needs the GTK feature level to parse the file; the
+    layout itself works without the named requirement.
+    """
+    for node in list(root):
+        if node.tag == "requires" and node.get("lib") == "LibreOffice":
+            root.remove(node)
+
+
 def build_notebookbar(source: Path, target: Path, module: str) -> tuple[int, list[str], bool]:
     tree = ET.parse(source)
     root = tree.getroot()
+    strip_requirements(root)
     removed = strip_notebookbar(root)
     order = reorder_tabs(root, module)
     added = add_editing_group(root, module)
@@ -388,6 +400,7 @@ def build_menubar(source: Path, target: Path) -> int:
 def build_start_center(source: Path, target: Path) -> int:
     tree = ET.parse(source)
     root = tree.getroot()
+    strip_requirements(root)
     hidden = 0
 
     def hide_object(object_id: str) -> None:

@@ -4,15 +4,15 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](docs/architecture.md)
-[![Version](https://img.shields.io/badge/version-0.3.0-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.3.1-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 ## Status
 
-**v0.3.0 — Windows preview with a rebuilt editor interface.** The installer bundles the office engine when none is present; if a compatible engine is already installed, it reuses that engine (its version may differ). Writer, Calc, Impress, and Draw now start with a WPS-style tab order, a new **编辑** group with Find & Replace and Select All, and the **Sifr** icon theme. The Start Center and Help menus no longer contain feedback or promotional entries. The product name is **Chenyi Office**; the splash and Start Center / About marks are custom. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature.
+**v0.3.1 — Windows preview with a rebuilt editor interface.** The installer bundles the office engine when none is present; if a compatible engine is already installed, it reuses that engine (its version may differ). Writer, Calc, Impress, and Draw now start with a WPS-style tab order, a new **编辑** group with Find & Replace and Select All, and the **Sifr** icon theme. The Start Center and Help menus no longer contain feedback or promotional entries. The product name is **Chenyi Office**; the splash and Start Center / About marks are custom. Updates run silently and are accepted only when the downloaded installer carries the pinned Chenyi Office Authenticode signature.
 
 ## Download
 
-- **Installer:** [ChenyiOffice-0.3.0-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **Installer:** [ChenyiOffice-0.3.1-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **Platform:** Windows 10 or Windows 11, 64-bit
 - **Notes:** the install password is requested only for the first installation. It is distributed separately from this repository. Updates never ask for it. The launcher checks for a newer release on every start; when one exists, the update screen cannot be skipped.
 
@@ -85,7 +85,7 @@ Requirements: `mingw-w64`, `msitools`, `python3` with Pillow, `curl`, `osslsignc
 SIGN_PFX_PASS=... ./scripts/build-windows.sh
 ```
 
-The script generates brand assets and the editor layout, compiles and signs the launcher and uninstaller, verifies the pinned engine MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.3.0-x64.exe` plus its SHA-256 and the public signing certificate.
+The script generates brand assets and the editor layout, compiles and signs the launcher and uninstaller, verifies the pinned engine MSI against its SHA-256, compiles the installer, appends the engine payload, and signs the final installer. For release builds set `REQUIRE_SIGN=1` so missing signing material is a hard failure. Output: `dist/ChenyiOffice-0.3.1-x64.exe` plus its SHA-256 and the public signing certificate.
 
 See [docs/build.md](docs/build.md) for the pipeline, [docs/signing.md](docs/signing.md) for the code-signing details, and [docs/architecture.md](docs/architecture.md) for how the launcher and engine fit together.
 

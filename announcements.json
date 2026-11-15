@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15T12:00:00+08:00",
+  "updated_at": "2026-11-15T13:00:00+08:00",
   "announcements": [
+    {
+      "id": "2026-11-15-v0-3-1",
+      "title": "v0.3.1 已发布：界面资源再清理",
+      "body": "Chenyi Office（胡辰逸定制版）v0.3.1 已发布。\n\n这一版继续清理引擎界面资源：生成的标签页布局不再包含第三方项目名，安装后替换的界面文件完全使用 Chenyi Office 自有标识。功能与布局不变。\n\n首次安装仍需密码，更新不需要。",
+      "severity": "important",
+      "published_at": "2026-11-15T13:00:00+08:00",
+      "expires_at": null,
+      "min_version": null,
+      "max_version": null,
+      "action_label": "下载安装包",
+      "action_url": "https://github.com/sitong-zhang/office-software/releases/latest"
+    },
     {
       "id": "2026-11-15-v0-3-0",
       "title": "v0.3.0 已发布：深度界面改版",

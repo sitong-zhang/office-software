@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the shipped v0.3.0 implementation.
+This document describes the shipped v0.3.1 implementation.
 
 ## Current implementation
 
@@ -66,7 +66,7 @@ Deep widget-level changes to individual dialogs would require rebuilding the eng
 
 | Target | Artifact | Built on |
 | --- | --- | --- |
-| Windows 10/11 x64 | `ChenyiOffice-0.3.0-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
+| Windows 10/11 x64 | `ChenyiOffice-0.3.1-x64.exe` | Linux + MinGW-w64 (custom Win32 installer) |
 | Windows 10/11 x64 | `Uninstall.exe` | Same pipeline |
 | Windows 10/11 x64 | Launcher `ChenyiOffice.exe` | Same pipeline |
 

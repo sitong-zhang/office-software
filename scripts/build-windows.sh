@@ -14,7 +14,7 @@ ENGINE_URL="${ENGINE_URL:-https://mirrors.tuna.tsinghua.edu.cn/libreoffice/libre
 # Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
 # when you have independently verified a new external artifact.
 ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
-VERSION="0.3.0"
+VERSION="0.3.1"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"

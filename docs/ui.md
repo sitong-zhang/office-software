@@ -6,7 +6,7 @@ The shell layout is ported from high-star open-source projects; see
 [ui-references.md](ui-references.md) for the exact sources, licenses, and
 mapping.
 
-## Implemented in v0.3.0
+## Implemented in v0.3.1
 
 - **Tabbed ribbon** is the default UI for Writer, Calc, Impress, and Draw, with a WPS-style tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展).
 - **编辑 group** on the Home tab of all four applications, with Find & Replace and Select All.

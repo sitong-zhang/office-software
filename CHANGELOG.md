@@ -2,6 +2,13 @@
 
 All notable user-visible changes to Chenyi Office（胡辰逸定制版） are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-11-15
+
+### Changed
+
+- Removed the engine project's builder requirement tag from the generated ribbon files, so the installed UI resources no longer contain its name.
+- Regenerated all four ribbon layouts and the Start Center layout from the updated generator.
+
 ## [0.3.0] — 2026-11-15
 
 ### Changed
@@ -200,6 +207,7 @@ First Windows preview.
 
 Initial project setup.
 
+[0.3.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.2.0
 [0.1.7]: https://github.com/sitong-zhang/office-software/releases/tag/v0.1.7

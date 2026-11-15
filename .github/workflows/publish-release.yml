@@ -1,0 +1,151 @@
+name: Publish signed release
+
+# Transfers a signed build artifact into a GitHub Release entirely inside the
+# Actions network. The signed installer never round-trips through a developer
+# machine; assets are assembled from the pinned build inputs and the update
+# manifest is created together with the release so "latest" is never partial.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (must already exist)
+        required: true
+        type: string
+      build_run_id:
+        description: Run id of "Build Windows installer" holding the signed artifact
+        required: true
+        type: string
+      notes:
+        description: Release notes (Markdown). Falls back to a short default.
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the signed build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name ChenyiOffice-windows-x64 --dir assets
+          # upload-artifact may preserve an inner dist/ directory; flatten it so
+          # the upload step below sees plain files only.
+          find assets -mindepth 2 -type f -print0 | while IFS= read -r -d '' f; do
+            mv -f "$f" "assets/$(basename "$f")"
+          done
+          find assets -mindepth 1 -type d -empty -delete
+          echo "Signed artifact contents:"
+          find assets -type f -printf "%f  %s bytes\n" | sort
+
+      - name: Fetch the pinned branded engine payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" \
+            --pattern "ChenyiEngine-*-branded.msi" --dir assets --clobber
+          echo "223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6  assets/ChenyiEngine-26.8.3-x64-branded.msi" | sha256sum -c -
+
+      - name: Verify checksums, signer certificate and embedded payload
+        run: |
+          set -euo pipefail
+          cd assets
+          sha256sum -c "$(ls ChenyiOffice-*-x64.exe.sha256)"
+          sha256sum -c ChenyiOffice-code-signing.cer.sha256
+          thumb=$(openssl x509 -inform DER -in ChenyiOffice-code-signing.cer \
+                  -noout -fingerprint -sha1 | sed 's/.*=//; s/://g')
+          echo "signer certificate thumbprint: $thumb"
+          test "$thumb" = "FDD3A2D15971DCBAE6CE40C5BAE76605A89062E4"
+          python3 - <<'PY'
+          import glob, hashlib, pathlib, struct
+          exe = glob.glob("ChenyiOffice-*-x64.exe")[0]
+          data = pathlib.Path(exe).read_bytes()
+          pos = data.rfind(b"CHNYSET1")
+          assert pos > 0, "engine payload footer missing"
+          _, base_len, msi_len = struct.unpack("<8sQQ", data[pos:pos + 24])
+          assert base_len + msi_len + 24 == pos + 24, "payload footer inconsistent"
+          digest = hashlib.sha256(data[base_len:base_len + msi_len]).hexdigest()
+          assert digest == "223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6", digest
+          print("embedded engine payload verified:", digest)
+          PY
+
+      - name: Compose the update manifest
+        env:
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          MIN_SUPPORTED: ${{ vars.MIN_SUPPORTED_VERSION }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, glob, hashlib, json, os, pathlib
+          tag = os.environ["TAG"]
+          repo = os.environ["REPO"]
+          version = tag.lstrip("v")
+          exe = pathlib.Path(glob.glob("assets/ChenyiOffice-*-x64.exe")[0])
+          data = exe.read_bytes()
+          manifest = {
+              "version": version,
+              "mandatory": False,
+              "min_supported_version": os.environ.get("MIN_SUPPORTED") or "0.0.0",
+              "published_at": datetime.datetime.now(datetime.timezone.utc)
+                              .strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "release_notes_url": f"https://github.com/{repo}/releases/tag/{tag}",
+              "installer": {
+                  "url": f"https://github.com/{repo}/releases/download/{tag}/{exe.name}",
+                  "sha256": hashlib.sha256(data).hexdigest(),
+                  "size": len(data),
+              },
+          }
+          pathlib.Path("assets/latest.json").write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Create the release as a draft and attach every asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          title="Chenyi Office（胡辰逸定制版） ${TAG#v}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refreshing assets only."
+          else
+            if [ -n "$NOTES" ]; then
+              printf '%s\n' "$NOTES" > release-notes.md
+            else
+              cat > release-notes.md <<'EOF'
+          ## 更新改为可选
+
+          检测到新版本时可以立即更新，也可以稍后提醒或关闭窗口；当前版本在更新前始终可以正常使用。下载校验、发布者签名固定、主机白名单与防降级策略保持不变。首次安装仍需密码，更新不需要。
+          EOF
+            fi
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "$title" --notes-file release-notes.md
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber assets/*
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # Editing the draft to published makes every asset, latest.json
+          # included, visible atomically to clients reading "releases/latest".
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+          echo "=== published release ==="
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,isLatest,assets \
+            --jq '"tag=\(.tagName) draft=\(.isDraft) latest=\(.isLatest)", (.assets[] | "\(.name)  \(.size) bytes")'

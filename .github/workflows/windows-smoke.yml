@@ -25,6 +25,7 @@ jobs:
           gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" `
             --pattern "latest.json" `
             --pattern "ChenyiOffice-*-x64.exe" `
+            --pattern "*.cer" `
             --dir smoke
 
       - name: Verify hash, signature, and silent-mode guard

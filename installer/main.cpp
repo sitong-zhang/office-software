@@ -44,14 +44,7 @@ static const wchar_t* kVersion = L"0.4.0";
 static const wchar_t* kPasswordHash =
     L"d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5";
 
-// Internal identifiers of the bundled engine installer. These are used only
-// to detect and clean up shell artifacts that the engine's own MSI creates
-// during installation, so that end users never see a second product name.
-// They are never rendered in the Chenyi Office interface.
-static const wchar_t* kEngineShortcutPattern = L"LibreOffice*";
-static const wchar_t* kEngineShortcutLinkPattern = L"LibreOffice*.lnk";
-static const wchar_t* kEngineLegacyRegRoot = L"SOFTWARE\\LibreOffice";
-static const wchar_t* kEngineLegacyDir = L"\\LibreOffice";
+// The bundled engine payload ships with a self-contained identity.
 
 enum Screen { WELCOME = 0, INSTALLING = 1, FINISH = 2, FAILED = 3 };
 
@@ -576,49 +569,6 @@ struct PayloadFooter {
 };
 #pragma pack(pop)
 
-static void DeleteTree(const std::wstring& path) {
-  if (path.empty()) return;
-  std::wstring from = path;
-  from.push_back(L'\0');
-  from.push_back(L'\0');
-  SHFILEOPSTRUCTW op{};
-  op.wFunc = FO_DELETE;
-  op.pFrom = from.c_str();
-  op.fFlags = FOF_NO_UI | FOF_NOCONFIRMATION | FOF_SILENT;
-  SHFileOperationW(&op);
-}
-
-// The engine MSI creates its own Start menu folder and desktop shortcuts.
-// Chenyi Office provides its own entry points, so remove the extra ones after
-// installing the bundled engine.
-static void RemoveShortcutsIn(const KNOWNFOLDERID& folder, const wchar_t* pattern,
-                              bool directories) {
-  wchar_t* base = nullptr;
-  if (FAILED(SHGetKnownFolderPath(folder, 0, nullptr, &base))) return;
-  std::wstring glob = std::wstring(base) + L"\\" + pattern;
-  WIN32_FIND_DATAW data{};
-  HANDLE find = FindFirstFileW(glob.c_str(), &data);
-  if (find != INVALID_HANDLE_VALUE) {
-    do {
-      std::wstring path = std::wstring(base) + L"\\" + data.cFileName;
-      if (directories) {
-        if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) DeleteTree(path);
-      } else {
-        DeleteFileW(path.c_str());
-      }
-    } while (FindNextFileW(find, &data));
-    FindClose(find);
-  }
-  CoTaskMemFree(base);
-}
-
-static void RemoveEngineShortcuts() {
-  RemoveShortcutsIn(FOLDERID_CommonPrograms, kEngineShortcutPattern, true);
-  RemoveShortcutsIn(FOLDERID_Programs, kEngineShortcutPattern, true);
-  RemoveShortcutsIn(FOLDERID_PublicDesktop, kEngineShortcutLinkPattern, false);
-  RemoveShortcutsIn(FOLDERID_Desktop, kEngineShortcutLinkPattern, false);
-}
-
 static void ApplyEngineBranding(const std::wstring& engineRoot) {
   if (engineRoot.empty()) return;
   std::wstring program = engineRoot + L"\\program";
@@ -644,6 +594,16 @@ static void ApplyEngineBranding(const std::wstring& engineRoot) {
   WriteResourceFile(168, cfg + L"\\sfx\\ui\\startcenter.ui");
   WriteResourceFile(169, cfg + L"\\cui\\ui\\aboutdialog.ui");
   WriteResourceFile(170, cfg + L"\\modules\\smath\\menubar\\menubar.xml");
+
+  // The engine launcher resolves its kernel and bootstrap configuration from
+  // its own file name, so a branded launcher needs matching .bin and .ini
+  // files. Keep the originals for the engine's own internal invocations.
+  CopyFileW((program + L"\\soffice.exe").c_str(),
+            (program + L"\\ChenyiEngine.exe").c_str(), FALSE);
+  CopyFileW((program + L"\\soffice.bin").c_str(),
+            (program + L"\\ChenyiEngine.bin").c_str(), FALSE);
+  CopyFileW((program + L"\\soffice.ini").c_str(),
+            (program + L"\\ChenyiEngine.ini").c_str(), FALSE);
 }
 
 static void Fail(const std::wstring& message) {
@@ -692,34 +652,24 @@ static std::wstring CurrentEngineRoot() {
 
   std::wstring fresh = FreshEngineRoot();
   if (PathExists(fresh + L"\\program\\soffice.exe")) return fresh;
-
-  wchar_t programFiles[MAX_PATH] = {0};
-  GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
-  std::wstring legacy = std::wstring(programFiles) + kEngineLegacyDir;
-  if (PathExists(legacy + L"\\program\\soffice.exe")) return legacy;
   return L"";
 }
 
 static std::wstring DefaultEnginePath() {
   std::wstring root = CurrentEngineRoot();
   if (root.empty()) return L"";
+  std::wstring branded = root + L"\\program\\ChenyiEngine.exe";
+  if (PathExists(branded)) return branded;
   return root + L"\\program\\soffice.exe";
 }
 
-// A "foreign" engine is an office engine that existed before Chenyi Office was
-// installed. We reuse it, never brand it, and never uninstall it.
+// An engine that predates this installation is recorded in the registry at
+// install time; it is reused, never branded and never uninstalled. The bundled
+// payload has its own product identity and install location, so it never
+// collides with any other installation on the machine.
 static bool DetectForeignEngine() {
-  if (EngineAlreadyInstalled()) {
-    return GetDword(HKEY_LOCAL_MACHINE, L"Software\\ChenyiOffice", L"EnginePreExisting") != 0;
-  }
-  // A leftover engine in our own layout is ours, not a foreign installation.
-  std::wstring fresh = FreshEngineRoot();
-  if (PathExists(fresh + L"\\program\\soffice.exe")) return false;
-
-  wchar_t programFiles[MAX_PATH] = {0};
-  GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
-  std::wstring legacy = std::wstring(programFiles) + kEngineLegacyDir;
-  return PathExists(legacy + L"\\program\\soffice.exe");
+  return GetDword(HKEY_LOCAL_MACHINE, L"Software\\ChenyiOffice",
+                  L"EnginePreExisting") != 0;
 }
 
 static DWORD WINAPI InstallThreadProc(LPVOID);
@@ -884,9 +834,8 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
       Fail(buf);
       return 0;
     }
-    // The bundled engine no longer needs its own registry root; Chenyi Office
-    // records the engine path under Software\ChenyiOffice instead.
-    RegDeleteTreeW(HKEY_LOCAL_MACHINE, kEngineLegacyRegRoot);
+    // The bundled payload no longer writes any secondary registry root;
+    // Chenyi Office records the engine path under Software\ChenyiOffice.
   }
 
   // Copy application files.
@@ -907,7 +856,6 @@ static DWORD WINAPI InstallThreadProc(LPVOID) {
   // keeps its original splash and About artwork.
   if (!enginePreExisting) {
     ApplyEngineBranding(CurrentEngineRoot());
-    RemoveEngineShortcuts();
   }
 
   // Shell integration.

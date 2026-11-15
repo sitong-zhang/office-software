@@ -14,6 +14,20 @@ ENGINE_URL="${ENGINE_URL:-https://github.com/sitong-zhang/office-software/releas
 # Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
 # when you have independently verified a new external artifact.
 ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-0e6918c273eabbdbbd800ee0dacbbf130a14c13c2e4cec861b06dd59e015bf94}"
+# A locally prepared engine payload may be supplied for a maintenance build.
+# Its checksum is computed on the fly; the pinned value above remains
+# authoritative for the published artifact used by CI.
+ENGINE_MSI_LOCAL="${ENGINE_MSI_LOCAL:-}"
+ENGINE_MSI_PATH="$CACHE/$ENGINE_MSI"
+if [ -n "$ENGINE_MSI_LOCAL" ]; then
+  if [ ! -f "$ENGINE_MSI_LOCAL" ]; then
+    echo "Local engine payload not found: $ENGINE_MSI_LOCAL" >&2
+    exit 1
+  fi
+  ENGINE_MSI_PATH="$ENGINE_MSI_LOCAL"
+  ENGINE_MSI_SHA256="$(sha256sum "$ENGINE_MSI_PATH" | awk '{print $1}')"
+  echo "  using local engine payload (sha256=$ENGINE_MSI_SHA256)"
+fi
 VERSION="0.4.0"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
@@ -100,13 +114,13 @@ echo "[3/8] Building and signing uninstaller"
 sign_file "$BUILD/Uninstall.exe"
 
 echo "[4/8] Preparing office engine"
-if [ ! -f "$CACHE/$ENGINE_MSI" ]; then
+if [ -z "$ENGINE_MSI_LOCAL" ] && [ ! -f "$ENGINE_MSI_PATH" ]; then
   curl -L --fail --retry 5 --retry-delay 5 --retry-all-errors \
-    -o "$CACHE/$ENGINE_MSI.part" "$ENGINE_URL"
-  mv "$CACHE/$ENGINE_MSI.part" "$CACHE/$ENGINE_MSI"
+    -o "$ENGINE_MSI_PATH.part" "$ENGINE_URL"
+  mv "$ENGINE_MSI_PATH.part" "$ENGINE_MSI_PATH"
 fi
-if ! echo "$ENGINE_MSI_SHA256  $CACHE/$ENGINE_MSI" | sha256sum -c - >/dev/null 2>&1; then
-  echo "Engine MSI checksum mismatch: $CACHE/$ENGINE_MSI" >&2
+if ! echo "$ENGINE_MSI_SHA256  $ENGINE_MSI_PATH" | sha256sum -c - >/dev/null 2>&1; then
+  echo "Engine MSI checksum mismatch: $ENGINE_MSI_PATH" >&2
   echo "Expected $ENGINE_MSI_SHA256" >&2
   echo "Delete the cached file and retry, or set ENGINE_MSI_SHA256 to a verified value." >&2
   exit 1
@@ -114,7 +128,7 @@ fi
 echo "  engine MSI checksum verified"
 
 echo "[5/8] Reading engine product code"
-PRODUCT_CODE="$(msiinfo export "$CACHE/$ENGINE_MSI" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
+PRODUCT_CODE="$(msiinfo export "$ENGINE_MSI_PATH" Property | tr -d '\r' | awk -F'\t' '$1=="ProductCode"{print $2}')"
 if [ -z "$PRODUCT_CODE" ]; then
   echo "Could not read ProductCode from $ENGINE_MSI" >&2
   exit 1
@@ -128,7 +142,7 @@ echo "[6/8] Building installer shell"
   -lbcrypt -lshell32 -lole32 -luuid -lgdi32 -luser32 -ladvapi32 -lshlwapi -lgdiplus -ldwmapi
 
 echo "[7/8] Appending engine payload"
-python3 - "$BUILD/ChenyiOfficeSetup-base.exe" "$CACHE/$ENGINE_MSI" "$OUT" <<'PY'
+python3 - "$BUILD/ChenyiOfficeSetup-base.exe" "$ENGINE_MSI_PATH" "$OUT" <<'PY'
 import pathlib
 import struct
 import sys

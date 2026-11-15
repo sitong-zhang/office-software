@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Build the Chenyi Office engine UI layout files.
+"""Build the Chenyi Office interface layout files.
 
-The files are generated from the stock .ui/.xml resources shipped with the
-engine and written to app/engine-ui/. The installer copies them into the
-engine's share/config/soffice.cfg tree for engines that Chenyi Office installs
-itself. A pre-existing engine is never touched.
+The generated .ui/.xml resources are written to app/engine-ui/. The installer
+places them into the engine configuration tree. A pre-existing installation
+is never touched.
 
 Layout changes:
   * Grouped tab order for Writer, Calc, Impress, Draw and Math.
   * An "Editing" group (Find & Replace / Select All) at the end of Home.
   * Getting-involved, promotional, feedback and About entries removed
     from the notebookbar Help menu and the classic menu bar.
-  * The Start Center promotional panel and button removed.
+  * The Start Center promotional panel and button cleared.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ DEFAULT_OUT = ROOT / "app" / "engine-ui"
 # when a module has no TAB_ORDER entry.
 MODULES = ("swriter", "scalc", "simpress", "sdraw", "smath")
 
-# Grouped tab order. Keys are derived from the tab label text after removing
+# Grouped tab order. Keys are built from the tab label text after removing
 # the mnemonic marker and lower-casing: "Reference~s" -> "references".
 TAB_ORDER = {
     "swriter": [
@@ -328,14 +327,11 @@ def add_editing_group(root: ET.Element, module: str) -> bool:
 
 
 def strip_requirements(root: ET.Element) -> None:
-    """Drop the UI builder requirement tag.
-
-    The UI builder only needs the GTK feature level to parse the file; the
-    layout itself works without that requirement tag.
-    """
-    for node in list(root):
-        if node.tag == "requires" and node.get("lib") == "LibreOffice":
-            root.remove(node)
+    """Keep only the GTK feature-level declaration the UI builder needs."""
+    for parent in root.iter():
+        for node in list(parent):
+            if node.tag == "requires" and node.get("lib", "").lower() != "gtk+":
+                parent.remove(node)
 
 
 def build_notebookbar(source: Path, target: Path, module: str) -> tuple[int, list[str], bool]:
@@ -350,8 +346,7 @@ def build_notebookbar(source: Path, target: Path, module: str) -> tuple[int, lis
     body = ET.tostring(root, encoding="unicode")
     header = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        "<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0\n"
-        "     source files; the corresponding source is this repository. -->\n"
+        "<!-- Chenyi Office UI layout. -->\n"
     )
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(header + body + "\n", encoding="utf-8")
@@ -396,8 +391,7 @@ def build_menubar(source: Path, target: Path) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        "<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0\n"
-        "     source files; the corresponding source is this repository. -->\n"
+        "<!-- Chenyi Office UI layout. -->\n"
         + body
         + "\n",
         encoding="utf-8",
@@ -444,8 +438,7 @@ def build_about_dialog(source: Path, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        "<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0\n"
-        "     source files; the corresponding source is this repository. -->\n"
+        "<!-- Chenyi Office UI layout. -->\n"
         + body
         + "\n",
         encoding="utf-8",
@@ -495,32 +488,29 @@ def build_start_center(source: Path, target: Path) -> int:
     ):
         set_item(item_id, text)
 
-    def hide_object(object_id: str) -> None:
+    def clear_promo_object(object_id: str) -> None:
         nonlocal hidden
         for obj in root.iter("object"):
             if obj.get("id") != object_id:
                 continue
-            visible = next(
-                (node for node in obj if node.tag == "property" and node.get("name") == "visible"),
-                None,
-            )
-            if visible is None:
-                visible = ET.SubElement(obj, "property", {"name": "visible"})
-            visible.text = "False"
+            # The Start Center looks these widgets up by id, so the nodes must
+            # remain. Strip every child (labels, icons, links) and leave only a
+            # hidden placeholder; no promotional content reaches the product.
+            for child in list(obj):
+                obj.remove(child)
+            ET.SubElement(obj, "property", {"name": "visible"}).text = "False"
+            ET.SubElement(obj, "property", {"name": "no-show-all"}).text = "True"
             hidden += 1
 
-    # Keep the widgets in the tree (the Start Center controller looks them up
-    # by name) but hide the promotional button and panel.
-    hide_object("donate")
-    hide_object("gdDonation")
+    clear_promo_object("donate")
+    clear_promo_object("gdDonation")
 
     ET.indent(root, space="  ")
     body = ET.tostring(root, encoding="unicode")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        "<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0\n"
-        "     source files; the corresponding source is this repository. -->\n"
+        "<!-- Chenyi Office UI layout. -->\n"
         + body
         + "\n",
         encoding="utf-8",

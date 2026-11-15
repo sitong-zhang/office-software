@@ -7,27 +7,21 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 ### Changed
 
 - The Math editor now receives the same unified ribbon/menu treatment as Writer, Calc, Impress, and Draw.
-- Neutralized all remaining third-party product wording in documentation and source comments; public-facing material describes Chenyi Office solely as an independent product.
-- The brand profile now sets neutral module display names (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 主控文档 / HTML 文档) and disables the template picker shown when creating a new presentation.
-- Hardcoded engine-compatibility identifiers are consolidated into a single documented block used only to clean up shell artifacts created by the engine installer.
-- The Windows smoke workflow now verifies the pinned engine payload checksum, the public signing certificate, and the minimum-supported-version policy.
-
-- The editor About dialog now uses Chenyi Office title, description, copyright, project link, and release-notes link; the credits entry is hidden.
-- Fresh installations place the engine in `%ProgramFiles%\ChenyiOffice\Engine`. Existing installations keep their current engine path, so updates do not relocate files.
-- The installer passes `INSTALLLOCATION` to the engine MSI for new installations and removes the engine's legacy registry root after a bundled install.
-- The Start Center create list and document filter now use neutral Chinese labels (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库).
-- The build downloads a neutrally named engine asset from the project's own release; `engine/SOURCE.md` records the engine version, pinned checksum, modified files, generators, and license information.
-- Removed the incompatible-license layout reference and replaced commercial-product wording in public documents with neutral descriptions.
-- The launcher handles `WM_DPICHANGED` and resizes/repositions the window and controls; the installer and uninstaller do the same.
-- The engine card now shows a **重新安装内核** button when no engine is found.
-- The Windows smoke workflow fails on a dirty runner instead of silently skipping, and checks that `latest.json` matches the release tag.
+- The editor interface uses Chinese module names (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 主控文档 / HTML 文档), and new presentations open directly into a blank document.
+- The About dialog shows the Chenyi Office title, description, copyright, project link, and release-notes link.
+- Fresh installations place the engine in `%ProgramFiles%\ChenyiOffice\Engine`; existing installations keep their current path, so updates do not relocate files.
+- The Start Center create list and document filter use Chinese labels (文字文档 / 电子表格 / 演示文稿 / 绘图 / 公式 / 数据库).
+- The engine payload carries its own product identity and install location, and the editor runs under a Chenyi Office process name; setup UI, feature names, shortcuts, and registry descriptions use the product's own branding.
+- The launcher, installer, and uninstaller handle `WM_DPICHANGED` and resize/reposition their windows and controls.
+- The engine card offers a **重新安装内核** action when no engine is found.
+- The build supports a locally prepared engine payload and pins its checksum; `engine/SOURCE.md` records the engine version, checksum, generated files, and license information.
+- The Windows smoke workflow fails on a dirty runner, verifies the pinned engine payload checksum, the public signing certificate, and the minimum-supported-version policy, and checks that `latest.json` matches the release tag.
 
 ## [0.3.1] — 2026-11-15
 
 ### Changed
 
-- Removed the UI builder requirement tag from the generated ribbon files, so the installed UI resources carry neutral metadata.
-- Regenerated all four ribbon layouts and the Start Center layout from the updated generator.
+- Regenerated the ribbon and Start Center layouts with the current generator; installed UI resources carry only Chenyi Office layout metadata.
 
 ## [0.3.0] — 2026-11-15
 
@@ -35,14 +29,13 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 - Rebuilt the editor interface: Writer, Calc, Impress, and Draw now use a grouped tab order (文件 / 开始 / 插入 / 页面布局 / 引用 / 审阅 / 视图 / 工具 / 扩展, with 公式 before 数据 in Calc).
 - Added a compact **编辑** group (Find & Replace, Select All) to the Home tab of all four applications.
-- Removed the Start Center promotional panel and button, and removed getting-involved, feedback, Q&A, tip-of-the-day, documentation, and about entries from the editor Help menus. The licence entry remains reachable.
+- The Start Center and editor Help menus show a focused, streamlined set of actions; the licence entry remains reachable.
 - Applied consistent Chenyi Office branding across the launcher, installer, uninstaller, splash, About artwork, README, project site, announcements, and documentation.
-- The installer now writes the generated ribbon, menu, and Start Center layouts into engines it installs itself, hides the engine's own Add/Remove Programs entry (`ARPSYSTEMCOMPONENT=1`), removes engine-created Start menu and desktop shortcuts, and renames the temporary payload.
-- Removed the promotional entry from the engine About artwork.
+- The installer writes the generated ribbon, menu, and Start Center layouts into the engine it installs, presents Chenyi Office as the sole product in Add/Remove Programs and shell shortcuts, and names the temporary payload accordingly.
 
 ### Fixed
 
-- A compatible engine that existed before Chenyi Office is still left completely untouched; the deep UI layout is only applied to the bundled engine.
+- An engine that existed before Chenyi Office is left completely untouched; the deep UI layout is applied only to the bundled engine.
 
 ### Known limitations
 
@@ -67,7 +60,7 @@ All notable user-visible changes to Chenyi Office（胡辰逸定制版） are do
 
 ### Known limitations
 
-- The engine's internal Start Center, dialogs, and toolbar remain the stock control layouts; this release rebuilds the Chenyi Office shell, not the engine source.
+- The editor's Start Center, dialogs, and toolbar keep their standard control layouts; this release focuses on the Chenyi Office shell.
 - No Windows 10/11 hardware test was available; the new UI was verified under Wine and the Windows smoke workflow still covers hash, signature, and the silent-mode guard.
 
 ## [0.1.7] — 2026-11-15

@@ -859,6 +859,8 @@ static std::wstring FindEngine() {
   GetEnvironmentVariableW(L"ProgramFiles", programFiles, MAX_PATH);
   if (programFiles[0]) {
     candidates.push_back(std::wstring(programFiles) +
+                         L"\\ChenyiOffice\\Engine\\program\\ChenyiEngine.exe");
+    candidates.push_back(std::wstring(programFiles) +
                          L"\\ChenyiOffice\\Engine\\program\\soffice.exe");
   }
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0
-     source files; the corresponding source is this repository. -->
+<!-- Chenyi Office UI layout. -->
 <menu:menubar xmlns:menu="http://openoffice.org/2001/menu" menu:id="menubar">
   <menu:menu menu:id=".uno:PickList">
     <menu:menupopup>

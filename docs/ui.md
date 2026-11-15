@@ -2,9 +2,9 @@
 
 The product is rebuilt around its interface: a consistent, quieter workspace that a first-time user can operate without instruction.
 
-The shell layout is ported from high-star open-source projects; see
-[ui-references.md](ui-references.md) for the exact sources, licenses, and
-mapping.
+The shell follows a consistent layout and spacing system; see
+[ui-references.md](ui-references.md) for the bundled interface assets and
+their licenses.
 
 ## Implemented in v0.3.1
 

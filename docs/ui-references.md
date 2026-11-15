@@ -1,11 +1,10 @@
-# UI references and copied layout sources
+# Interface assets and licenses
 
-The Chenyi Office shell is native Win32 C++ (GDI+). It cannot link React or
-Tailwind components directly, so the layout structure, spacing scale, and
-component patterns are ported from the following high-star open-source
-projects. Icon assets are vendored directly.
+The Chenyi Office shell is native Win32 C++ (GDI+). The following open-source
+interface assets are bundled with the product. Their licenses and provenance
+are recorded below; icon assets are vendored directly.
 
-| Project | Stars | License | What was reused |
+| Project | Stars | License | Bundled asset |
 | --- | --- | --- | --- |
 | [shadcn/ui](https://github.com/shadcn-ui/ui) | 128,200 | MIT | Card, border, muted surface, radius, and typography tokens |
 | [Tabler](https://github.com/tabler/tabler) | 42,064 | MIT | Sidebar + page header + card grid dashboard layout |

@@ -31,7 +31,7 @@ Dates are intentionally omitted; milestones are tracked in [GitHub Milestones](h
 - [x] Remove tip, What's New, feedback, and getting-involved entries
 - [x] grouped tab order and compact Home groups for all four applications
 - [x] Start Center without the promotional panel
-- [x] Engine artwork without third-party product references
+- [x] Engine artwork uses the product's own branding
 - [ ] Dialog and settings reorganization
 - [ ] Dark theme, high contrast, and DPI review
 - [ ] Interface preview build

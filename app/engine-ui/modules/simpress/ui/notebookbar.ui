@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Chenyi Office UI layout. Modified from Mozilla Public License 2.0
-     source files; the corresponding source is this repository. -->
+<!-- Chenyi Office UI layout. -->
 <interface domain="sd">
   <requires lib="gtk+" version="3.24" />
   <object class="GtkMenu" id="Menu Addons">

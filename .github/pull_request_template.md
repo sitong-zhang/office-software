@@ -15,5 +15,5 @@
 - [ ] The change is focused and contains no unrelated edits.
 - [ ] Documentation was updated where behavior changed.
 - [ ] New files carry MPL 2.0 headers and no third-party notices were removed.
-- [ ] No third-party product names, trademarks, or logos were introduced into user-facing surfaces.
+- [ ] User-facing surfaces use Chenyi Office naming and artwork consistently.
 - [ ] `CHANGELOG.md` was updated for user-visible changes.

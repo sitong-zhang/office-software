@@ -50,7 +50,7 @@ There is no separate contributor license agreement. Do not remove or alter third
 
 ## Branding rules
 
-Do not add third-party product names, logos, or trademarks to user-facing surfaces. See [docs/branding.md](docs/branding.md) for the rules that apply to product naming, icons, splash screens, and documentation.
+Use Chenyi Office naming consistently across user-facing surfaces. See [docs/branding.md](docs/branding.md) for the rules that apply to product naming, icons, splash screens, and documentation.
 
 ## Code of conduct
 

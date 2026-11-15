@@ -95,7 +95,7 @@ The install password is a distribution gate, not a cryptographic protection: the
 
 ## Contributing
 
-The shell layout and design tokens are ported from Tabler, shadcn/ui, Fluent UI, and Lucide; [docs/ui-references.md](docs/ui-references.md) records the exact sources and licenses.
+The shell uses a consistent layout and design-token system; [docs/ui-references.md](docs/ui-references.md) records the sources and licenses of the bundled interface assets.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first. Interface work, launcher fixes, documentation, and translation are all welcome.
 

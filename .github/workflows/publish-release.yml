@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
           gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" \
             --pattern "ChenyiEngine-*-branded.msi" --dir assets --clobber
-          echo "223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6  assets/ChenyiEngine-26.8.3-x64-branded.msi" | sha256sum -c -
+          echo "d6e129213f83393f8a17ecce08f3027f5af0ddf0947e2d1f16d2c4caf7f0c71f  assets/ChenyiEngine-26.8.3-x64-branded.msi" | sha256sum -c -
 
       - name: Verify checksums, signer certificate and embedded payload
         run: |
@@ -75,7 +75,7 @@ jobs:
           _, base_len, msi_len = struct.unpack("<8sQQ", data[pos:pos + 24])
           assert base_len + msi_len + 24 == pos + 24, "payload footer inconsistent"
           digest = hashlib.sha256(data[base_len:base_len + msi_len]).hexdigest()
-          assert digest == "223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6", digest
+          assert digest == "d6e129213f83393f8a17ecce08f3027f5af0ddf0947e2d1f16d2c4caf7f0c71f", digest
           print("embedded engine payload verified:", digest)
           PY
 

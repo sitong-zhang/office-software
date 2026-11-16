@@ -80,7 +80,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          PINNED_ENGINE_SHA256: 223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6
+          PINNED_ENGINE_SHA256: d6e129213f83393f8a17ecce08f3027f5af0ddf0947e2d1f16d2c4caf7f0c71f
         run: |
           $ErrorActionPreference = 'Stop'
           $installer = Get-ChildItem smoke -Filter 'ChenyiOffice-*-x64.exe' | Select-Object -First 1

@@ -13,7 +13,7 @@ ENGINE_MSI="ChenyiEngine-${ENGINE_VERSION}-x64-branded.msi"
 ENGINE_URL="${ENGINE_URL:-https://github.com/sitong-zhang/office-software/releases/download/v0.4.0/${ENGINE_MSI}}"
 # Pinned SHA-256 of the engine MSI. Override together with ENGINE_VERSION only
 # when you have independently verified a new external artifact.
-ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-223469a23d78b9a8ca900a985ee5205a15b29da2b497d0800ca075303ef47fb6}"
+ENGINE_MSI_SHA256="${ENGINE_MSI_SHA256:-d6e129213f83393f8a17ecce08f3027f5af0ddf0947e2d1f16d2c4caf7f0c71f}"
 # A locally prepared engine payload may be supplied for a maintenance build.
 # Its checksum is computed on the fly; the pinned value above remains
 # authoritative for the published artifact used by CI.

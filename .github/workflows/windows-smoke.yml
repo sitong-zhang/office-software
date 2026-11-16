@@ -8,6 +8,11 @@ on:
         required: true
         default: v0.4.2
         type: string
+      verify_ui:
+        description: Perform a real silent install and verify deployed UI artifacts
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -116,3 +121,120 @@ jobs:
             throw "Engine payload SHA-256 mismatch: $engineHash"
           }
           Write-Host 'Payload, checksum, certificate and version assertions passed.'
+
+      - name: Real silent install and deployed UI verification
+        if: ${{ inputs.verify_ui }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem smoke -Filter 'ChenyiOffice-*-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'Installer asset is missing.' }
+          $expectedVersion = "${{ inputs.tag }}".TrimStart('v')
+
+          # The silent path is reserved for updates and refuses a fresh
+          # machine. Seed the registry markers of an existing installation so
+          # the installer takes the real update path: it extracts and runs the
+          # engine MSI, copies the launcher, deploys every UI layout variant and
+          # icon theme, and writes the install registry values. No password is
+          # involved on this path, which is exactly how shipped updates work.
+          $installDir = Join-Path $env:ProgramFiles 'ChenyiOffice'
+          New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+          $seedExe = Join-Path $installDir 'ChenyiOffice.exe'
+          Copy-Item -LiteralPath $installer.FullName -Destination $seedExe -Force
+          New-Item -Path 'HKLM:\Software\ChenyiOffice' -Force | Out-Null
+          Set-ItemProperty -Path 'HKLM:\Software\ChenyiOffice' -Name 'InstallDir' -Value $installDir
+          Set-ItemProperty -Path 'HKLM:\Software\ChenyiOffice' -Name 'EnginePreExisting' -Value 0 -Type DWord
+
+          Write-Host 'Running a real silent install (update path)...'
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' `
+            -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) {
+            $log = Join-Path $env:TEMP 'ChenyiOffice-update-error.txt'
+            if (Test-Path $log) { Write-Host (Get-Content $log -Raw) }
+            throw "Real silent install failed with exit code $($process.ExitCode)."
+          }
+          Write-Host 'Silent install completed successfully.'
+
+          # The installer must have written its own identity over the seed.
+          $installedExe = Join-Path $installDir 'ChenyiOffice.exe'
+          $installedHash = (Get-FileHash $installedExe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($installedHash -eq (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) {
+            throw 'Installed launcher is still the seed file; install did not replace it.'
+          }
+          $regVersion = (Get-ItemProperty 'HKLM:\Software\ChenyiOffice' -Name Version).Version
+          if ($regVersion -ne $expectedVersion) {
+            throw "Registry version $regVersion does not match $expectedVersion"
+          }
+
+          # Locate the engine root the installer actually used.
+          $enginePath = (Get-ItemProperty 'HKLM:\Software\ChenyiOffice' -Name EnginePath -ErrorAction SilentlyContinue).EnginePath
+          if (-not $enginePath -or -not (Test-Path $enginePath)) {
+            throw 'Installer did not record a valid EnginePath.'
+          }
+          $engineRoot = Split-Path (Split-Path $enginePath -Parent) -Parent
+          $cfg = Join-Path $engineRoot 'share\config\soffice.cfg'
+          Write-Host "Engine root: $engineRoot"
+
+          # Every notebookbar layout variant and branded config file must be on
+          # disk. This is the artifact behind the "UI mode is not locked" fix.
+          $required = @(
+            'modules\swriter\ui\notebookbar.ui',
+            'modules\swriter\ui\notebookbar_compact.ui',
+            'modules\swriter\ui\notebookbar_groupedbar_full.ui',
+            'modules\swriter\ui\notebookbar_groupedbar_compact.ui',
+            'modules\swriter\ui\notebookbar_single.ui',
+            'modules\swriter\ui\notebookbar_groups.ui',
+            'modules\scalc\ui\notebookbar.ui',
+            'modules\scalc\ui\notebookbar_compact.ui',
+            'modules\simpress\ui\notebookbar.ui',
+            'modules\simpress\ui\notebookbar_single.ui',
+            'modules\sdraw\ui\notebookbar.ui',
+            'modules\smath\menubar\menubar.xml',
+            'sfx\ui\startcenter.ui',
+            'cui\ui\aboutdialog.ui'
+          )
+          foreach ($rel in $required) {
+            $full = Join-Path $cfg $rel
+            if (-not (Test-Path $full)) { throw "Missing deployed UI artifact: $rel" }
+          }
+
+          # The Math module's menubar must expose the UI picker and About so the
+          # interface is reachable, matching every other module.
+          $mathMenu = Get-Content (Join-Path $cfg 'modules\smath\menubar\menubar.xml') -Raw
+          if ($mathMenu -notmatch 'UIPicker') { throw 'Math menubar is missing UIPicker.' }
+          if ($mathMenu -notmatch 'uno:About') { throw 'Math menubar is missing About.' }
+
+          # The branded icon theme must be installed so the profile's
+          # SymbolStyle=chenyi resolves instead of dangling on a reused engine.
+          $config = Join-Path $engineRoot 'share\config'
+          if (-not (Test-Path (Join-Path $config 'images_chenyi.zip'))) {
+            throw 'Branded icon theme (images_chenyi.zip) was not deployed.'
+          }
+          if (-not (Test-Path (Join-Path $config 'images_chenyi_svg.zip'))) {
+            throw 'Branded SVG icon theme was not deployed.'
+          }
+          Write-Host 'All deployed UI artifacts and icon themes verified.'
+
+      - name: Launcher self-test
+        if: ${{ inputs.verify_ui }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installDir = Join-Path $env:ProgramFiles 'ChenyiOffice'
+          $launcher = Join-Path $installDir 'ChenyiOffice.exe'
+          if (-not (Test-Path $launcher)) { throw 'Installed launcher is missing.' }
+
+          $out = Join-Path $env:TEMP 'chenyi-selftest.txt'
+          if (Test-Path $out) { Remove-Item $out -Force }
+          $process = Start-Process -FilePath $launcher -ArgumentList "--self-test=$out" `
+            -Wait -PassThru -NoNewWindow
+          if (-not (Test-Path $out)) { throw 'Launcher self-test produced no output.' }
+          $log = Get-Content $out -Raw
+          Write-Host $log
+          if ($process.ExitCode -ne 0) {
+            throw "Launcher self-test failed with exit code $($process.ExitCode)."
+          }
+          if ($log -notmatch 'TOTAL (\d+) passed, 0 failed') {
+            throw 'Launcher self-test did not report a clean pass.'
+          }
+          Write-Host 'Launcher self-test assertions passed.'

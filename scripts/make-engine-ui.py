@@ -193,6 +193,33 @@ def build_menubar(source: Path, target: Path) -> int:
             if item.tag == ns + "menuitem" and item.get(ns + "id") in MENUBAR_HIDDEN:
                 parent.remove(item)
                 removed += 1
+
+    # The User Interface picker must be reachable in every module. Math ships
+    # no notebookbar variants, but its View menu still needs the switcher so
+    # users are not locked to a single interface. Use the engine's own menu
+    # item shape and place it next to the toolbar-mode entries.
+    ids = {item.get(ns + "id") for item in root.iter(ns + "menuitem")}
+    if ".uno:UIPicker" not in ids:
+        for menu in root.iter(ns + "menu"):
+            if menu.get(ns + "id") != ".uno:ViewMenu":
+                continue
+            popup = menu.find(ns + "menupopup")
+            if popup is None:
+                continue
+            picker = ET.Element(ns + "menuitem")
+            picker.set(ns + "id", ".uno:UIPicker")
+            picker.set(ns + "style", "text")
+            anchor = None
+            for child in list(popup):
+                if child.get(ns + "id") in (".uno:ToolbarMode", ".uno:AvailableToolbars"):
+                    anchor = child
+                    break
+            if anchor is not None:
+                popup.insert(list(popup).index(anchor), picker)
+            else:
+                popup.append(picker)
+            break
+
     ET.indent(root, space="  ")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(HEADER + ET.tostring(root, encoding="unicode") + "\n", encoding="utf-8")

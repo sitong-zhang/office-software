@@ -743,6 +743,13 @@ static bool VersionGreater(const std::wstring& a, const std::wstring& b) {
   return false;
 }
 
+// A release is mandatory when the running build is below the manifest's
+// security floor or the manifest explicitly marks it. Kept pure so the
+// non-interactive self-test can assert the exact production decision.
+static bool ShouldForceUpdate(bool belowMinimum, bool mandatory) {
+  return belowMinimum || mandatory;
+}
+
 static bool IsoToTime(const std::string& s, time_t& out) {
   int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0;
   if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &sec) != 6) return false;
@@ -870,6 +877,26 @@ static std::wstring FindEngine() {
   return L"";
 }
 
+// The chenyi icon theme is deployed only into an engine that Chenyi Office
+// installed and branded itself. A pre-existing engine is reused untouched, so
+// it never carries images_chenyi*. In that case pointing SymbolStyle at
+// "chenyi" leaves the theme name dangling. Check the engine tree before we
+// write that key into the profile.
+static bool ChenyiThemeInstalled() {
+  std::wstring engine = FindEngine();
+  if (engine.empty()) return false;
+  std::wstring dir = engine;
+  size_t program = dir.find_last_of(L'\\');
+  if (program == std::wstring::npos) return false;
+  dir = dir.substr(0, program);  // .../program
+  size_t root = dir.find_last_of(L'\\');
+  if (root == std::wstring::npos) return false;
+  dir = dir.substr(0, root);  // engine root
+  std::wstring zip = dir + L"\\share\\config\\images_chenyi.zip";
+  std::wstring svg = dir + L"\\share\\config\\images_chenyi_svg.zip";
+  return FileExists(zip) || FileExists(svg);
+}
+
 // ---------------------------------------------------------------------------
 // Data gathered by the worker thread
 // ---------------------------------------------------------------------------
@@ -879,9 +906,11 @@ struct UpdateInfo {
   std::wstring url;
   std::wstring sha256;
   uint64_t size = 0;
-  // Retained for manifest compatibility. Updates are always optional;
-  // this flag never blocks the user from continuing on the current build.
+  // A release is forced only when the running build is below the manifest's
+  // min_supported_version (a security floor) or the manifest explicitly marks
+  // it mandatory. Ordinary newer-version updates remain optional.
   bool mandatory = false;
+  bool forced = false;
 };
 
 struct Announcement {
@@ -1064,13 +1093,18 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
           if (valid) {
             g_update.version = Utf8ToWide(remote);
             g_update.mandatory = root.Bool("mandatory", false);
+            // The security floor is authoritative: a build below
+            // min_supported_version must update, and cannot defer the prompt.
+            g_update.forced = ShouldForceUpdate(belowMinimum, g_update.mandatory);
             g_update.url = Utf8ToWide(url);
             g_update.sha256 = Utf8ToWide(sha);
             g_update.size = size;
             updateAvailable = true;
             SetStatus(L"发现新版本");
           }
-          LogLine(valid ? L"update available (optional)" : L"manifest update rejected: missing url, sha256, or size");
+          LogLine(valid ? (g_update.forced ? L"update required (below minimum or mandatory)"
+                                           : L"update available (optional)")
+                        : L"manifest update rejected: missing url, sha256, or size");
         } else {
           LogLine(L"manifest update rejected: installer object missing");
         }
@@ -1808,17 +1842,21 @@ static void DrawUpdate(Graphics& g) {
   ui::FillRound(g, card, S(20), ui::Paper());
   DrawWindowButton(g, RectF(g_width - S(86), S(16), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
                    true);
-  DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_SKIP_UPDATE,
-                   true);
+  // A required update cannot be dismissed; keep only the minimize control.
+  if (!g_update.forced)
+    DrawWindowButton(g, RectF(g_width - S(52), S(16), S(28), S(28)), UI_ICON_CLOSE, A_SKIP_UPDATE,
+                     true);
 
   ui::FillRoundGradient(g, RectF(card.X, card.Y, card.Width, S(160)), S(20), ui::GreenLight(),
                         ui::Green());
   ui::FillRound(g, RectF(card.X, card.Y + S(120), card.Width, S(40)), 0, ui::Green());
   ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_CREAM,
            RectF(card.X + S(32), card.Y + S(30), S(44), S(44)));
-  ui::Text(g, L"可用更新", RectF(card.X + S(92), card.Y + S(28), S(300), S(20)), S(10),
+  ui::Text(g, g_update.forced ? L"安全更新" : L"可用更新",
+           RectF(card.X + S(92), card.Y + S(28), S(300), S(20)), S(10),
            FontStyleBold, ui::rgba(220, 240, 230));
-  ui::Text(g, L"发现新版本", RectF(card.X + S(92), card.Y + S(48), S(400), S(36)), S(24),
+  ui::Text(g, g_update.forced ? L"需要更新后才能继续" : L"发现新版本",
+           RectF(card.X + S(92), card.Y + S(48), S(400), S(36)), S(24),
            FontStyleBold, ui::SidebarText());
   ui::TextLatin(g, std::wstring(L"v") + g_update.version,
                 RectF(card.X + S(32), card.Y + S(102), S(400), S(40)), S(28), FontStyleBold,
@@ -1829,7 +1867,9 @@ static void DrawUpdate(Graphics& g) {
            FormatBytes(g_update.size).c_str());
   ui::Text(g, meta, RectF(card.X + S(32), card.Y + S(184), card.Width - S(64), S(22)), S(10.5),
            FontStyleRegular, ui::TextMuted());
-  ui::Text(g, L"有新版本可用。你可以立即更新，也可以稍后提醒；在此期间当前版本可继续正常使用。",
+  ui::Text(g, g_update.forced
+               ? L"当前版本已低于安全支持下限，必须更新后才能继续使用。请保持网络连接。"
+               : L"有新版本可用。你可以立即更新，也可以稍后提醒；在此期间当前版本可继续正常使用。",
            RectF(card.X + S(32), card.Y + S(220), card.Width - S(64), S(48)), S(11.5),
            FontStyleRegular, ui::Text(), StringAlignmentNear, StringAlignmentNear, true);
 
@@ -1842,8 +1882,9 @@ static void DrawUpdate(Graphics& g) {
 
   DrawButton(g, RectF(card.X + S(32), card.Y + card.Height - S(64), S(180), S(40)),
              L"立即更新", UI_ICON_DOWNLOAD, true, A_DOWNLOAD);
-  DrawButton(g, RectF(card.X + S(228), card.Y + card.Height - S(64), S(180), S(40)),
-             L"稍后提醒", 0, false, A_SKIP_UPDATE);
+  if (!g_update.forced)
+    DrawButton(g, RectF(card.X + S(228), card.Y + card.Height - S(64), S(180), S(40)),
+               L"稍后提醒", 0, false, A_SKIP_UPDATE);
 }
 
 static void DrawDownloading(Graphics& g) {
@@ -1933,8 +1974,9 @@ static void DrawError(Graphics& g) {
              L"打开日志", UI_ICON_FOLDER_OPEN, false, A_OPEN_LOG);
   DrawButton(g, RectF(card.X + S(318), card.Y + card.Height - S(64), S(150), S(40)),
              L"打开下载页", UI_ICON_EXTERNAL_LINK, false, A_OPEN_RELEASES);
-  DrawButton(g, RectF(card.X + card.Width - S(150), card.Y + card.Height - S(64), S(118), S(40)),
-             L"稍后提醒", 0, false, A_SKIP_UPDATE);
+  if (!g_update.forced)
+    DrawButton(g, RectF(card.X + card.Width - S(150), card.Y + card.Height - S(64), S(118), S(40)),
+               L"稍后提醒", 0, false, A_SKIP_UPDATE);
 }
 
 static void OnAction(int action) {
@@ -2001,8 +2043,10 @@ static void OnAction(int action) {
       if (!g_update.url.empty()) StartDownload();
       return;
     case A_SKIP_UPDATE:
-      // Deferring an update leaves the current build fully usable. Unseen
-      // release notices are still delivered before the home screen.
+      // A required update (below the security floor) cannot be deferred.
+      if (g_update.forced) return;
+      // Deferring an ordinary update leaves the current build fully usable.
+      // Unseen release notices are still delivered before the home screen.
       if (!g_announcements.empty()) {
         g_screen = 1;
         g_announcementIndex = 0;
@@ -2017,10 +2061,12 @@ static void OnAction(int action) {
       ShowWindow(g_window, SW_MINIMIZE);
       return;
     case A_CLOSE:
+      // A required update cannot be escaped by closing the window.
+      if (g_update.forced) return;
       if (g_screen == 1) {
         FinishAnnouncements();
       } else {
-        // Updates are optional: closing the window never blocks the user.
+        // Ordinary updates are optional: closing the window never blocks the user.
         PostQuitMessage(0);
       }
       return;
@@ -2161,30 +2207,68 @@ static void CollectProfileItems(const std::string& xml, std::set<std::string>& k
   }
 }
 
-// A few template keys must win over a stale value left by an earlier
-// build: the toolbar-mode file name and the icon theme name. Every
-// other existing value is kept so upgrades never wipe user choices.
-static bool IsAuthoritativeProfileItem(const std::string& path,
-                                       const std::string& name) {
-  if (path.find("org.openoffice.Office.UI.ToolbarMode") != std::string::npos)
-    return true;
-  if (path == "/org.openoffice.Office.Common/Misc" && name == "SymbolStyle")
-    return true;
+// Valid notebookbar toolbar-mode names. An earlier build wrote a layout file
+// name ("notebookbar.ui") where the engine expects a mode name; that stale
+// value makes new documents fall back to the basic interface. Only such an
+// invalid value is corrected — a valid user choice is always preserved.
+static bool IsValidToolbarMode(const std::string& value) {
+  static const char* kModes[] = {
+      "Tabbed", "TabbedCompact", "GroupedbarCompact", "GroupedbarFull",
+      "ContextualSingle", "ContextualGroups", "Default"};
+  for (const char* mode : kModes)
+    if (value == mode) return true;
   return false;
 }
 
-// Drop an existing <item> with the same path+name so an authoritative
-// replacement is unambiguous instead of being overridden by a earlier one.
-static void DropProfileItem(std::string& xml, const std::string& path,
-                            const std::string& name) {
+static bool IsToolbarModeItem(const std::string& path) {
+  return path.find("/org.openoffice.Office.UI.ToolbarMode") == 0;
+}
+
+static bool IsSymbolStyleItem(const std::string& path, const std::string& name) {
+  return path == "/org.openoffice.Office.Common/Misc" && name == "SymbolStyle";
+}
+
+static std::string ItemValue(const std::string& block) {
+  size_t start = block.find("<value>");
+  if (start == std::string::npos) return "";
+  start += 7;
+  size_t end = block.find("</value>", start);
+  if (end == std::string::npos) return "";
+  return block.substr(start, end - start);
+}
+
+static bool FindExistingValue(const std::string& xml, const std::string& path,
+                              const std::string& name, std::string& value) {
   size_t pos = 0;
   while ((pos = xml.find("<item ", pos)) != std::string::npos) {
     size_t end = xml.find("</item>", pos);
     if (end == std::string::npos) break;
     end += 7;
     std::string block = xml.substr(pos, end - pos);
-    if (XmlAttribute(block, "oor:path") == path &&
-        XmlAttribute(block, "oor:name") == name) {
+    if (XmlAttribute(block, "oor:path") == path && XmlAttribute(block, "oor:name") == name) {
+      value = ItemValue(block);
+      return true;
+    }
+    pos = end;
+  }
+  return false;
+}
+
+// Drop an existing <item> with the same path+name so a corrected
+// replacement is unambiguous instead of being overridden by an earlier one.
+static void DropProfileItem(std::string& xml, const std::string& path,
+                            const std::string& name,
+                            const std::string* expectedValue = nullptr) {
+  size_t pos = 0;
+  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
+    size_t end = xml.find("</item>", pos);
+    if (end == std::string::npos) break;
+    end += 7;
+    std::string block = xml.substr(pos, end - pos);
+    bool match = XmlAttribute(block, "oor:path") == path &&
+                 XmlAttribute(block, "oor:name") == name;
+    if (match && expectedValue) match = ItemValue(block) == *expectedValue;
+    if (match) {
       xml.erase(pos, end - pos);
     } else {
       pos = end;
@@ -2193,8 +2277,10 @@ static void DropProfileItem(std::string& xml, const std::string& path,
 }
 
 // Add brand defaults that the user's profile does not have yet. Existing
-// values are kept, so upgrades never wipe user toolbar/icon/option changes,
-// except for authoritative keys that correct a known stale value.
+// values are always kept, so upgrades never wipe the user's interface mode,
+// icon theme, or option changes. The only value ever corrected is a toolbar
+// mode that is not a valid mode name — the stale "notebookbar.ui" written by
+// an earlier build, which otherwise drops new documents to the basic toolbar.
 static std::string MergeProfile(const std::string& existing, const std::string& tmpl) {
   std::set<std::string> existingKeys;
   CollectProfileItems(existing, existingKeys, nullptr);
@@ -2204,15 +2290,24 @@ static std::string MergeProfile(const std::string& existing, const std::string& 
   CollectProfileItems(tmpl, templateKeys, &templateBlocks);
 
   std::string additions;
-  std::vector<std::pair<std::string, std::string>> overrides;
+  std::vector<std::pair<std::string, std::string>> corrections;
   for (const auto& block : templateBlocks) {
     std::string path = XmlAttribute(block, "oor:path");
     std::string name = XmlAttribute(block, "oor:name");
     if (path.empty() || name.empty()) continue;
-    bool authoritative = IsAuthoritativeProfileItem(path, name);
     if (existingKeys.count(ProfileKey(path, name))) {
-      if (!authoritative) continue;
-      overrides.push_back({path, name});
+      // A valid user choice is never touched. Correct a toolbar mode only
+      // when the stored value is not a real mode name (e.g. a file name).
+      if (IsToolbarModeItem(path)) {
+        std::string value;
+        FindExistingValue(existing, path, name, value);
+        if (!IsValidToolbarMode(value)) {
+          corrections.push_back({path, name});
+          additions += block;
+          additions += "\n";
+        }
+      }
+      continue;
     }
     additions += block;
     additions += "\n";
@@ -2220,7 +2315,7 @@ static std::string MergeProfile(const std::string& existing, const std::string& 
   if (additions.empty()) return existing;
 
   std::string merged = existing;
-  for (const auto& kv : overrides) DropProfileItem(merged, kv.first, kv.second);
+  for (const auto& kv : corrections) DropProfileItem(merged, kv.first, kv.second);
   size_t close = merged.rfind("</oor:items>");
   if (close == std::string::npos) {
     merged += "\n" + additions;
@@ -2247,6 +2342,14 @@ static void EnsureProfile() {
     return;
   }
 
+  // A reused engine is never branded and has no chenyi icon theme installed.
+  // Pointing SymbolStyle at a theme that is not there leaves the name dangling,
+  // so remove the key and let the engine use its own default icon set.
+  bool themeInstalled = ChenyiThemeInstalled();
+  std::string chenyi = "chenyi";
+  if (!themeInstalled)
+    DropProfileItem(tmpl, "/org.openoffice.Office.Common/Misc", "SymbolStyle", &chenyi);
+
   bool created = !FileExists(path);
   if (created) {
     if (!WriteWholeFile(path, tmpl)) {
@@ -2261,6 +2364,8 @@ static void EnsureProfile() {
       return;
     }
     std::string merged = MergeProfile(existing, tmpl);
+    if (!themeInstalled)
+      DropProfileItem(merged, "/org.openoffice.Office.Common/Misc", "SymbolStyle", &chenyi);
     if (merged != existing && !WriteWholeFile(path, merged)) {
       LogLine(L"cannot merge brand profile");
       return;
@@ -2544,8 +2649,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
       return 0;
 
     case WM_CLOSE:
-      // Updates are optional: every screen may be closed. Doing so simply
-      // defers a pending update to the next launch.
+      // A required update cannot be escaped by closing the window.
+      if (g_update.forced) return 0;
+      // Ordinary updates are optional: every screen may be closed. Doing so
+      // simply defers a pending update to the next launch.
       if (g_screen == 1) {
         FinishAnnouncements();
         return 0;
@@ -2560,8 +2667,144 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+// ---------------------------------------------------------------------------
+// Non-interactive self-test. Driven by CI (`ChenyiOffice.exe --self-test=PATH`)
+// to assert the pure logic behind the launcher's UI and update behaviour
+// without opening a window, touching the network, or starting the engine.
+// The same production functions are called, so a regression cannot pass by
+// testing a copy of the logic. Exit code 0 means every assertion passed.
+// ---------------------------------------------------------------------------
+
+static std::string SelfTestItem(const std::string& path, const std::string& name,
+                                const std::string& value) {
+  return "<item oor:path=\"" + path + "\"><prop oor:name=\"" + name +
+         "\" oor:op=\"fuse\"><value>" + value + "</value></prop></item>";
+}
+
+static std::string SelfTestDoc(const std::string& body) {
+  return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+         "<oor:items xmlns:oor=\"http://openoffice.org/2001/registry\">\n" +
+         body + "\n</oor:items>\n";
+}
+
+static int RunSelfTest(const std::wstring& outPath) {
+  int passed = 0, failed = 0;
+  std::string log;
+  auto check = [&](const char* name, bool ok) {
+    log += (ok ? "PASS " : "FAIL ") + std::string(name) + "\n";
+    if (ok) ++passed; else ++failed;
+  };
+
+  const std::string toolbar = "/org.openoffice.Office.UI.ToolbarMode";
+  const std::string misc = "/org.openoffice.Office.Common/Misc";
+
+  // Problem 1/3: only real mode names are valid; a layout file name is not.
+  check("mode Tabbed valid", IsValidToolbarMode("Tabbed"));
+  check("mode GroupedbarCompact valid", IsValidToolbarMode("GroupedbarCompact"));
+  check("mode Default valid", IsValidToolbarMode("Default"));
+  check("file name notebookbar.ui rejected", !IsValidToolbarMode("notebookbar.ui"));
+  check("empty mode rejected", !IsValidToolbarMode(""));
+
+  // Version comparison underpins the security floor.
+  check("0.4.2 greater than 0.4.1", VersionGreater(L"0.4.2", L"0.4.1"));
+  check("0.4.1 not greater than 0.4.2", !VersionGreater(L"0.4.1", L"0.4.2"));
+  check("equal versions not greater", !VersionGreater(L"0.4.2", L"0.4.2"));
+
+  // Problem 5: normal updates optional; floor or mandatory forces the prompt.
+  check("ordinary update optional", !ShouldForceUpdate(false, false));
+  check("below security floor forced", ShouldForceUpdate(true, false));
+  check("mandatory flag forced", ShouldForceUpdate(false, true));
+  check("floor and mandatory forced", ShouldForceUpdate(true, true));
+
+  // Problem 3: a valid user toolbar choice survives a version-bump merge.
+  {
+    std::string existing = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "GroupedbarCompact"));
+    std::string tmpl = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "Tabbed"));
+    std::string merged = MergeProfile(existing, tmpl);
+    std::string value;
+    FindExistingValue(merged, toolbar, "ActiveWriter", value);
+    check("valid toolbar choice preserved", value == "GroupedbarCompact");
+  }
+
+  // Problem 3: the stale file-name value is corrected, not duplicated.
+  {
+    std::string existing = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "notebookbar.ui"));
+    std::string tmpl = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "Tabbed"));
+    std::string merged = MergeProfile(existing, tmpl);
+    std::string value;
+    FindExistingValue(merged, toolbar, "ActiveWriter", value);
+    check("stale toolbar value corrected", value == "Tabbed");
+    check("stale toolbar value not duplicated", merged.find("notebookbar.ui") == std::string::npos);
+  }
+
+  // Problem 3: a user-chosen icon theme is not reset by a merge.
+  {
+    std::string existing = SelfTestDoc(SelfTestItem(misc, "SymbolStyle", "colibre"));
+    std::string tmpl = SelfTestDoc(SelfTestItem(misc, "SymbolStyle", "chenyi"));
+    std::string merged = MergeProfile(existing, tmpl);
+    std::string value;
+    FindExistingValue(merged, misc, "SymbolStyle", value);
+    check("user icon theme preserved on merge", value == "colibre");
+  }
+
+  // Problem 2: removing the dangling theme drops only our own value.
+  {
+    std::string xml = SelfTestDoc(SelfTestItem(misc, "SymbolStyle", "chenyi") +
+                                  SelfTestItem(misc, "SymbolStyle", "colibre"));
+    std::string chenyi = "chenyi";
+    DropProfileItem(xml, misc, "SymbolStyle", &chenyi);
+    std::string value;
+    bool found = FindExistingValue(xml, misc, "SymbolStyle", value);
+    check("only chenyi theme removed", found && value == "colibre");
+  }
+
+  // A missing default is still supplied for a fresh profile.
+  {
+    std::string existing = SelfTestDoc("");
+    std::string tmpl = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "Tabbed"));
+    std::string merged = MergeProfile(existing, tmpl);
+    std::string value;
+    FindExistingValue(merged, toolbar, "ActiveWriter", value);
+    check("default toolbar mode added when missing", value == "Tabbed");
+  }
+
+  log += "TOTAL " + std::to_string(passed) + " passed, " + std::to_string(failed) +
+         " failed\n";
+
+  FILE* file = outPath.empty() ? nullptr : _wfopen(outPath.c_str(), L"wb");
+  if (file) {
+    fwrite(log.data(), 1, log.size(), file);
+    fclose(file);
+  }
+  fwrite(log.data(), 1, log.size(), stderr);
+  return failed == 0 ? 0 : 1;
+}
+
+// Returns -1 when the process was not launched in self-test mode.
+static int MaybeRunSelfTest() {
+  std::wstring cmd = GetCommandLineW();
+  const std::wstring flag = L"--self-test";
+  size_t pos = cmd.find(flag);
+  if (pos == std::wstring::npos) return -1;
+
+  std::wstring outPath;
+  size_t eq = cmd.find(L'=', pos);
+  if (eq == pos + flag.size()) {
+    size_t begin = eq + 1;
+    size_t end = cmd.find_first_of(L" \t\r\n", begin);
+    if (end == std::wstring::npos) end = cmd.size();
+    outPath = cmd.substr(begin, end - begin);
+    if (outPath.size() >= 2 && outPath.front() == L'"' && outPath.back() == L'"')
+      outPath = outPath.substr(1, outPath.size() - 2);
+  }
+  if (outPath.empty()) outPath = StateDirectory() + L"\\self-test.log";
+  return RunSelfTest(outPath);
+}
+
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   g_instance = instance;
+  int selfTestResult = MaybeRunSelfTest();
+  if (selfTestResult >= 0) return selfTestResult;
   SetProcessDPIAware();
   ui::InitGdiplus(g_gdiplusToken);
   InitializeCriticalSection(&g_dataLock);

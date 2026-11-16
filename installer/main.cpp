@@ -37,7 +37,7 @@ using namespace Gdiplus;
 #endif
 
 static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.4.2";
+static const wchar_t* kVersion = L"0.4.3";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
 // can always be extracted by someone who obtains the file.

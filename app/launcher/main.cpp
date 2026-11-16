@@ -43,8 +43,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
-static const wchar_t* kVersion = L"0.4.2";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.2";
+static const wchar_t* kVersion = L"0.4.3";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.3";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the

@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify
         required: true
-        default: v0.4.2
+        default: v0.4.3
         type: string
       verify_ui:
         description: Perform a real silent install and verify deployed UI artifacts

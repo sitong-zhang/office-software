@@ -2,6 +2,19 @@
 
 这里记录 Chenyi Office（胡辰逸定制版）每个版本面向用户的重要变更。
 
+## [0.4.3] — 2026-11-16
+
+### 修复
+
+- 升级不再重置你选好的界面。此前每次升级都会把界面模式和图标主题悄悄改回默认；现在只纠正无效的旧配置，你自己的选择会完整保留。
+- 图标主题只在确实可用的情况下启用。复用系统中已有办公组件时，不再指向不存在的主题，避免图标显示异常。
+- 公式编辑器现在可以从菜单打开「用户界面」切换入口与「关于」对话框。
+
+### 变更
+
+- 安全更新现在能真正强制推送：当你的版本低于安全下限、或更新被标记为必需时，更新变为必须完成；普通版本更新仍可随时推迟或关闭。
+- 安装器与更新流程经过更完整的自动化验证，包括真实安装一次并检查界面资源是否齐全。
+
 ## [0.4.2] — 2026-11-16
 
 ### 修复
@@ -187,6 +200,7 @@
 
 项目初始化。
 
+[0.4.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.3
 [0.4.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.2
 [0.4.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.1
 [0.4.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.0

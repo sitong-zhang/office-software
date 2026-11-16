@@ -4,13 +4,13 @@
 
 [![许可证：MPL 2.0](https://img.shields.io/badge/license-MPL%202.0-1f5c46.svg)](LICENSE)
 [![平台：Windows x64](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4.svg)](https://sitong-zhang.github.io/office-software/)
-[![版本](https://img.shields.io/badge/version-0.4.2-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
+[![版本](https://img.shields.io/badge/version-0.4.3-1f5c46.svg)](https://github.com/sitong-zhang/office-software/releases/latest)
 
 Chenyi Office 提供文字文档、电子表格、演示文稿、绘图和公式等常用办公能力，并把启动、界面、更新和公告整合为一致的体验。
 
 ## 下载与安装
 
-- **安装包**：[ChenyiOffice-0.4.2-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
+- **安装包**：[ChenyiOffice-0.4.3-x64.exe](https://github.com/sitong-zhang/office-software/releases/latest)
 - **适用平台**：Windows 10 / Windows 11，64 位
 - **安装说明**：首次安装需要发布者提供的安装密码，更新时无需再次输入。
 

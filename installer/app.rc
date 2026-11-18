@@ -49,7 +49,7 @@
 1 24 "installer/app.manifest"
 
 1 VERSIONINFO
-FILEVERSION 0,4,3,0
+FILEVERSION 0,4,4,0
 PRODUCTVERSION 0,4,2,0
 FILEOS 0x40004
 FILETYPE 0x1
@@ -60,12 +60,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Chenyi Office contributors"
       VALUE "FileDescription", "Chenyi Office installer"
-      VALUE "FileVersion", "0.4.3.0"
+      VALUE "FileVersion", "0.4.4.0"
       VALUE "InternalName", "ChenyiOfficeSetup"
       VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
-      VALUE "OriginalFilename", "ChenyiOffice-0.4.3-x64.exe"
+      VALUE "OriginalFilename", "ChenyiOffice-0.4.4-x64.exe"
       VALUE "ProductName", "Chenyi Office"
-      VALUE "ProductVersion", "0.4.3"
+      VALUE "ProductVersion", "0.4.4"
     END
   END
   BLOCK "VarFileInfo"

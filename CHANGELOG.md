@@ -2,7 +2,7 @@
 
 这里记录 Chenyi Office每个版本面向用户的重要变更。
 
-## [0.4.3] — 2026-11-16
+## [0.4.4] — 2026-11-16
 
 ### 修复
 
@@ -200,7 +200,7 @@
 
 项目初始化。
 
-[0.4.3]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.3
+[0.4.4]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.4
 [0.4.2]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.2
 [0.4.1]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.1
 [0.4.0]: https://github.com/sitong-zhang/office-software/releases/tag/v0.4.0

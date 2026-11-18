@@ -45,8 +45,8 @@ using namespace Gdiplus;
 // ---------------------------------------------------------------------------
 
 static const wchar_t* kProductName = L"Chenyi Office";
-static const wchar_t* kVersion = L"0.4.3";
-static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.3";
+static const wchar_t* kVersion = L"0.4.4";
+static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.4";
 
 // SHA-1 thumbprints of accepted code-signing certificates. Updates are accepted
 // only from an installer signed by one of these certificates, even if the
@@ -2749,7 +2749,7 @@ static int RunSelfTest(const std::wstring& outPath) {
         "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x/y.exe\","
         "\"sha256\":\"" + sha + "\",\"size\":1234}}";
     UpdateInfo info;
-    bool ok = ParseUpdateInfo(normal, L"0.4.3", info);
+    bool ok = ParseUpdateInfo(normal, L"0.4.4", info);
     check("newer manifest accepted", ok && info.version == L"0.4.4" && info.size == 1234);
     check("manifest ordinary update optional", ok && !info.forced);
   }
@@ -2760,7 +2760,7 @@ static int RunSelfTest(const std::wstring& outPath) {
         "\"installer\":{\"url\":\"https://github.com/x/y.exe\","
         "\"sha256\":\"" + sha + "\",\"size\":1234}}";
     UpdateInfo info;
-    bool ok = ParseUpdateInfo(floor, L"0.4.3", info);
+    bool ok = ParseUpdateInfo(floor, L"0.4.4", info);
     check("security floor forces update", ok && info.forced);
   }
   {
@@ -2770,7 +2770,7 @@ static int RunSelfTest(const std::wstring& outPath) {
         "\"installer\":{\"url\":\"https://github.com/x/y.exe\","
         "\"sha256\":\"" + sha + "\",\"size\":1234}}";
     UpdateInfo info;
-    bool ok = ParseUpdateInfo(mandatory, L"0.4.3", info);
+    bool ok = ParseUpdateInfo(mandatory, L"0.4.4", info);
     check("mandatory flag forces update", ok && info.forced && info.mandatory);
   }
   {
@@ -2778,25 +2778,25 @@ static int RunSelfTest(const std::wstring& outPath) {
         "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"http://github.com/x.exe\","
         "\"sha256\":\"" + std::string(64, 'd') + "\",\"size\":1}}";
     UpdateInfo info;
-    check("insecure manifest url rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+    check("insecure manifest url rejected", !ParseUpdateInfo(bad, L"0.4.4", info));
     bad = "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x.exe\","
           "\"sha256\":\"short\",\"size\":1}}";
-    check("bad sha256 rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+    check("bad sha256 rejected", !ParseUpdateInfo(bad, L"0.4.4", info));
     bad = "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x.exe\","
           "\"sha256\":\"" + std::string(64, 'e') + "\",\"size\":0}}";
-    check("zero size rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+    check("zero size rejected", !ParseUpdateInfo(bad, L"0.4.4", info));
   }
   {
     std::string current =
-        "{\"version\":\"0.4.3\",\"installer\":{\"url\":\"https://github.com/x.exe\","
+        "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x.exe\","
         "\"sha256\":\"" + std::string(64, 'f') + "\",\"size\":1}}";
     UpdateInfo info;
-    check("no update for current version", !ParseUpdateInfo(current, L"0.4.3", info));
+    check("no update for current version", !ParseUpdateInfo(current, L"0.4.4", info));
   }
   {
     std::string malformed = "{ this is not json";
     UpdateInfo info;
-    check("malformed manifest rejected", !ParseUpdateInfo(malformed, L"0.4.3", info));
+    check("malformed manifest rejected", !ParseUpdateInfo(malformed, L"0.4.4", info));
   }
 
   log += "TOTAL " + std::to_string(passed) + " passed, " + std::to_string(failed) +

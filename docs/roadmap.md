@@ -1,6 +1,6 @@
 # 路线图
 
-当前版本：**v0.4.3** —— 面向 Windows 10 / 11 64 位的预览版，提供专属启动器与安装器、重新设计的编辑界面、免密码更新、可选更新通道和应用内公告。
+当前版本：**v0.4.4** —— 面向 Windows 10 / 11 64 位的预览版，提供专属启动器与安装器、重新设计的编辑界面、免密码更新、可选更新通道和应用内公告。
 
 里程碑在 [GitHub Milestones](https://github.com/sitong-zhang/office-software/milestones) 跟踪，并通过 [Discussions](https://github.com/sitong-zhang/office-software/discussions/categories/announcements) 公布。
 

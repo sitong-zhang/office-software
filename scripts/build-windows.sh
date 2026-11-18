@@ -28,7 +28,7 @@ if [ -n "$ENGINE_MSI_LOCAL" ]; then
   ENGINE_MSI_SHA256="$(sha256sum "$ENGINE_MSI_PATH" | awk '{print $1}')"
   echo "  using local engine payload (sha256=$ENGINE_MSI_SHA256)"
 fi
-VERSION="0.4.3"
+VERSION="0.4.4"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
 PRODUCT_NAME="Chenyi Office"

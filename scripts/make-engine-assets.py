@@ -71,9 +71,8 @@ def make_splash(width, height):
     cjk = ImageFont.truetype(FONT_CJK, int(height * 0.075))
 
     draw.text((text_x, int(height * 0.28)), "CHENYI OFFICE", font=bold, fill=CREAM)
-    draw.text((text_x, int(height * 0.50)), "", font=cjk, fill=ACCENT)
     draw.text(
-        (text_x, int(height * 0.64)),
+        (text_x, int(height * 0.58)),
         "Windows 10 / 11  ·  64-bit",
         font=regular,
         fill=MUTED,

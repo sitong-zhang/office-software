@@ -96,7 +96,7 @@
                 <property name="valign">end</property>
                 <property name="hexpand">True</property>
                 <property name="vexpand">True</property>
-                <property name="label" translatable="no" context="aboutdialog|description">Chenyi Office（胡辰逸定制版）是一套面向 Windows 10 / 11 64 位的桌面办公套件，包含文档、表格、演示、绘图与公式编辑。</property>
+                <property name="label" translatable="no" context="aboutdialog|description">Chenyi Office 是一套面向 Windows 10 / 11 64 位的桌面办公套件，包含文档、表格、演示、绘图与公式编辑。</property>
                 <property name="wrap">True</property>
                 <property name="max-width-chars">60</property>
                 <property name="xalign">0</property>

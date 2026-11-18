@@ -1,4 +1,4 @@
-// Chenyi Office（胡辰逸定制版） installer
+// Chenyi Office installer
 // Welcome gate with password, payload extraction, engine installation.
 
 #ifndef UNICODE
@@ -37,7 +37,7 @@ using namespace Gdiplus;
 #define MSI_PRODUCT_CODE L""
 #endif
 
-static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
+static const wchar_t* kProduct = L"Chenyi Office";
 static const wchar_t* kVersion = L"0.4.3";
 // SHA-256 of the install password; the plain password is not stored in source.
 // This is a distribution gate, not a security boundary: the installer payload
@@ -132,8 +132,6 @@ static void DrawSidebar(Graphics& g) {
   ui::Image(g, 111, RectF(S(26), S(24), S(42), S(42)));
   ui::TextLatin(g, L"Chenyi Office", RectF(S(80), S(22), S(170), S(24)), S(15),
                 FontStyleBold, ui::SidebarText());
-  ui::Text(g, L"胡辰逸定制版", RectF(S(80), S(48), S(170), S(18)), S(10),
-           FontStyleRegular, ui::SidebarMuted());
   ui::FillRound(g, RectF(S(26), S(88), S(228), 1), 0, ui::rgba(255, 255, 255, 18));
 
   int y = S(140);
@@ -158,7 +156,7 @@ static void DrawSidebar(Graphics& g) {
 
 static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
   ui::TitleBar(g, {g_dpi, g_hover}, g_hits, SIDEBAR, g_width, title,
-               L"Chenyi Office · 胡辰逸定制版", IA_MINIMIZE, IA_CLOSE, allowClose);
+               L"Chenyi Office", IA_MINIMIZE, IA_CLOSE, allowClose);
 }
 
 static void DrawWelcome(Graphics& g) {
@@ -301,7 +299,7 @@ static void DrawFinish(Graphics& g) {
   ui::Icon(g, UI_ICON_CHECK_CIRCLE, ui::ICON_GREEN, RectF(x + S(16), S(112), S(32), S(32)));
   ui::Text(g, L"安装完成", RectF(x + S(84), S(104), width - S(84), S(40)), S(26),
            FontStyleBold, ui::Text());
-  ui::Text(g, L"Chenyi Office（胡辰逸定制版）已安装到本机。",
+  ui::Text(g, L"Chenyi Office 已安装到本机。",
            RectF(x, S(184), width, S(22)), S(12), FontStyleBold, ui::Text());
   ui::Text(g,
            L"首次启动会执行开屏动画、检查最新版本并读取应用内公告，完成后进入办公套件。",
@@ -568,8 +566,6 @@ static void ApplyEngineBranding(const std::wstring& engineRoot) {
   WriteResourceFile(194, cfg + L"\\modules\\sdraw\\ui\\notebookbar_compact.ui");
   WriteResourceFile(195, cfg + L"\\modules\\sdraw\\ui\\notebookbar_groupedbar_compact.ui");
   WriteResourceFile(196, cfg + L"\\modules\\sdraw\\ui\\notebookbar_single.ui");
-  WriteResourceFile(197, engineRoot + L"\\share\\config\\images_chenyi_svg.zip");
-  WriteResourceFile(198, engineRoot + L"\\share\\config\\images_chenyi.zip");
 
   // The engine launcher resolves its kernel and bootstrap configuration from
   // its own file name, so a branded launcher needs matching .bin and .ini

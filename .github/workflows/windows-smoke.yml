@@ -204,16 +204,7 @@ jobs:
           if ($mathMenu -notmatch 'UIPicker') { throw 'Math menubar is missing UIPicker.' }
           if ($mathMenu -notmatch 'uno:About') { throw 'Math menubar is missing About.' }
 
-          # The branded icon theme must be installed so the profile's
-          # SymbolStyle=chenyi resolves instead of dangling on a reused engine.
-          $config = Join-Path $engineRoot 'share\config'
-          if (-not (Test-Path (Join-Path $config 'images_chenyi.zip'))) {
-            throw 'Branded icon theme (images_chenyi.zip) was not deployed.'
-          }
-          if (-not (Test-Path (Join-Path $config 'images_chenyi_svg.zip'))) {
-            throw 'Branded SVG icon theme was not deployed.'
-          }
-          Write-Host 'All deployed UI artifacts and icon themes verified.'
+          Write-Host 'All deployed UI artifacts verified.'
 
       - name: Launcher self-test
         if: ${{ inputs.verify_ui }}

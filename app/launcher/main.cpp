@@ -1,4 +1,4 @@
-// Chenyi Office（胡辰逸定制版） launcher
+// Chenyi Office launcher
 // Splash, optional update prompt, in-app announcements, engine start.
 
 #ifndef UNICODE
@@ -44,7 +44,7 @@ using namespace Gdiplus;
 // Product configuration
 // ---------------------------------------------------------------------------
 
-static const wchar_t* kProductName = L"Chenyi Office（胡辰逸定制版）";
+static const wchar_t* kProductName = L"Chenyi Office";
 static const wchar_t* kVersion = L"0.4.3";
 static const wchar_t* kUserAgent = L"ChenyiOffice/0.4.3";
 
@@ -1373,8 +1373,6 @@ static void DrawSidebar(Graphics& g) {
   ui::Image(g, 111, RectF(S(24), S(24), S(38), S(38)));
   ui::TextLatin(g, L"Chenyi Office", RectF(S(74), S(22), S(140), S(24)), S(15),
                 FontStyleBold, ui::SidebarText());
-  ui::Text(g, L"胡辰逸定制版", RectF(S(74), S(47), S(140), S(18)), S(10),
-           FontStyleRegular, ui::SidebarMuted());
   ui::FillRound(g, RectF(S(24), S(86), S(184), 1), 0, ui::rgba(255, 255, 255, 18));
 
   int y = S(104);
@@ -1403,7 +1401,7 @@ static void DrawSidebar(Graphics& g) {
 
 static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
   ui::TitleBar(g, {g_dpi, g_hover}, g_hits, SIDEBAR, g_width, title,
-               L"Chenyi Office · 胡辰逸定制版", A_MINIMIZE, A_CLOSE, allowClose);
+               L"Chenyi Office", A_MINIMIZE, A_CLOSE, allowClose);
 }
 
 static void DrawQuickCard(Graphics& g, const RectF& rect, int icon, const std::wstring& title,
@@ -1495,7 +1493,7 @@ static void DrawDashboard(Graphics& g) {
   float left = S(272), top = S(80), leftWidth = S(520);
   RectF hero(left, top, leftWidth, S(160));
   ui::FillRoundGradient(g, hero, S(18), ui::GreenLight(), ui::Ink());
-  ui::Text(g, L"下午好，胡辰逸", RectF(left + S(24), top + S(20), leftWidth - S(48), S(34)),
+  ui::Text(g, L"下午好", RectF(left + S(24), top + S(20), leftWidth - S(48), S(34)),
            S(24), FontStyleBold, ui::SidebarText());
   ui::Text(g, L"把文档、表格、演示和绘图放在一个安静的工作空间里。",
            RectF(left + S(24), top + S(62), leftWidth - S(48), S(40)), S(11.5),
@@ -1660,7 +1658,7 @@ static void DrawSettingsPage(Graphics& g) {
   ui::FillRound(g, aboutCard, S(14), ui::Surface());
   ui::StrokeRound(g, aboutCard, S(14), ui::Border());
   ui::Image(g, 110, RectF(aboutCard.X + S(20), aboutCard.Y + S(20), S(28), S(28)));
-  ui::Text(g, L"Chenyi Office（胡辰逸定制版）",
+  ui::Text(g, L"Chenyi Office",
            RectF(aboutCard.X + S(60), aboutCard.Y + S(16), S(420), S(22)), S(13),
            FontStyleBold, ui::Text());
   ui::Text(g, L"独立打造的桌面办公空间，界面、更新与公告由本项目维护。",
@@ -1706,8 +1704,6 @@ static void DrawSplash(Graphics& g) {
   ui::Image(g, 111, RectF(center - S(48), g_height / 2.0f - S(150), S(96), S(96)));
   ui::TextLatin(g, L"CHENYI OFFICE", RectF(0, g_height / 2.0f - S(34), g_width, S(44)), S(34),
                 FontStyleBold, ui::SidebarText(), StringAlignmentCenter);
-  ui::Text(g, L"胡辰逸定制版", RectF(0, g_height / 2.0f + S(14), g_width, S(24)), S(14),
-           FontStyleRegular, ui::Accent(), StringAlignmentCenter);
   float lineWidth = (float)S(220) * std::min(1.0, (double)elapsed / 900.0);
   ui::FillRound(g, RectF(center - lineWidth / 2, g_height / 2.0f + S(54), lineWidth, S(3)), S(2),
                 ui::Accent());
@@ -2025,7 +2021,7 @@ static void OnAction(int action) {
     }
     case A_ABOUT:
       MessageBoxW(g_window,
-                  L"Chenyi Office（胡辰逸定制版）\n\n"
+                  L"Chenyi Office\n\n"
                   L"Windows 10 / 11 · 64 位\n"
                   L"产品图标来自 Google Material Design Icons（Apache 2.0）。",
                   kProductName, MB_ICONINFORMATION | MB_OK);

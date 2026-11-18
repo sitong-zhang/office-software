@@ -24,7 +24,7 @@ BEGIN
       VALUE "InternalName", "Uninstall"
       VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
       VALUE "OriginalFilename", "Uninstall.exe"
-      VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
+      VALUE "ProductName", "Chenyi Office"
       VALUE "ProductVersion", "0.4.3"
     END
   END

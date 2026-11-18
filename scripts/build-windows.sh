@@ -31,7 +31,7 @@ fi
 VERSION="0.4.3"
 OUT="$DIST/ChenyiOffice-${VERSION}-x64.exe"
 
-PRODUCT_NAME="Chenyi Office（胡辰逸定制版）"
+PRODUCT_NAME="Chenyi Office"
 HOMEPAGE="https://sitong-zhang.github.io/office-software/"
 SIGN_PFX="${SIGN_PFX:-$BUILD/signing/chenyi.pfx}"
 SIGN_CERT="${SIGN_CERT:-$BUILD/signing/chenyi.crt}"

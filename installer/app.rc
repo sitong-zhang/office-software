@@ -43,8 +43,6 @@
 194 RCDATA "app/engine-ui/modules/sdraw/ui/notebookbar_compact.ui"
 195 RCDATA "app/engine-ui/modules/sdraw/ui/notebookbar_groupedbar_compact.ui"
 196 RCDATA "app/engine-ui/modules/sdraw/ui/notebookbar_single.ui"
-197 RCDATA "app/engine-icons/images_chenyi_svg.zip"
-198 RCDATA "app/engine-icons/images_chenyi.zip"
 
 #include "../app/ui/icons.rc"
 
@@ -66,7 +64,7 @@ BEGIN
       VALUE "InternalName", "ChenyiOfficeSetup"
       VALUE "LegalCopyright", "Copyright (C) 2026 Chenyi Office contributors. MPL 2.0."
       VALUE "OriginalFilename", "ChenyiOffice-0.4.3-x64.exe"
-      VALUE "ProductName", "Chenyi Office（胡辰逸定制版）"
+      VALUE "ProductName", "Chenyi Office"
       VALUE "ProductVersion", "0.4.3"
     END
   END

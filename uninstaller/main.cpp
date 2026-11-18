@@ -1,4 +1,4 @@
-// Chenyi Office（胡辰逸定制版） uninstaller
+// Chenyi Office uninstaller
 
 #ifndef UNICODE
 #define UNICODE
@@ -23,7 +23,7 @@ using namespace Gdiplus;
 #include <string>
 #include <vector>
 
-static const wchar_t* kProduct = L"Chenyi Office（胡辰逸定制版）";
+static const wchar_t* kProduct = L"Chenyi Office";
 
 static HINSTANCE g_instance = nullptr;
 static HWND g_window = nullptr;
@@ -222,7 +222,7 @@ static void DrawSidebar(Graphics& g) {
   ui::Image(g, 111, RectF(S(24), S(24), S(40), S(40)));
   ui::TextLatin(g, L"Chenyi Office", RectF(S(76), S(22), S(130), S(24)), S(14),
                 FontStyleBold, ui::SidebarText());
-  ui::Text(g, L"胡辰逸定制版", RectF(S(76), S(46), S(130), S(18)), S(9.5), FontStyleRegular,
+  ui::Text(g, L"", RectF(S(76), S(46), S(130), S(18)), S(9.5), FontStyleRegular,
            ui::SidebarMuted());
   ui::FillRound(g, RectF(S(24), S(86), S(172), 1), 0, ui::rgba(255, 255, 255, 18));
 
@@ -242,7 +242,7 @@ static void DrawScreen(Graphics& g) {
 
   ui::Text(g, L"卸载 Chenyi Office", RectF(SIDEBAR + S(40), S(12), S(360), S(32)), S(17),
            FontStyleBold, ui::Text());
-  ui::Text(g, L"Chenyi Office · 胡辰逸定制版", RectF(SIDEBAR + S(40), S(34), S(360), S(16)),
+  ui::Text(g, L"Chenyi Office", RectF(SIDEBAR + S(40), S(34), S(360), S(16)),
            S(10), FontStyleRegular, ui::TextMuted());
   ui::FillRound(g, RectF(SIDEBAR, TITLEBAR - 1, g_width - SIDEBAR, 1), 0, ui::Border());
   DrawWindowButton(g, RectF(g_width - S(86), S(14), S(28), S(28)), UI_ICON_MINIMIZE, UA_MINIMIZE,
@@ -430,8 +430,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
   g_enginePreExisting = enginePreExisting != 0;
   const wchar_t* question =
       enginePreExisting == 0
-          ? L"确定要卸载 Chenyi Office（胡辰逸定制版）及其办公内核吗？"
-          : L"确定要卸载 Chenyi Office（胡辰逸定制版）吗？\n\n"
+          ? L"确定要卸载 Chenyi Office及其办公内核吗？"
+          : L"确定要卸载 Chenyi Office吗？\n\n"
             L"系统中原有的办公内核会被保留。";
   int answer = MessageBoxW(nullptr, question, kProduct,
                            MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2);

@@ -243,7 +243,7 @@ def build_about_dialog(source: Path, target: Path) -> None:
     strip_requirements(root)
     set_prop(root, "AboutDialog", "title", "关于 Chenyi Office")
     set_prop(root, "lbAbout", "label",
-             "Chenyi Office（胡辰逸定制版）是一套面向 Windows 10 / 11 64 位的桌面办公套件，"
+             "Chenyi Office是一套面向 Windows 10 / 11 64 位的桌面办公套件，"
              "包含文档、表格、演示、绘图与公式编辑。")
     set_prop(root, "lbCopyright", "label", "Copyright © 2026 Chenyi Office contributors.")
     set_prop(root, "btnWebsite", "label", "项目主页")

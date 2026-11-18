@@ -71,7 +71,7 @@ def make_splash(width, height):
     cjk = ImageFont.truetype(FONT_CJK, int(height * 0.075))
 
     draw.text((text_x, int(height * 0.28)), "CHENYI OFFICE", font=bold, fill=CREAM)
-    draw.text((text_x, int(height * 0.50)), "胡辰逸定制版", font=cjk, fill=ACCENT)
+    draw.text((text_x, int(height * 0.50)), "", font=cjk, fill=ACCENT)
     draw.text(
         (text_x, int(height * 0.64)),
         "Windows 10 / 11  ·  64-bit",
@@ -120,7 +120,7 @@ def make_about_svg():
   </style>
   {svg_mark(280, 360, 120, "#1f5c46")}
   <text x="500" y="500" text-anchor="middle" font-size="76" class="title">CHENYI OFFICE</text>
-  <text x="500" y="560" text-anchor="middle" font-size="34" class="sub">胡辰逸定制版</text>
+  <text x="500" y="560" text-anchor="middle" font-size="34" class="sub"></text>
   <rect x="410" y="610" width="180" height="6" rx="3" fill="#58b892"/>
   <text x="500" y="668" text-anchor="middle" font-size="22" class="fine">Windows 10 / 11  ·  64-bit</text>
 </svg>

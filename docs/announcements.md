@@ -25,7 +25,7 @@ https://raw.githubusercontent.com/sitong-zhang/office-software/main/announcement
   "announcements": [
     {
       "id": "2026-11-15-project-start",
-      "title": "Chenyi Office（胡辰逸定制版）项目启动",
+      "title": "Chenyi Office项目启动",
       "body": "第一段。\n\n第二段。",
       "severity": "info",
       "published_at": "2026-11-15T12:00:00+08:00",

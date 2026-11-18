@@ -41,7 +41,7 @@ Chenyi Office 提供文字文档、电子表格、演示文稿、绘图和公式
 
 ## 许可证
 
-本项目源代码采用 [Mozilla Public License 2.0](LICENSE) 授权。产品图标使用 Lucide（ISC）与 Material Design Icons（Apache 2.0）等开源资源，对应的许可证文件随资源一并保存在 `app/branding/third-party/` 目录中。
+本项目源代码采用 [Mozilla Public License 2.0](LICENSE) 授权。产品图标使用 Lucide（ISC）与 Material Design Icons（Apache 2.0）等开源资源，对应的许可证文件随资源一并保存在 `app/branding/third-party/` 目录中；启动器解析本地配置所用的 [pugixml](https://pugixml.org/)（MIT）位于 `app/third_party/pugixml/`，许可证与其源码一同提供。
 
 ## 安全
 

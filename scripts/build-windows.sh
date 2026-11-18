@@ -101,7 +101,8 @@ python3 "$ROOT/scripts/make-ui-icons.py"
 
 echo "[2/8] Building and signing launcher"
 "$RC" "$ROOT/app/launcher/app.rc" -O coff -o "$BUILD/app.res.o"
-"$CXX" "${CXXFLAGS[@]}" "$ROOT/app/launcher/main.cpp" "$BUILD/app.res.o" \
+"$CXX" "${CXXFLAGS[@]}" "$ROOT/app/launcher/main.cpp" \
+  "$ROOT/app/third_party/pugixml/pugixml.cpp" "$BUILD/app.res.o" \
   -o "$BUILD/ChenyiOffice.exe" \
   -lwinhttp -lbcrypt -lwintrust -lcrypt32 -lshell32 -lole32 -luuid -lshlwapi -lgdi32 -luser32 -ladvapi32 -lgdiplus -ldwmapi
 sign_file "$BUILD/ChenyiOffice.exe"

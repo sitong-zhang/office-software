@@ -21,6 +21,8 @@
 #include <wintrust.h>
 #include <softpub.h>
 
+#include "app/third_party/pugixml/pugixml.hpp"
+#include "app/ui/common.h"
 #include "app/ui/icons.h"
 #include "app/ui/theme.h"
 
@@ -913,6 +915,42 @@ struct UpdateInfo {
   bool forced = false;
 };
 
+// Pure manifest validation, shared by the live update check and self-test.
+// `out` is only written when a usable update is found; returns true in that
+// case. Keeping the exact acceptance rules here means a self-test assertion
+// exercises the same code path the launcher uses, not a copy.
+static bool ParseUpdateInfo(const std::string& body, const std::wstring& current,
+                            UpdateInfo& out) {
+  json::Value root;
+  std::string parseError;
+  if (!json::Parser(body).Parse(root, parseError)) return false;
+
+  std::string remote = root.Str("version");
+  std::string minSupported = root.Str("min_supported_version");
+  bool newer = !remote.empty() && VersionGreater(Utf8ToWide(remote), current);
+  bool belowMinimum = !minSupported.empty() && VersionGreater(Utf8ToWide(minSupported), current);
+  if (!newer && !belowMinimum) return false;
+
+  const json::Value* installer = root.Get("installer");
+  if (!installer) return false;
+  std::string url = installer->Str("url");
+  std::string sha = installer->Str("sha256");
+  uint64_t size = (uint64_t)installer->Num("size", 0);
+  bool manifestConsistent =
+      minSupported.empty() || !VersionGreater(Utf8ToWide(minSupported), Utf8ToWide(remote));
+  bool valid = !remote.empty() && !url.empty() && url.rfind("https://", 0) == 0 &&
+               sha.size() == 64 && size > 0 && manifestConsistent;
+  if (!valid) return false;
+
+  out.version = Utf8ToWide(remote);
+  out.mandatory = root.Bool("mandatory", false);
+  out.forced = ShouldForceUpdate(belowMinimum, out.mandatory);
+  out.url = Utf8ToWide(url);
+  out.sha256 = Utf8ToWide(sha);
+  out.size = size;
+  return true;
+}
+
 struct Announcement {
   std::string id;
   std::wstring title;
@@ -1069,46 +1107,13 @@ static DWORD WINAPI CheckThreadProc(LPVOID) {
 
   bool updateAvailable = false;
   if (manifestOk) {
-    json::Value root;
-    std::string parseError;
-    if (json::Parser(body).Parse(root, parseError)) {
-      std::string remote = root.Str("version");
-      std::string minSupported = root.Str("min_supported_version");
-      LogLine(L"manifest version: " + Utf8ToWide(remote));
-
-      bool newer = !remote.empty() && VersionGreater(Utf8ToWide(remote), kVersion);
-      bool belowMinimum =
-          !minSupported.empty() && VersionGreater(Utf8ToWide(minSupported), kVersion);
-
-      if (newer || belowMinimum) {
-        const json::Value* installer = root.Get("installer");
-        if (installer) {
-          std::string url = installer->Str("url");
-          std::string sha = installer->Str("sha256");
-          uint64_t size = (uint64_t)installer->Num("size", 0);
-          bool manifestConsistent =
-              minSupported.empty() || !VersionGreater(Utf8ToWide(minSupported), Utf8ToWide(remote));
-          bool valid = !remote.empty() && !url.empty() && url.rfind("https://", 0) == 0 &&
-                       sha.size() == 64 && size > 0 && manifestConsistent;
-          if (valid) {
-            g_update.version = Utf8ToWide(remote);
-            g_update.mandatory = root.Bool("mandatory", false);
-            // The security floor is authoritative: a build below
-            // min_supported_version must update, and cannot defer the prompt.
-            g_update.forced = ShouldForceUpdate(belowMinimum, g_update.mandatory);
-            g_update.url = Utf8ToWide(url);
-            g_update.sha256 = Utf8ToWide(sha);
-            g_update.size = size;
-            updateAvailable = true;
-            SetStatus(L"发现新版本");
-          }
-          LogLine(valid ? (g_update.forced ? L"update required (below minimum or mandatory)"
-                                           : L"update available (optional)")
-                        : L"manifest update rejected: missing url, sha256, or size");
-        } else {
-          LogLine(L"manifest update rejected: installer object missing");
-        }
-      }
+    UpdateInfo parsed;
+    if (ParseUpdateInfo(body, kVersion, parsed)) {
+      g_update = parsed;
+      updateAvailable = true;
+      SetStatus(L"发现新版本");
+      LogLine(g_update.forced ? L"update required (below minimum or mandatory)"
+                              : L"update available (optional)");
     }
   }
 
@@ -1239,23 +1244,11 @@ enum Action {
   A_RECENT_BASE = 100,
 };
 
-struct HitTarget {
-  RectF rect;
-  int id;
-};
+static ui::HitMap g_hits;
 
-static std::vector<HitTarget> g_hits;
+static void AddHit(const RectF& rect, int id) { g_hits.Add(rect, id); }
 
-static void AddHit(const RectF& rect, int id) {
-  if (rect.Width > 0 && rect.Height > 0) g_hits.push_back({rect, id});
-}
-
-static int HitTest(POINT point) {
-  for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
-    if (ui::Hit(it->rect, point)) return it->id;
-  }
-  return A_NONE;
-}
+static int HitTest(POINT point) { return g_hits.Test(point, A_NONE); }
 
 static void LaunchEngine(const std::wstring& extraArgs = L"");
 static void StartDownload();
@@ -1345,34 +1338,11 @@ static void ShowAnnouncements() {
 
 static void DrawButton(Graphics& g, const RectF& rect, const std::wstring& label, int icon,
                        bool primary, int action, bool dark = false) {
-  bool hover = g_hover == action;
-  if (primary) {
-    ui::FillRound(g, rect, S(10), hover ? ui::GreenLight() : ui::Green());
-  } else {
-    ui::FillRound(g, rect, S(10), hover ? ui::SurfaceMuted() : ui::Surface());
-    ui::StrokeRound(g, rect, S(10), ui::Border(), 1.0f);
-  }
-  float iconSize = S(17);
-  float textX = rect.X + S(16);
-  if (icon) {
-    ui::Icon(g, icon, primary || dark ? ui::ICON_CREAM : ui::ICON_GREEN,
-             RectF(rect.X + S(14), rect.Y + (rect.Height - iconSize) / 2, iconSize, iconSize));
-    textX += iconSize + S(8);
-  }
-  ui::Text(g, label, RectF(textX, rect.Y, rect.Width - (textX - rect.X) - S(12), rect.Height),
-           S(13), FontStyleBold, primary ? ui::Surface() : ui::Text(), StringAlignmentNear,
-           StringAlignmentCenter);
-  AddHit(rect, action);
+  ui::Button(g, {g_dpi, g_hover}, g_hits, rect, label, icon, primary, action, dark);
 }
 
 static void DrawWindowButton(Graphics& g, const RectF& rect, int icon, int action, bool dark) {
-  bool hover = g_hover == action;
-  if (hover) {
-    ui::FillRound(g, rect, S(8), dark ? ui::rgba(255, 255, 255, 24) : ui::rgba(16, 32, 26, 12));
-  }
-  ui::Icon(g, icon, dark ? ui::ICON_CREAM : ui::ICON_MUTED,
-           RectF(rect.X + S(6), rect.Y + S(6), S(16), S(16)));
-  AddHit(rect, action);
+  ui::WindowButton(g, {g_dpi, g_hover}, g_hits, rect, icon, action, dark);
 }
 
 static void DrawNavItem(Graphics& g, int y, int icon, const std::wstring& label, int action,
@@ -1432,18 +1402,8 @@ static void DrawSidebar(Graphics& g) {
 }
 
 static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
-  ui::Text(g, title, RectF(SIDEBAR + S(36), S(12), S(480), S(32)), S(17), FontStyleBold,
-           ui::Text());
-  ui::Text(g, L"Chenyi Office · 胡辰逸定制版", RectF(SIDEBAR + S(36), S(34), S(480), S(16)),
-           S(10), FontStyleRegular, ui::TextMuted());
-  ui::FillRound(g, RectF(SIDEBAR, TITLEBAR - 1, g_width - SIDEBAR, 1), 0, ui::Border());
-
-  DrawWindowButton(g, RectF(g_width - S(86), S(14), S(28), S(28)), UI_ICON_MINIMIZE, A_MINIMIZE,
-                   false);
-  if (allowClose) {
-    DrawWindowButton(g, RectF(g_width - S(52), S(14), S(28), S(28)), UI_ICON_CLOSE, A_CLOSE,
-                     false);
-  }
+  ui::TitleBar(g, {g_dpi, g_hover}, g_hits, SIDEBAR, g_width, title,
+               L"Chenyi Office · 胡辰逸定制版", A_MINIMIZE, A_CLOSE, allowClose);
 }
 
 static void DrawQuickCard(Graphics& g, const RectF& rect, int icon, const std::wstring& title,
@@ -1466,9 +1426,7 @@ static void DrawQuickCard(Graphics& g, const RectF& rect, int icon, const std::w
 }
 
 static void DrawVersionCard(Graphics& g, const RectF& rect) {
-  ui::SoftShadow(g, rect, S(16));
-  ui::FillRound(g, rect, S(16), ui::Surface());
-  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Card(g, rect, S(16));
   ui::Text(g, L"版本与更新", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(60), S(22)),
            S(13), FontStyleBold, ui::Text());
   ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_GREEN,
@@ -1491,9 +1449,7 @@ static void DrawVersionCard(Graphics& g, const RectF& rect) {
 }
 
 static void DrawAnnouncementCard(Graphics& g, const RectF& rect) {
-  ui::SoftShadow(g, rect, S(16));
-  ui::FillRound(g, rect, S(16), ui::Surface());
-  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Card(g, rect, S(16));
   ui::Text(g, L"最新公告", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(36), S(22)),
            S(13), FontStyleBold, ui::Text());
   if (g_announcements.empty()) {
@@ -1513,9 +1469,7 @@ static void DrawAnnouncementCard(Graphics& g, const RectF& rect) {
 }
 
 static void DrawEngineCard(Graphics& g, const RectF& rect) {
-  ui::SoftShadow(g, rect, S(16));
-  ui::FillRound(g, rect, S(16), ui::Surface());
-  ui::StrokeRound(g, rect, S(16), ui::Border());
+  ui::Card(g, rect, S(16));
   ui::Text(g, L"办公内核", RectF(rect.X + S(18), rect.Y + S(16), rect.Width - S(36), S(22)),
            S(13), FontStyleBold, ui::Text());
   std::wstring engine = FindEngine();
@@ -1574,9 +1528,7 @@ static void DrawDashboard(Graphics& g) {
   ui::Text(g, L"最近使用", RectF(left, recentTop, S(200), S(24)), S(16), FontStyleBold,
            ui::Text());
   RectF recentCard(left, recentTop + S(30), leftWidth, S(84));
-  ui::SoftShadow(g, recentCard, S(14));
-  ui::FillRound(g, recentCard, S(14), ui::Surface());
-  ui::StrokeRound(g, recentCard, S(14), ui::Border());
+  ui::Card(g, recentCard, S(14));
   if (g_recent.empty()) {
     ui::Icon(g, UI_ICON_CLOCK, ui::ICON_MUTED,
              RectF(recentCard.X + S(20), recentCard.Y + S(28), S(24), S(24)));
@@ -1620,9 +1572,7 @@ static void DrawNewPage(Graphics& g) {
                          cardHeight),
                 UI_ICON_SHAPES, L"Draw 绘图", L"图形、流程图与海报", A_CREATE_DRAW);
   RectF openCard(left, top + S(78) + (cardHeight + gap) * 2 + S(12), S(520), S(64));
-  ui::SoftShadow(g, openCard, S(14));
-  ui::FillRound(g, openCard, S(14), ui::Surface());
-  ui::StrokeRound(g, openCard, S(14), ui::Border());
+  ui::Card(g, openCard, S(14));
   ui::Icon(g, UI_ICON_FOLDER_OPEN, ui::ICON_GREEN,
            RectF(openCard.X + S(20), openCard.Y + S(20), S(24), S(24)));
   ui::Text(g, L"打开已有文件", RectF(openCard.X + S(58), openCard.Y + S(14), S(300), S(22)),
@@ -1640,9 +1590,7 @@ static void DrawRecentPage(Graphics& g) {
            RectF(left, top + S(36), S(520), S(22)), S(11), FontStyleRegular, ui::TextMuted());
   if (g_recent.empty()) {
     RectF empty(left, top + S(82), S(520), S(180));
-    ui::SoftShadow(g, empty, S(16));
-    ui::FillRound(g, empty, S(16), ui::Surface());
-    ui::StrokeRound(g, empty, S(16), ui::Border());
+    ui::Card(g, empty, S(16));
     ui::Icon(g, UI_ICON_CLOCK, ui::ICON_MUTED, RectF(left + S(24), top + S(110), S(32), S(32)));
     ui::Text(g, L"还没有最近文档", RectF(left + S(72), top + S(108), S(360), S(26)), S(15),
              FontStyleBold, ui::Text());
@@ -1678,9 +1626,7 @@ static void DrawSettingsPage(Graphics& g) {
            FontStyleRegular, ui::TextMuted());
 
   RectF updateCard(left, top + S(80), S(520), S(132));
-  ui::SoftShadow(g, updateCard, S(14));
-  ui::FillRound(g, updateCard, S(14), ui::Surface());
-  ui::StrokeRound(g, updateCard, S(14), ui::Border());
+  ui::Card(g, updateCard, S(14));
   ui::Icon(g, UI_ICON_SHIELD_CHECK, ui::ICON_GREEN,
            RectF(updateCard.X + S(20), updateCard.Y + S(20), S(24), S(24)));
   ui::Text(g, L"版本与更新", RectF(updateCard.X + S(58), updateCard.Y + S(16), S(300), S(22)),
@@ -1915,11 +1861,7 @@ static void DrawDownloading(Graphics& g) {
   ui::TextLatin(g, pct, RectF(card.X + S(32), card.Y + S(120), card.Width - S(64), S(64)), S(48),
                 FontStyleBold, ui::Green());
   RectF track(card.X + S(32), card.Y + S(196), card.Width - S(64), S(10));
-  ui::FillRound(g, track, S(5), ui::SurfaceMuted());
-  if (percent > 0) {
-    ui::FillRound(g, RectF(track.X, track.Y, track.Width * percent / 100.0f, track.Height), S(5),
-                  ui::Green());
-  }
+  ui::ProgressBar(g, {g_dpi, g_hover}, track, percent);
   ui::Text(g, L"下载期间请保持网络连接；你随时可以关闭窗口，稍后再更新。",
            RectF(card.X + S(32), card.Y + S(228), card.Width - S(64), S(44)), S(11),
            FontStyleRegular, ui::TextMuted(), StringAlignmentNear, StringAlignmentNear, true);
@@ -2175,36 +2117,60 @@ static bool LoadResourceString(int id, std::string& out) {
   return true;
 }
 
-static std::string XmlAttribute(const std::string& block, const char* attribute) {
-  std::string needle = std::string(attribute) + "=\"";
-  size_t start = block.find(needle);
-  if (start == std::string::npos) return "";
-  start += needle.size();
-  size_t end = block.find('"', start);
-  if (end == std::string::npos) return "";
-  return block.substr(start, end - start);
-}
+// LibreOffice's registrymodifications.xcu is XML, so it is parsed as XML:
+//   <item oor:path="..."><prop oor:name="..." oor:op="fuse"><value>...</value></prop></item>
+// String searching for "<item ...>" used to break on any change of attribute
+// order, quote style, extra attributes or nesting. pugixml makes all of those
+// irrelevant. Every mutating helper parses first and refuses to write back a
+// document it could not parse, so a malformed profile is never destroyed.
 
-static std::string ProfileKey(const std::string& path, const std::string& name) {
-  return path + '\x1f' + name;
-}
-
-static void CollectProfileItems(const std::string& xml, std::set<std::string>& keys,
-                                std::vector<std::string>* blocks) {
-  size_t pos = 0;
-  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
-    size_t end = xml.find("</item>", pos);
-    if (end == std::string::npos) break;
-    end += 7;
-    std::string block = xml.substr(pos, end - pos);
-    std::string path = XmlAttribute(block, "oor:path");
-    std::string name = XmlAttribute(block, "oor:name");
-    if (!path.empty() && !name.empty()) {
-      keys.insert(ProfileKey(path, name));
-      if (blocks) blocks->push_back(block);
-    }
-    pos = end;
+struct XmlStringWriter : pugi::xml_writer {
+  std::string data;
+  void write(const void* bytes, size_t size) override {
+    data.append(static_cast<const char*>(bytes), size);
   }
+};
+
+// Local element name: real profiles and self-test docs use <oor:items>, whose
+// prefixed name pugixml reports verbatim (it does not resolve namespaces).
+static bool IsItemsRoot(const pugi::xml_node& root) {
+  std::string name = root.name();
+  size_t colon = name.rfind(':');
+  return (colon == std::string::npos ? name : name.substr(colon + 1)) == "items";
+}
+
+static bool ParseProfile(const std::string& xml, pugi::xml_document& doc) {
+  pugi::xml_parse_result result = doc.load_string(xml.c_str(), pugi::parse_default);
+  return result.status == pugi::status_ok && doc.document_element() &&
+         IsItemsRoot(doc.document_element());
+}
+
+static std::string SerializeProfile(const pugi::xml_document& doc) {
+  XmlStringWriter writer;
+  doc.save(writer, "  ", pugi::format_default, pugi::encoding_utf8);
+  return writer.data;
+}
+
+// Locate a <prop oor:name="name"> inside an <item>, independent of sibling order.
+static pugi::xml_node FindProp(pugi::xml_node item, const std::string& name) {
+  for (pugi::xml_node prop = item.child("prop"); prop; prop = prop.next_sibling("prop"))
+    if (std::string(prop.attribute("oor:name").value()) == name) return prop;
+  return pugi::xml_node();
+}
+
+// Find the <item oor:path="path"> that carries a prop named `name`.
+static pugi::xml_node FindProfileItem(const pugi::xml_node& root, const std::string& path,
+                                      const std::string& name) {
+  for (pugi::xml_node item = root.child("item"); item; item = item.next_sibling("item")) {
+    if (std::string(item.attribute("oor:path").value()) != path) continue;
+    if (name.empty() || FindProp(item, name)) return item;
+  }
+  return pugi::xml_node();
+}
+
+static std::string PropValue(pugi::xml_node prop) {
+  if (!prop) return "";
+  return prop.child("value").text().get();
 }
 
 // Valid notebookbar toolbar-mode names. An earlier build wrote a layout file
@@ -2228,101 +2194,74 @@ static bool IsSymbolStyleItem(const std::string& path, const std::string& name) 
   return path == "/org.openoffice.Office.Common/Misc" && name == "SymbolStyle";
 }
 
-static std::string ItemValue(const std::string& block) {
-  size_t start = block.find("<value>");
-  if (start == std::string::npos) return "";
-  start += 7;
-  size_t end = block.find("</value>", start);
-  if (end == std::string::npos) return "";
-  return block.substr(start, end - start);
-}
-
 static bool FindExistingValue(const std::string& xml, const std::string& path,
                               const std::string& name, std::string& value) {
-  size_t pos = 0;
-  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
-    size_t end = xml.find("</item>", pos);
-    if (end == std::string::npos) break;
-    end += 7;
-    std::string block = xml.substr(pos, end - pos);
-    if (XmlAttribute(block, "oor:path") == path && XmlAttribute(block, "oor:name") == name) {
-      value = ItemValue(block);
-      return true;
-    }
-    pos = end;
-  }
-  return false;
+  pugi::xml_document doc;
+  if (!ParseProfile(xml, doc)) return false;
+  pugi::xml_node item = FindProfileItem(doc.document_element(), path, name);
+  if (!item) return false;
+  value = PropValue(FindProp(item, name));
+  return true;
 }
 
-// Drop an existing <item> with the same path+name so a corrected
-// replacement is unambiguous instead of being overridden by an earlier one.
+// Drop every <item oor:path="path"> whose prop `name` matches, optionally only
+// when that prop's value equals `expectedValue`. Used to remove a corrected
+// duplicate and to drop a dangling SymbolStyle without touching user values.
 static void DropProfileItem(std::string& xml, const std::string& path,
                             const std::string& name,
                             const std::string* expectedValue = nullptr) {
-  size_t pos = 0;
-  while ((pos = xml.find("<item ", pos)) != std::string::npos) {
-    size_t end = xml.find("</item>", pos);
-    if (end == std::string::npos) break;
-    end += 7;
-    std::string block = xml.substr(pos, end - pos);
-    bool match = XmlAttribute(block, "oor:path") == path &&
-                 XmlAttribute(block, "oor:name") == name;
-    if (match && expectedValue) match = ItemValue(block) == *expectedValue;
-    if (match) {
-      xml.erase(pos, end - pos);
-    } else {
-      pos = end;
-    }
+  pugi::xml_document doc;
+  if (!ParseProfile(xml, doc)) return;
+  pugi::xml_node root = doc.document_element();
+  std::vector<pugi::xml_node> doomed;
+  for (pugi::xml_node item = root.child("item"); item; item = item.next_sibling("item")) {
+    if (std::string(item.attribute("oor:path").value()) != path) continue;
+    pugi::xml_node prop = FindProp(item, name);
+    if (!prop) continue;
+    if (expectedValue && PropValue(prop) != *expectedValue) continue;
+    doomed.push_back(item);
   }
+  if (doomed.empty()) return;
+  for (pugi::xml_node item : doomed) root.remove_child(item);
+  xml = SerializeProfile(doc);
 }
 
 // Add brand defaults that the user's profile does not have yet. Existing
 // values are always kept, so upgrades never wipe the user's interface mode,
 // icon theme, or option changes. The only value ever corrected is a toolbar
-// mode that is not a valid mode name — the stale "notebookbar.ui" written by
+// mode that is not a real mode name — the stale "notebookbar.ui" written by
 // an earlier build, which otherwise drops new documents to the basic toolbar.
 static std::string MergeProfile(const std::string& existing, const std::string& tmpl) {
-  std::set<std::string> existingKeys;
-  CollectProfileItems(existing, existingKeys, nullptr);
+  pugi::xml_document edoc, tdoc;
+  if (!ParseProfile(existing, edoc) || !ParseProfile(tmpl, tdoc)) return existing;
+  pugi::xml_node eroot = edoc.document_element();
+  pugi::xml_node troot = tdoc.document_element();
 
-  std::set<std::string> templateKeys;
-  std::vector<std::string> templateBlocks;
-  CollectProfileItems(tmpl, templateKeys, &templateBlocks);
-
-  std::string additions;
-  std::vector<std::pair<std::string, std::string>> corrections;
-  for (const auto& block : templateBlocks) {
-    std::string path = XmlAttribute(block, "oor:path");
-    std::string name = XmlAttribute(block, "oor:name");
-    if (path.empty() || name.empty()) continue;
-    if (existingKeys.count(ProfileKey(path, name))) {
+  bool changed = false;
+  for (pugi::xml_node titem = troot.child("item"); titem; titem = titem.next_sibling("item")) {
+    std::string path = titem.attribute("oor:path").value();
+    for (pugi::xml_node tprop = titem.child("prop"); tprop; tprop = tprop.next_sibling("prop")) {
+      std::string name = tprop.attribute("oor:name").value();
+      if (path.empty() || name.empty()) continue;
+      pugi::xml_node eitem = FindProfileItem(eroot, path, name);
+      if (!eitem) {
+        eroot.append_copy(titem);  // whole item: preserve all of its props
+        changed = true;
+        continue;
+      }
       // A valid user choice is never touched. Correct a toolbar mode only
       // when the stored value is not a real mode name (e.g. a file name).
       if (IsToolbarModeItem(path)) {
-        std::string value;
-        FindExistingValue(existing, path, name, value);
-        if (!IsValidToolbarMode(value)) {
-          corrections.push_back({path, name});
-          additions += block;
-          additions += "\n";
+        pugi::xml_node eprop = FindProp(eitem, name);
+        if (eprop && !IsValidToolbarMode(PropValue(eprop))) {
+          eprop.child("value").text().set(PropValue(tprop).c_str());  // in place: no duplicate
+          changed = true;
         }
       }
-      continue;
     }
-    additions += block;
-    additions += "\n";
   }
-  if (additions.empty()) return existing;
-
-  std::string merged = existing;
-  for (const auto& kv : corrections) DropProfileItem(merged, kv.first, kv.second);
-  size_t close = merged.rfind("</oor:items>");
-  if (close == std::string::npos) {
-    merged += "\n" + additions;
-  } else {
-    merged.insert(close, additions);
-  }
-  return merged;
+  // Preserve the original bytes when nothing changed — maximum fidelity.
+  return changed ? SerializeProfile(edoc) : existing;
 }
 
 static void EnsureProfile() {
@@ -2514,7 +2453,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
-      g_hits.clear();
+      g_hits.Clear();
 
       Bitmap buffer(g_width, g_height, PixelFormat32bppPARGB);
       Graphics g(&buffer);
@@ -2766,6 +2705,102 @@ static int RunSelfTest(const std::wstring& outPath) {
     std::string value;
     FindExistingValue(merged, toolbar, "ActiveWriter", value);
     check("default toolbar mode added when missing", value == "Tabbed");
+  }
+
+  // Structured XML parsing: attributes in a different order, extra attributes,
+  // single quotes and interleaved whitespace all resolve to the same key/value.
+  // The old "<item " + substring parser silently failed on every one of these.
+  {
+    std::string odd =
+        "<?xml version='1.0'?>\n<oor:items xmlns:oor='http://openoffice.org/2001/registry'>\n"
+        "  <item oor:op='fuse' oor:path='" + toolbar + "'>\n"
+        "    <prop oor:name='ActiveWriter' oor:op='fuse'><value>ContextualSingle</value></prop>\n"
+        "  </item>\n</oor:items>\n";
+    pugi::xml_document doc;
+    check("reordered quoted attributes parse", ParseProfile(odd, doc));
+    std::string value;
+    bool found = FindExistingValue(odd, toolbar, "ActiveWriter", value);
+    check("single-quoted attributes resolve", found && value == "ContextualSingle");
+    std::string tmpl = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "Tabbed"));
+    std::string merged = MergeProfile(odd, tmpl);
+    FindExistingValue(merged, toolbar, "ActiveWriter", value);
+    check("reordered user choice survives merge", value == "ContextualSingle");
+  }
+
+  // A malformed profile must be refused, not silently overwritten.
+  {
+    std::string broken = SelfTestDoc(SelfTestItem(toolbar, "ActiveWriter", "Tabbed"));
+    broken.erase(broken.find("</oor:items>"));  // unterminated document
+    std::string tmpl = SelfTestDoc(SelfTestItem(misc, "SymbolStyle", "chenyi"));
+    check("malformed profile left untouched", MergeProfile(broken, tmpl) == broken);
+  }
+
+  // Redirect / URL allow-list: every hop is validated by HttpRequest before it
+  // is requested. Assert the same production predicate the redirect loop uses.
+  check("github.com allowed", IsAllowedUrl(L"https://github.com/o/r/releases/latest.json"));
+  check("jsdelivr cdn allowed", IsAllowedUrl(L"https://cdn.jsdelivr.net/npm/x/latest.json"));
+  check("githubusercontent subdomain allowed",
+        IsAllowedUrl(L"https://objects.githubusercontent.com/a/b.exe"));
+  check("http scheme rejected", !IsAllowedUrl(L"http://github.com/x"));
+  check("non-default port rejected", !IsAllowedUrl(L"https://github.com:8443/x"));
+  check("unknown host rejected", !IsAllowedUrl(L"https://evil.example/x"));
+  check("suffix-spoof host rejected", !IsAllowedUrl(L"https://github.com.evil.test/x"));
+
+  // Update manifest parsing: the exact rules that gate a real download.
+  {
+    std::string sha(64, 'a');
+    std::string normal =
+        "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x/y.exe\","
+        "\"sha256\":\"" + sha + "\",\"size\":1234}}";
+    UpdateInfo info;
+    bool ok = ParseUpdateInfo(normal, L"0.4.3", info);
+    check("newer manifest accepted", ok && info.version == L"0.4.4" && info.size == 1234);
+    check("manifest ordinary update optional", ok && !info.forced);
+  }
+  {
+    std::string sha(64, 'b');
+    std::string floor =
+        "{\"version\":\"0.4.4\",\"min_supported_version\":\"0.4.4\","
+        "\"installer\":{\"url\":\"https://github.com/x/y.exe\","
+        "\"sha256\":\"" + sha + "\",\"size\":1234}}";
+    UpdateInfo info;
+    bool ok = ParseUpdateInfo(floor, L"0.4.3", info);
+    check("security floor forces update", ok && info.forced);
+  }
+  {
+    std::string sha(64, 'c');
+    std::string mandatory =
+        "{\"version\":\"0.4.4\",\"mandatory\":true,"
+        "\"installer\":{\"url\":\"https://github.com/x/y.exe\","
+        "\"sha256\":\"" + sha + "\",\"size\":1234}}";
+    UpdateInfo info;
+    bool ok = ParseUpdateInfo(mandatory, L"0.4.3", info);
+    check("mandatory flag forces update", ok && info.forced && info.mandatory);
+  }
+  {
+    std::string bad =
+        "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"http://github.com/x.exe\","
+        "\"sha256\":\"" + std::string(64, 'd') + "\",\"size\":1}}";
+    UpdateInfo info;
+    check("insecure manifest url rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+    bad = "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x.exe\","
+          "\"sha256\":\"short\",\"size\":1}}";
+    check("bad sha256 rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+    bad = "{\"version\":\"0.4.4\",\"installer\":{\"url\":\"https://github.com/x.exe\","
+          "\"sha256\":\"" + std::string(64, 'e') + "\",\"size\":0}}";
+    check("zero size rejected", !ParseUpdateInfo(bad, L"0.4.3", info));
+  }
+  {
+    std::string current =
+        "{\"version\":\"0.4.3\",\"installer\":{\"url\":\"https://github.com/x.exe\","
+        "\"sha256\":\"" + std::string(64, 'f') + "\",\"size\":1}}";
+    UpdateInfo info;
+    check("no update for current version", !ParseUpdateInfo(current, L"0.4.3", info));
+  }
+  {
+    std::string malformed = "{ this is not json";
+    UpdateInfo info;
+    check("malformed manifest rejected", !ParseUpdateInfo(malformed, L"0.4.3", info));
   }
 
   log += "TOTAL " + std::to_string(passed) + " passed, " + std::to_string(failed) +

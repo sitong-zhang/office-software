@@ -19,7 +19,7 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64 msitools python3-pil curl osslsigncode openssl fonts-noto-cjk librsvg2-bin
+          sudo apt-get install -y mingw-w64 msitools python3-pil curl osslsigncode openssl fonts-noto-cjk librsvg2-bin wine64
 
       - name: Check version consistency
         run: python3 scripts/check-version.py
@@ -41,6 +41,21 @@ jobs:
           REQUIRE_SIGN: "1"
           SIGN_PFX_PASS: ${{ secrets.SIGN_PFX_PASS }}
         run: ./scripts/build-windows.sh
+
+      # Routine gate: the launcher's non-interactive self-test calls the same
+      # production functions as the UI (profile merge, version floor, redirect
+      # allow-list, manifest validation). Run it on every build via Wine so a
+      # regression fails the build, not just an opt-in smoke run.
+      - name: Launcher self-test (Wine)
+        env:
+          WINEDEBUG: "-all"
+          WINEPREFIX: ${{ github.workspace }}/build/wine-prefix
+        run: |
+          set -euo pipefail
+          out=build/self-test.log
+          wine64 build/ChenyiOffice.exe "--self-test=$PWD/$out"
+          cat "$out"
+          grep -Eq 'TOTAL [0-9]+ passed, 0 failed' "$out"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

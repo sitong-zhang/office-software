@@ -14,6 +14,7 @@
 #include <shellapi.h>
 #include <tlhelp32.h>
 
+#include "app/ui/common.h"
 #include "app/ui/icons.h"
 #include "app/ui/theme.h"
 
@@ -47,23 +48,11 @@ static std::wstring g_status = L"正在移除办公内核与程序文件…";
 
 enum UninstallAction { UA_NONE = 0, UA_CLOSE, UA_MINIMIZE };
 
-struct UninstallHit {
-  RectF rect;
-  int id;
-};
+static ui::HitMap g_hits;
 
-static std::vector<UninstallHit> g_hits;
+static void AddHit(const RectF& rect, int id) { g_hits.Add(rect, id); }
 
-static void AddHit(const RectF& rect, int id) {
-  if (rect.Width > 0 && rect.Height > 0) g_hits.push_back({rect, id});
-}
-
-static int HitTest(POINT point) {
-  for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
-    if (ui::Hit(it->rect, point)) return it->id;
-  }
-  return UA_NONE;
-}
+static int HitTest(POINT point) { return g_hits.Test(point, UA_NONE); }
 
 static bool IsProcessRunning(const wchar_t* name) {
   HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -221,13 +210,7 @@ static DWORD WINAPI UninstallThread(LPVOID) {
 }
 
 static void DrawWindowButton(Graphics& g, const RectF& rect, int icon, int action, bool dark) {
-  bool hover = g_hover == action;
-  if (hover) {
-    ui::FillRound(g, rect, S(8), dark ? ui::rgba(255, 255, 255, 24) : ui::rgba(16, 32, 26, 12));
-  }
-  ui::Icon(g, icon, dark ? ui::ICON_CREAM : ui::ICON_MUTED,
-           RectF(rect.X + S(6), rect.Y + S(6), S(16), S(16)));
-  AddHit(rect, action);
+  ui::WindowButton(g, {g_dpi, g_hover}, g_hits, rect, icon, action, dark);
 }
 
 static void DrawSidebar(Graphics& g) {
@@ -351,7 +334,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
-      g_hits.clear();
+      g_hits.Clear();
       Bitmap buffer(g_width, g_height, PixelFormat32bppPARGB);
       Graphics g(&buffer);
       g.SetSmoothingMode(SmoothingModeAntiAlias);

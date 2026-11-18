@@ -17,6 +17,7 @@
 #include <shellapi.h>
 #include <objidl.h>
 
+#include "app/ui/common.h"
 #include "app/ui/icons.h"
 #include "app/ui/theme.h"
 
@@ -88,23 +89,11 @@ enum InstallerAction {
   IA_CLOSE,
 };
 
-struct InstallerHit {
-  RectF rect;
-  int id;
-};
+static ui::HitMap g_hits;
 
-static std::vector<InstallerHit> g_hits;
+static void AddHit(const RectF& rect, int id) { g_hits.Add(rect, id); }
 
-static void AddHit(const RectF& rect, int id) {
-  if (rect.Width > 0 && rect.Height > 0) g_hits.push_back({rect, id});
-}
-
-static int HitTest(POINT point) {
-  for (auto it = g_hits.rbegin(); it != g_hits.rend(); ++it) {
-    if (ui::Hit(it->rect, point)) return it->id;
-  }
-  return IA_NONE;
-}
+static int HitTest(POINT point) { return g_hits.Test(point, IA_NONE); }
 
 // ---------------------------------------------------------------------------
 // Drawing helpers
@@ -112,34 +101,11 @@ static int HitTest(POINT point) {
 
 static void DrawButton(Graphics& g, const RectF& rect, const std::wstring& label, int icon,
                        bool primary, int action) {
-  bool hover = g_hover == action;
-  if (primary) {
-    ui::FillRound(g, rect, S(10), hover ? ui::GreenLight() : ui::Green());
-  } else {
-    ui::FillRound(g, rect, S(10), hover ? ui::SurfaceMuted() : ui::Surface());
-    ui::StrokeRound(g, rect, S(10), ui::Border(), 1.0f);
-  }
-  float iconSize = S(17);
-  float textX = rect.X + S(16);
-  if (icon) {
-    ui::Icon(g, icon, primary ? ui::ICON_CREAM : ui::ICON_GREEN,
-             RectF(rect.X + S(14), rect.Y + (rect.Height - iconSize) / 2, iconSize, iconSize));
-    textX += iconSize + S(8);
-  }
-  ui::Text(g, label, RectF(textX, rect.Y, rect.Width - (textX - rect.X) - S(12), rect.Height),
-           S(13), FontStyleBold, primary ? ui::Surface() : ui::Text(), StringAlignmentNear,
-           StringAlignmentCenter);
-  AddHit(rect, action);
+  ui::Button(g, {g_dpi, g_hover}, g_hits, rect, label, icon, primary, action);
 }
 
 static void DrawWindowButton(Graphics& g, const RectF& rect, int icon, int action, bool dark) {
-  bool hover = g_hover == action;
-  if (hover) {
-    ui::FillRound(g, rect, S(8), dark ? ui::rgba(255, 255, 255, 24) : ui::rgba(16, 32, 26, 12));
-  }
-  ui::Icon(g, icon, dark ? ui::ICON_CREAM : ui::ICON_MUTED,
-           RectF(rect.X + S(6), rect.Y + S(6), S(16), S(16)));
-  AddHit(rect, action);
+  ui::WindowButton(g, {g_dpi, g_hover}, g_hits, rect, icon, action, dark);
 }
 
 static void DrawStep(Graphics& g, int y, int icon, const std::wstring& label, bool active,
@@ -191,17 +157,8 @@ static void DrawSidebar(Graphics& g) {
 }
 
 static void DrawTitleBar(Graphics& g, const std::wstring& title, bool allowClose) {
-  ui::Text(g, title, RectF(SIDEBAR + S(36), S(12), S(480), S(32)), S(17), FontStyleBold,
-           ui::Text());
-  ui::Text(g, L"Chenyi Office · 胡辰逸定制版", RectF(SIDEBAR + S(36), S(34), S(480), S(16)),
-           S(10), FontStyleRegular, ui::TextMuted());
-  ui::FillRound(g, RectF(SIDEBAR, TITLEBAR - 1, g_width - SIDEBAR, 1), 0, ui::Border());
-  DrawWindowButton(g, RectF(g_width - S(86), S(14), S(28), S(28)), UI_ICON_MINIMIZE, IA_MINIMIZE,
-                   false);
-  if (allowClose) {
-    DrawWindowButton(g, RectF(g_width - S(52), S(14), S(28), S(28)), UI_ICON_CLOSE, IA_CLOSE,
-                     false);
-  }
+  ui::TitleBar(g, {g_dpi, g_hover}, g_hits, SIDEBAR, g_width, title,
+               L"Chenyi Office · 胡辰逸定制版", IA_MINIMIZE, IA_CLOSE, allowClose);
 }
 
 static void DrawWelcome(Graphics& g) {
@@ -1021,7 +978,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
       PAINTSTRUCT ps;
       HDC dc = BeginPaint(hwnd, &ps);
-      g_hits.clear();
+      g_hits.Clear();
 
       Bitmap buffer(g_width, g_height, PixelFormat32bppPARGB);
       Graphics g(&buffer);

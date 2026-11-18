@@ -1,0 +1,61 @@
+name: Launcher self-test
+
+# Routine gate on every change: compile the launcher and run its non-
+# interactive self-test under Wine. Unlike the signed installer build this
+# needs no certificate and no engine payload, so it runs on pushes and PRs
+# to main and fails fast on a logic regression.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 python3-pil wine64 fonts-noto-cjk librsvg2-bin
+
+      - name: Generate resources
+        run: |
+          python3 scripts/make-brand-assets.py
+          python3 scripts/make-engine-assets.py
+          python3 scripts/make-ui-icons.py
+
+      - name: Compile launcher (with self-test)
+        run: |
+          set -euo pipefail
+          CXX=x86_64-w64-mingw32-g++
+          RC=x86_64-w64-mingw32-windres
+          CXXFLAGS=(-std=c++17 -O2 -municode -mwindows -DUNICODE -D_UNICODE
+                    -finput-charset=UTF-8 -fexec-charset=UTF-8
+                    -static -static-libgcc -static-libstdc++ -lwinpthread -I.)
+          "$RC" app/launcher/app.rc -O coff -o build/app.res.o
+          "$CXX" "${CXXFLAGS[@]}" app/launcher/main.cpp \
+            app/third_party/pugixml/pugixml.cpp build/app.res.o \
+            -o build/ChenyiOffice.exe \
+            -lwinhttp -lbcrypt -lwintrust -lcrypt32 -lshell32 -lole32 -luuid \
+            -lshlwapi -lgdi32 -luser32 -ladvapi32 -lgdiplus -ldwmapi
+
+      - name: Run self-test (Wine)
+        env:
+          WINEDEBUG: "-all"
+          WINEPREFIX: ${{ github.workspace }}/build/wine-prefix
+        run: |
+          set -euo pipefail
+          out=build/self-test.log
+          wine64 build/ChenyiOffice.exe "--self-test=$PWD/$out"
+          cat "$out"
+          grep -Eq 'TOTAL [0-9]+ passed, 0 failed' "$out"
